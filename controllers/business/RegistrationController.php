@@ -423,6 +423,156 @@ class RegistrationController {
         $xlsx->mergeCells('A' . $summaryRowNum . ':J' . $summaryRowNum);
         $xlsx->mergeCells('L' . $summaryRowNum . ':O' . $summaryRowNum);
 
+        // =========================================================================
+        // SHEET 2: តារាងវត្តមានសម្រាប់បោះពុម្ព (ATTENDANCE SHEET FOR PRINT A4)
+        // =========================================================================
+        $xlsx->addSheet('តារាងវត្តមាន (Print A4)', [6, 16, 26, 8, 26, 20, 16, 26, 14], [
+            'paperSize' => 9,           // A4 Paper
+            'orientation' => 'landscape', // A4 Landscape orientation for wide signature tables
+            'fitToWidth' => 1,          // Fit all columns to 1 page wide
+            'fitToHeight' => 0
+        ]);
+
+        // Row 1: Top spacing
+        $xlsx->addRow([], 10);
+
+        // Row 2-3: Official Motto
+        $xlsx->addRow([
+            ['v' => 'ព្រះរាជាណាចក្រកម្ពុជា', 's' => 17]
+        ], 24);
+        $xlsx->mergeCells('A2:I2');
+
+        $xlsx->addRow([
+            ['v' => 'ជាតិ សាសនា ព្រះមហាក្សត្រ', 's' => 17]
+        ], 22);
+        $xlsx->mergeCells('A3:I3');
+
+        // Row 4: Spacing
+        $xlsx->addRow([], 8);
+
+        // Row 5: Title of Attendance Sheet
+        $xlsx->addRow([
+            ['v' => 'តារាងវត្តមានសិក្ខាកាមចូលរួម (PARTICIPANT ATTENDANCE SHEET)', 's' => 16]
+        ], 32);
+        $xlsx->mergeCells('A5:I5');
+
+        // Row 6: Event Name Subtitle
+        $xlsx->addRow([
+            ['v' => 'កម្មវិធី / សិក្ខាសាលា៖ ' . $workshop['name'], 's' => 17]
+        ], 24);
+        $xlsx->mergeCells('A6:I6');
+
+        // Row 7: Spacing
+        $xlsx->addRow([], 10);
+
+        // Row 8: Metadata 1
+        $xlsx->addRow([
+            ['v' => 'កាលបរិច្ឆេទ៖', 's' => 3],
+            ['v' => $dateStr, 's' => 4],
+            [],
+            ['v' => 'វាគ្មិនកិត្តិយស៖', 's' => 3],
+            ['v' => $trainerStr, 's' => 4],
+            [],
+            ['v' => 'ទីតាំង៖', 's' => 3],
+            ['v' => $venueStr, 's' => 4],
+            []
+        ], 24);
+        $xlsx->mergeCells('B8:C8');
+        $xlsx->mergeCells('E8:F8');
+        $xlsx->mergeCells('H8:I8');
+
+        // Row 9: Metadata 2
+        $xlsx->addRow([
+            ['v' => 'អ្នករៀបចំ៖', 's' => 3],
+            ['v' => $organizerStr, 's' => 4],
+            [],
+            ['v' => 'សរុបសិក្ខាកាម៖', 's' => 3],
+            ['v' => $totalCount . ' នាក់', 's' => 4],
+            [],
+            ['v' => 'កាលបរិច្ឆេទបោះពុម្ព៖', 's' => 3],
+            ['v' => date('d-m-Y'), 's' => 4],
+            []
+        ], 24);
+        $xlsx->mergeCells('B9:C9');
+        $xlsx->mergeCells('E9:F9');
+        $xlsx->mergeCells('H9:I9');
+
+        // Row 10: Spacing
+        $xlsx->addRow([], 10);
+
+        // Row 11: Table Header for Print
+        $printHeaders = [
+            'ល.រ', 'កូដសម្គាល់', 'គោត្តនាម និងនាម', 'ភេទ',
+            'អង្គភាព / ស្ថាប័ន', 'មុខតំណែង', 'លេខទូរស័ព្ទ',
+            'ហត្ថលេខា / ស្នាមមេដៃ', 'ផ្សេងៗ'
+        ];
+        $printHeaderCells = [];
+        foreach ($printHeaders as $ph) {
+            $printHeaderCells[] = ['v' => $ph, 's' => 18];
+        }
+        $xlsx->addRow($printHeaderCells, 30);
+
+        // Rows 12+: Attendance Data Rows (Height 34pt gives ample room for signing with pen!)
+        $attNo = 1;
+        foreach ($registrations as $reg) {
+            $genderText = $reg['gender'] === 'female' ? 'ស្រី' : ($reg['gender'] === 'male' ? 'ប្រុស' : ($reg['gender'] ? 'ផ្សេងៗ' : '-'));
+            $remarkText = !empty($reg['checked_in_at']) ? 'ស្កេនរួច' : '';
+
+            $attCells = [
+                ['v' => $attNo++, 's' => 20, 't' => 'n'],
+                ['v' => $reg['registration_code'], 's' => 20],
+                ['v' => $reg['participant_name'], 's' => 19],
+                ['v' => $genderText, 's' => 20],
+                ['v' => $reg['company'] ?? '', 's' => 19],
+                ['v' => $reg['position'] ?? '', 's' => 19],
+                ['v' => $reg['phone'] ?? '', 's' => 20],
+                ['v' => '', 's' => 21], // SIGNATURE / THUMBPRINT CELL (EMPTY FOR PHYSICAL SIGNATURE)
+                ['v' => $remarkText, 's' => 20],
+            ];
+            $xlsx->addRow($attCells, 34);
+        }
+
+        // Add 3 blank rows for extra / walk-in participants
+        $extraRowsCount = max(3, ($totalCount < 10 ? 5 : 2));
+        for ($k = 0; $k < $extraRowsCount; $k++) {
+            $blankCells = [
+                ['v' => $attNo++, 's' => 20, 't' => 'n'],
+                ['v' => '', 's' => 20],
+                ['v' => '', 's' => 19],
+                ['v' => '', 's' => 20],
+                ['v' => '', 's' => 19],
+                ['v' => '', 's' => 19],
+                ['v' => '', 's' => 20],
+                ['v' => '', 's' => 21], // SIGNATURE CELL
+                ['v' => '', 's' => 20],
+            ];
+            $xlsx->addRow($blankCells, 34);
+        }
+
+        // Signature Sign-off Block (Bottom right)
+        $signoffStartRow = 11 + count($registrations) + $extraRowsCount + 2;
+        $xlsx->addRow([], 14);
+
+        $xlsx->addRow([
+            [], [], [], [], [], [],
+            ['v' => 'រាជធានី/ខេត្ត............., ថ្ងៃទី..... ខែ..... ឆ្នាំ ២០២...', 's' => 17]
+        ], 24);
+        $xlsx->mergeCells('G' . $signoffStartRow . ':I' . $signoffStartRow);
+
+        $xlsx->addRow([
+            [], [], [], [], [], [],
+            ['v' => 'អ្នកគ្រប់គ្រង / អ្នកស្រង់វត្តមាន', 's' => 17]
+        ], 24);
+        $xlsx->mergeCells('G' . ($signoffStartRow + 1) . ':I' . ($signoffStartRow + 1));
+
+        $xlsx->addRow([], 36); // Signature line space
+
+        $xlsx->addRow([
+            [], [], [], [], [], [],
+            ['v' => '( ហត្ថលេខា និងឈ្មោះ )', 's' => 17]
+        ], 22);
+        $xlsx->mergeCells('G' . ($signoffStartRow + 3) . ':I' . ($signoffStartRow + 3));
+
         $filename = 'បញ្ជីសិក្ខាកាម_' . slugify($workshop['name']) . '_' . date('Ymd_His') . '.xlsx';
         $content = $xlsx->build();
 

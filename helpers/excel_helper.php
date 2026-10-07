@@ -3,39 +3,77 @@
 /**
  * ExcelHelper - Professional XLSX Spreadsheet Generator
  * Generates native Microsoft Excel (.xlsx) files with rich styling,
- * custom fonts (Khmer Unicode), cell colors, borders, and column widths.
- * Zero third-party dependencies. Uses ZipArchive or PureZip fallback.
+ * multi-sheet support, A4 print layout, custom Khmer fonts,
+ * cell colors, borders, and column widths.
+ * Zero external dependencies. Uses ZipArchive or PureZip fallback.
  */
 
 class SimpleXlsx {
-    private array $rows = [];
-    private array $merges = [];
-    private array $colWidths = [];
-    private string $sheetName = 'បញ្ជីសិក្ខាកាម';
+    private array $sheets = [];
+    private int $currentSheet = -1;
+
+    public function __construct() {
+        $this->addSheet('បញ្ជីសិក្ខាកាម');
+    }
+
+    public function addSheet(string $name, array $colWidths = [], array $pageSetup = []): self {
+        $clean = preg_replace('/[\[\]\*\?\/\\:]/u', '', $name);
+        $sheetName = mb_substr($clean, 0, 31, 'UTF-8') ?: ('Sheet' . (count($this->sheets) + 1));
+        $this->sheets[] = [
+            'name' => $sheetName,
+            'colWidths' => $colWidths,
+            'rows' => [],
+            'merges' => [],
+            'pageSetup' => $pageSetup,
+        ];
+        $this->currentSheet = count($this->sheets) - 1;
+        return $this;
+    }
+
+    public function selectSheet(int $index): self {
+        if (isset($this->sheets[$index])) {
+            $this->currentSheet = $index;
+        }
+        return $this;
+    }
 
     public function setSheetName(string $name): self {
-        $clean = preg_replace('/[\[\]\*\?\/\\:]/', '', $name);
-        $this->sheetName = mb_substr($clean, 0, 31, 'UTF-8') ?: 'Sheet1';
+        if ($this->currentSheet >= 0) {
+            $clean = preg_replace('/[\[\]\*\?\/\\:]/u', '', $name);
+            $this->sheets[$this->currentSheet]['name'] = mb_substr($clean, 0, 31, 'UTF-8') ?: 'Sheet1';
+        }
         return $this;
     }
 
     public function setColWidths(array $widths): self {
-        $this->colWidths = $widths;
+        if ($this->currentSheet >= 0) {
+            $this->sheets[$this->currentSheet]['colWidths'] = $widths;
+        }
+        return $this;
+    }
+
+    public function setPageSetup(array $setup): self {
+        if ($this->currentSheet >= 0) {
+            $this->sheets[$this->currentSheet]['pageSetup'] = $setup;
+        }
         return $this;
     }
 
     public function addRow(array $cells, int $height = 24): self {
-        $this->rows[] = ['cells' => $cells, 'height' => $height];
+        if ($this->currentSheet >= 0) {
+            $this->sheets[$this->currentSheet]['rows'][] = ['cells' => $cells, 'height' => $height];
+        }
         return $this;
     }
 
     public function mergeCells(string $range): self {
-        $this->merges[] = strtoupper($range);
+        if ($this->currentSheet >= 0) {
+            $this->sheets[$this->currentSheet]['merges'][] = strtoupper($range);
+        }
         return $this;
     }
 
     private function sanitizeXml(string $str): string {
-        // Strip control characters not permitted in XML 1.0
         $str = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/u', '', $str);
         return htmlspecialchars($str, ENT_QUOTES | ENT_XML1, 'UTF-8');
     }
@@ -51,118 +89,151 @@ class SimpleXlsx {
     }
 
     public function build(): string {
-        // 1. Build sheet1.xml
-        $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
-        $sheetXml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' . "\n";
-        
-        $sheetXml .= '  <sheetViews>' . "\n";
-        $sheetXml .= '    <sheetView tabSelected="1" workbookViewId="0">' . "\n";
-        $sheetXml .= '      <pane state="split"/>' . "\n";
-        $sheetXml .= '      <selection/>' . "\n";
-        $sheetXml .= '    </sheetView>' . "\n";
-        $sheetXml .= '  </sheetViews>' . "\n";
-        
-        $sheetXml .= '  <sheetFormatPr defaultRowHeight="22" baseColWidth="10"/>' . "\n";
+        $zipFiles = [];
 
-        // Column widths
-        if (!empty($this->colWidths)) {
-            $sheetXml .= '  <cols>' . "\n";
+        // 1. Build Worksheets
+        foreach ($this->sheets as $idx => $s) {
+            $sheetNum = $idx + 1;
+            $sheetXml = $this->buildSheetXml($s);
+            $zipFiles['xl/worksheets/sheet' . $sheetNum . '.xml'] = $sheetXml;
+        }
+
+        // 2. Build styles.xml
+        $zipFiles['xl/styles.xml'] = $this->buildStylesXml();
+
+        // 3. Build workbook.xml
+        $wbXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $wbXml .= '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' . "\n";
+        $wbXml .= '  <sheets>' . "\n";
+        foreach ($this->sheets as $idx => $s) {
+            $sheetNum = $idx + 1;
+            $wbXml .= '    <sheet name="' . $this->sanitizeXml($s['name']) . '" sheetId="' . $sheetNum . '" r:id="rId' . $sheetNum . '"/>' . "\n";
+        }
+        $wbXml .= '  </sheets>' . "\n";
+        $wbXml .= '</workbook>';
+        $zipFiles['xl/workbook.xml'] = $wbXml;
+
+        // 4. Build xl/_rels/workbook.xml.rels
+        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $wbRels .= '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . "\n";
+        foreach ($this->sheets as $idx => $s) {
+            $sheetNum = $idx + 1;
+            $wbRels .= '  <Relationship Id="rId' . $sheetNum . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . $sheetNum . '.xml"/>' . "\n";
+        }
+        $stylesRId = count($this->sheets) + 1;
+        $wbRels .= '  <Relationship Id="rId' . $stylesRId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' . "\n";
+        $wbRels .= '</Relationships>';
+        $zipFiles['xl/_rels/workbook.xml.rels'] = $wbRels;
+
+        // 5. Build _rels/.rels
+        $rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $rootRels .= '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . "\n";
+        $rootRels .= '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' . "\n";
+        $rootRels .= '</Relationships>';
+        $zipFiles['_rels/.rels'] = $rootRels;
+
+        // 6. Build [Content_Types].xml
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $contentTypes .= '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' . "\n";
+        $contentTypes .= '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' . "\n";
+        $contentTypes .= '  <Default Extension="xml" ContentType="application/xml"/>' . "\n";
+        $contentTypes .= '  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' . "\n";
+        foreach ($this->sheets as $idx => $s) {
+            $sheetNum = $idx + 1;
+            $contentTypes .= '  <Override PartName="/xl/worksheets/sheet' . $sheetNum . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' . "\n";
+        }
+        $contentTypes .= '  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' . "\n";
+        $contentTypes .= '</Types>';
+        $zipFiles['[Content_Types].xml'] = $contentTypes;
+
+        return $this->createZip($zipFiles);
+    }
+
+    private function buildSheetXml(array $sheet): string {
+        $isPrintA4 = !empty($sheet['pageSetup']);
+        $pSetup = $sheet['pageSetup'] ?? [];
+        $orientation = $pSetup['orientation'] ?? 'landscape';
+        $paperSize = $pSetup['paperSize'] ?? 9; // 9 = A4
+
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' . "\n";
+        
+        if ($isPrintA4) {
+            $xml .= '  <sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' . "\n";
+        }
+
+        $xml .= '  <sheetViews>' . "\n";
+        $xml .= '    <sheetView tabSelected="1" workbookViewId="0">' . "\n";
+        $xml .= '      <pane state="split"/>' . "\n";
+        $xml .= '      <selection/>' . "\n";
+        $xml .= '    </sheetView>' . "\n";
+        $xml .= '  </sheetViews>' . "\n";
+        
+        $xml .= '  <sheetFormatPr defaultRowHeight="22" baseColWidth="10"/>' . "\n";
+
+        // Columns
+        if (!empty($sheet['colWidths'])) {
+            $xml .= '  <cols>' . "\n";
             $colNum = 1;
-            foreach ($this->colWidths as $w) {
-                $sheetXml .= '    <col min="' . $colNum . '" max="' . $colNum . '" width="' . $w . '" customWidth="1"/>' . "\n";
+            foreach ($sheet['colWidths'] as $w) {
+                $xml .= '    <col min="' . $colNum . '" max="' . $colNum . '" width="' . $w . '" customWidth="1"/>' . "\n";
                 $colNum++;
             }
-            $sheetXml .= '  </cols>' . "\n";
+            $xml .= '  </cols>' . "\n";
         }
 
         // Sheet Data
-        $sheetXml .= '  <sheetData>' . "\n";
+        $xml .= '  <sheetData>' . "\n";
         $rowNum = 1;
-        foreach ($this->rows as $rData) {
+        foreach ($sheet['rows'] as $rData) {
             $height = $rData['height'];
             $cells = $rData['cells'];
-            $sheetXml .= '    <row r="' . $rowNum . '" ht="' . $height . '" customHeight="1">' . "\n";
+            $xml .= '    <row r="' . $rowNum . '" ht="' . $height . '" customHeight="1">' . "\n";
 
             $colNum = 1;
             foreach ($cells as $cell) {
                 $ref = $this->colLetter($colNum) . $rowNum;
                 $val = $cell['v'] ?? '';
                 $style = $cell['s'] ?? 0;
-                $type = $cell['t'] ?? 's'; // 's' = string, 'n' = number
+                $type = $cell['t'] ?? 's';
 
                 if ($val === '' || $val === null) {
-                    $sheetXml .= '      <c r="' . $ref . '" s="' . $style . '"/>' . "\n";
+                    $xml .= '      <c r="' . $ref . '" s="' . $style . '"/>' . "\n";
                 } elseif ($type === 'n') {
                     $numVal = is_numeric($val) ? (float)$val : 0;
-                    $sheetXml .= '      <c r="' . $ref . '" s="' . $style . '"><v>' . $numVal . '</v></c>' . "\n";
+                    $xml .= '      <c r="' . $ref . '" s="' . $style . '"><v>' . $numVal . '</v></c>' . "\n";
                 } else {
                     $escaped = $this->sanitizeXml((string)$val);
-                    $sheetXml .= '      <c r="' . $ref . '" s="' . $style . '" t="inlineStr"><is><t>' . $escaped . '</t></is></c>' . "\n";
+                    $xml .= '      <c r="' . $ref . '" s="' . $style . '" t="inlineStr"><is><t>' . $escaped . '</t></is></c>' . "\n";
                 }
                 $colNum++;
             }
 
-            $sheetXml .= '    </row>' . "\n";
+            $xml .= '    </row>' . "\n";
             $rowNum++;
         }
-        $sheetXml .= '  </sheetData>' . "\n";
+        $xml .= '  </sheetData>' . "\n";
 
         // Merge cells
-        if (!empty($this->merges)) {
-            $sheetXml .= '  <mergeCells count="' . count($this->merges) . '">' . "\n";
-            foreach ($this->merges as $m) {
-                $sheetXml .= '    <mergeCell ref="' . $m . '"/>' . "\n";
+        if (!empty($sheet['merges'])) {
+            $xml .= '  <mergeCells count="' . count($sheet['merges']) . '">' . "\n";
+            foreach ($sheet['merges'] as $m) {
+                $xml .= '    <mergeCell ref="' . $m . '"/>' . "\n";
             }
-            $sheetXml .= '  </mergeCells>' . "\n";
+            $xml .= '  </mergeCells>' . "\n";
         }
 
-        $sheetXml .= '  <pageMargins left="0.5" right="0.5" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' . "\n";
-        $sheetXml .= '</worksheet>';
+        if ($isPrintA4) {
+            $xml .= '  <printOptions gridLines="1" horizontalCentered="1"/>' . "\n";
+            $xml .= '  <pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>' . "\n";
+            $xml .= '  <pageSetup paperSize="' . $paperSize . '" orientation="' . $orientation . '" fitToWidth="1" fitToHeight="0"/>' . "\n";
+            $xml .= '  <headerFooter><oddFooter>&amp;Cទំព័រ &amp;P នៃ &amp;N</oddFooter></headerFooter>' . "\n";
+        } else {
+            $xml .= '  <pageMargins left="0.5" right="0.5" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' . "\n";
+        }
 
-        // 2. Build styles.xml
-        $stylesXml = $this->buildStylesXml();
-
-        // 3. Build workbook.xml
-        $workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
-        $workbookXml .= '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' . "\n";
-        $workbookXml .= '  <sheets>' . "\n";
-        $workbookXml .= '    <sheet name="' . $this->sanitizeXml($this->sheetName) . '" sheetId="1" r:id="rId1"/>' . "\n";
-        $workbookXml .= '  </sheets>' . "\n";
-        $workbookXml .= '</workbook>';
-
-        // 4. Relationships
-        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
-        $wbRels .= '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . "\n";
-        $wbRels .= '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' . "\n";
-        $wbRels .= '  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' . "\n";
-        $wbRels .= '</Relationships>';
-
-        $rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
-        $rootRels .= '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . "\n";
-        $rootRels .= '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' . "\n";
-        $rootRels .= '</Relationships>';
-
-        // 5. Content Types
-        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
-        $contentTypes .= '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' . "\n";
-        $contentTypes .= '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' . "\n";
-        $contentTypes .= '  <Default Extension="xml" ContentType="application/xml"/>' . "\n";
-        $contentTypes .= '  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' . "\n";
-        $contentTypes .= '  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' . "\n";
-        $contentTypes .= '  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' . "\n";
-        $contentTypes .= '</Types>';
-
-        // Pack files
-        $zipFiles = [
-            '[Content_Types].xml' => $contentTypes,
-            '_rels/.rels' => $rootRels,
-            'xl/_rels/workbook.xml.rels' => $wbRels,
-            'xl/workbook.xml' => $workbookXml,
-            'xl/styles.xml' => $stylesXml,
-            'xl/worksheets/sheet1.xml' => $sheetXml,
-        ];
-
-        return $this->createZip($zipFiles);
+        $xml .= '</worksheet>';
+        return $xml;
     }
 
     private function buildStylesXml(): string {
@@ -171,7 +242,7 @@ class SimpleXlsx {
   <numFmts count="1">
     <numFmt numFmtId="164" formatCode="$#,##0.00"/>
   </numFmts>
-  <fonts count="8">
+  <fonts count="10">
     <!-- 0: Normal 11pt Khmer OS Siemreap -->
     <font><sz val="11"/><name val="Khmer OS Siemreap"/><family val="2"/></font>
     <!-- 1: Bold 11pt Khmer OS Siemreap -->
@@ -188,8 +259,12 @@ class SimpleXlsx {
     <font><b/><sz val="10.5"/><color rgb="FF166534"/><name val="Khmer OS Siemreap"/><family val="2"/></font>
     <!-- 7: Gray Regular 10pt -->
     <font><sz val="10"/><color rgb="FF64748B"/><name val="Khmer OS Siemreap"/><family val="2"/></font>
+    <!-- 8: Print Title Bold 15pt Dark (#0F172A) -->
+    <font><b/><sz val="15"/><color rgb="FF0F172A"/><name val="Khmer OS Siemreap"/><family val="2"/></font>
+    <!-- 9: Print Subtitle Bold 11pt Dark (#1E293B) -->
+    <font><b/><sz val="11"/><color rgb="FF1E293B"/><name val="Khmer OS Siemreap"/><family val="2"/></font>
   </fonts>
-  <fills count="8">
+  <fills count="9">
     <!-- 0: None -->
     <fill><patternFill patternType="none"/></fill>
     <!-- 1: Gray125 -->
@@ -206,8 +281,10 @@ class SimpleXlsx {
     <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/></patternFill></fill>
     <!-- 7: White Fill (#FFFFFF) -->
     <fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill>
+    <!-- 8: Attendance Header Dark Slate (#0F172A) -->
+    <fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/></patternFill></fill>
   </fills>
-  <borders count="4">
+  <borders count="5">
     <!-- 0: None -->
     <border><left/><right/><top/><bottom/><diagonal/></border>
     <!-- 1: Thin Gray (#CBD5E1) -->
@@ -231,11 +308,18 @@ class SimpleXlsx {
       <top style="thin"><color rgb="FF94A3B8"/></top>
       <bottom style="double"><color rgb="FF0F172A"/></bottom>
     </border>
+    <!-- 4: Solid Dark Border for Print (#475569) -->
+    <border>
+      <left style="thin"><color rgb="FF475569"/></left>
+      <right style="thin"><color rgb="FF475569"/></right>
+      <top style="thin"><color rgb="FF475569"/></top>
+      <bottom style="thin"><color rgb="FF475569"/></bottom>
+    </border>
   </borders>
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="16">
+  <cellXfs count="22">
     <!-- 0: Default Normal -->
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <!-- 1: Title Banner (s=1): Font 3, Fill 2, Center/Center -->
@@ -298,6 +382,30 @@ class SimpleXlsx {
     <xf numFmtId="0" fontId="1" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
       <alignment horizontal="center" vertical="center"/>
     </xf>
+    <!-- 16: Print Title Clean Center (s=16): Font 8, Fill 0, No Border -->
+    <xf numFmtId="0" fontId="8" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <!-- 17: Print Subtitle Center (s=17): Font 9, Fill 0, No Border -->
+    <xf numFmtId="0" fontId="9" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <!-- 18: Print Table Header (s=18): Font 2, Fill 8, Border 4, Center/Center -->
+    <xf numFmtId="0" fontId="2" fillId="8" borderId="4" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center" wrapText="1"/>
+    </xf>
+    <!-- 19: Print Cell Left (s=19): Font 0, Fill 7, Border 4 -->
+    <xf numFmtId="0" fontId="0" fillId="7" borderId="4" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <!-- 20: Print Cell Center (s=20): Font 0, Fill 7, Border 4 -->
+    <xf numFmtId="0" fontId="0" fillId="7" borderId="4" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <!-- 21: Print Signature Empty Cell (s=21): Font 0, Fill 7, Border 4 -->
+    <xf numFmtId="0" fontId="0" fillId="7" borderId="4" xfId="0" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
   </cellXfs>
   <cellStyles count="1">
     <cellStyle name="Normal" xfId="0" builtinId="0"/>
@@ -306,7 +414,6 @@ class SimpleXlsx {
     }
 
     private function createZip(array $files): string {
-        // Preferred: PHP ZipArchive
         if (class_exists('ZipArchive')) {
             $tmpFile = tempnam(sys_get_temp_dir(), 'wos_xlsx_');
             $zip = new ZipArchive();
