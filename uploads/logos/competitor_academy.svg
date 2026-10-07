@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="compGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4776E6" />
+      <stop offset="100%" stop-color="#8E54E9" />
+    </linearGradient>
+    <linearGradient id="coralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff758c" />
+      <stop offset="100%" stop-color="#ff7eb3" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Square -->
+  <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#compGrad)" />
+  <rect x="4" y="4" width="112" height="112" rx="28" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" />
+  
+  <!-- Academy Star / Compass Icon -->
+  <path d="M60 25 L65 37 L77 39 L68 48 L70 60 L60 54 L50 60 L52 48 L43 39 L55 37 Z" fill="url(#coralGrad)" />
+  
+  <!-- CA Typography -->
+  <text x="60" y="87" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" letter-spacing="2">CA</text>
+  <text x="60" y="103" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="9" fill="rgba(255,255,255,0.8)" text-anchor="middle" letter-spacing="1.2">ACADEMY</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="kshGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3c72" />
+      <stop offset="100%" stop-color="#2a5298" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700" />
+      <stop offset="100%" stop-color="#ffae00" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Shield -->
+  <rect x="4" y="4" width="112" height="112" rx="28" fill="url(#kshGrad)" />
+  <rect x="4" y="4" width="112" height="112" rx="28" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" />
+  
+  <!-- Graduation Cap Icon -->
+  <path d="M60 26 L90 38 L60 50 L30 38 Z" fill="url(#goldGrad)" />
+  <path d="M42 43 L42 58 C42 66 78 66 78 58 L78 43" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-linecap="round" />
+  <path d="M85 39 L85 55" stroke="url(#goldGrad)" stroke-width="2.5" stroke-linecap="round" />
+  <circle cx="85" cy="56" r="2.5" fill="url(#goldGrad)" />
+  
+  <!-- KSH Typography -->
+  <text x="60" y="85" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="25" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">KSH</text>
+  <text x="60" y="101" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="9" fill="rgba(255,255,255,0.75)" text-anchor="middle" letter-spacing="1.2">INSTITUTE</text>
+</svg>

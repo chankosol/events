@@ -1,0 +1,127 @@
+<?php
+// C:\xampp\htdocs\workshopos\controllers\business\SettingsController.php
+
+class BusinessSettingsController {
+    public static function index(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $business = $db->queryOne("SELECT * FROM businesses WHERE id = ?", [$businessId]);
+        $branding = $db->queryOne("SELECT * FROM business_branding WHERE business_id = ?", [$businessId]);
+        $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY sort_order", [$businessId]);
+
+        $title = 'Business Settings - ' . APP_NAME;
+        ob_start();
+        require VIEWS_PATH . '/business/settings/index.php';
+        $content = ob_get_clean();
+        require VIEWS_PATH . '/layouts/business.php';
+    }
+
+    public static function saveGeneral(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $name       = trim($_POST['name'] ?? '');
+        $phone      = trim($_POST['phone'] ?? '');
+        $country    = trim($_POST['country'] ?? '');
+        $city       = trim($_POST['city'] ?? '');
+        $address    = trim($_POST['address'] ?? '');
+        $website    = trim($_POST['website'] ?? '');
+        $timezone   = $_POST['timezone'] ?? 'Asia/Phnom_Penh';
+        $currency   = $_POST['preferred_currency'] ?? 'USD';
+        $language   = $_POST['preferred_language'] ?? 'en';
+
+        if (empty($name)) {
+            Session::flash('error', 'Company name is required.');
+            redirect(APP_URL . '/settings');
+        }
+
+        $db->execute(
+            "UPDATE businesses SET name = ?, phone = ?, country = ?, city = ?, address = ?, website = ?, timezone = ?, preferred_currency = ?, preferred_language = ?, updated_at = NOW() WHERE id = ?",
+            [$name, $phone, $country, $city, $address, $website, $timezone, $currency, $language, $businessId]
+        );
+
+        auditLog('business_settings_updated', 'business', $businessId);
+        Session::flash('success', 'General business settings saved successfully.');
+        redirect(APP_URL . '/settings');
+    }
+
+    public static function saveBranding(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $primaryColor   = $_POST['primary_color'] ?? '#0d6efd';
+        $secondaryColor = $_POST['secondary_color'] ?? '#6c757d';
+
+        $logoPath = null;
+        if (!empty($_FILES['logo']['name'])) {
+            $upload = uploadFile($_FILES['logo'], 'logo', $businessId);
+            if ($upload['success']) $logoPath = $upload['path'];
+        }
+
+        $branding = $db->queryOne("SELECT id FROM business_branding WHERE business_id = ?", [$businessId]);
+        if ($branding) {
+            $updates = ['primary_color = ?', 'secondary_color = ?', 'updated_at = NOW()'];
+            $params  = [$primaryColor, $secondaryColor];
+            if ($logoPath) {
+                $updates[] = 'logo_path = ?';
+                $params[]  = $logoPath;
+            }
+            $params[] = $businessId;
+            $db->execute("UPDATE business_branding SET " . implode(', ', $updates) . " WHERE business_id = ?", $params);
+        } else {
+            $db->execute(
+                "INSERT INTO business_branding (business_id, logo_path, primary_color, secondary_color) VALUES (?, ?, ?, ?)",
+                [$businessId, $logoPath, $primaryColor, $secondaryColor]
+            );
+        }
+
+        auditLog('branding_updated', 'business_branding', $businessId);
+        Session::flash('success', 'Company branding updated successfully.');
+        redirect(APP_URL . '/settings');
+    }
+
+    public static function savePaymentMethods(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $name       = trim($_POST['method_name'] ?? '');
+        $bank       = trim($_POST['bank'] ?? '');
+        $accName    = trim($_POST['account_name'] ?? '');
+        $accNum     = trim($_POST['account_number'] ?? '');
+        $instructions = trim($_POST['instructions'] ?? '');
+        $currency   = $_POST['currency'] ?? 'USD';
+
+        if (empty($name)) {
+            Session::flash('error', 'Payment method name is required.');
+            redirect(APP_URL . '/settings');
+        }
+
+        $qrPath = null;
+        if (!empty($_FILES['qr_image']['name'])) {
+            $upload = uploadFile($_FILES['qr_image'], 'qr_image', $businessId);
+            if ($upload['success']) $qrPath = $upload['path'];
+        }
+
+        $db->execute(
+            "INSERT INTO business_payment_methods (business_id, name, bank, account_name, account_number, qr_image_path, instructions, currency, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+            [$businessId, $name, $bank, $accName, $accNum, $qrPath, $instructions, $currency]
+        );
+
+        auditLog('payment_method_created', 'business_payment_methods', $db->lastInsertId());
+        Session::flash('success', 'Payment method added successfully.');
+        redirect(APP_URL . '/settings');
+    }
+}

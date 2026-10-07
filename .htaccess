@@ -1,0 +1,22 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /workshopos/
+
+# Block access to hidden/sensitive files and directories
+RewriteRule ^(core|config|helpers|models|migrations|seeds|vendor|lang|logs)/ - [F,L]
+RewriteRule ^uploads/.*?\.(php[0-9]?|phtml|pl|py|sh|cgi|exe|bat|cmd)$ - [F,L]
+
+# Prevent access to dot files and config/log extensions
+<FilesMatch "^\.|\.(env|log|sql|md|lock|json|ini|sh|bat|phar)$">
+    Require all denied
+</FilesMatch>
+
+# Allow index.php and other public assets
+<Files "index.php">
+    Require all granted
+</Files>
+
+# Rewrite all requests to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php?_url=$1 [QSA,L]
