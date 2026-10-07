@@ -101,8 +101,8 @@
             <button type="button" class="btn btn-outline-info text-dark d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#shareLinksModal">
                 <i class="bi bi-qr-code-scan me-1 text-primary"></i> តំណភ្ជាប់ & QR
             </button>
-            <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/registrations/export" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                <i class="bi bi-download me-1"></i> ទាញយក
+            <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/registrations/export" class="btn btn-outline-success d-inline-flex align-items-center fw-medium" title="ទាញយកជា Excel (.xlsx)">
+                <i class="bi bi-file-earmark-excel-fill me-1 text-success"></i> ទាញយក Excel
             </a>
             <?php if ($isUnpaid): ?>
                 <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/activate" class="btn btn-outline-primary d-inline-flex align-items-center" title="បង់ថ្លៃប្រព័ន្ធដើម្បីដំណើរការ">

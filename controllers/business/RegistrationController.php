@@ -196,7 +196,13 @@ class RegistrationController {
         $businessId = Tenant::id();
         $db = Database::getInstance();
 
-        $workshop = $db->queryOne("SELECT * FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$workshopId, $businessId]);
+        $workshop = $db->queryOne("
+            SELECT w.*, b.name as business_name 
+            FROM workshops w 
+            LEFT JOIN businesses b ON b.id = w.business_id 
+            WHERE w.id = ? AND w.business_id = ? AND w.deleted_at IS NULL", 
+            [$workshopId, $businessId]
+        );
         if (!$workshop) { http_response_code(404); die('Workshop not found.'); }
 
         $registrations = $db->query(
@@ -207,62 +213,227 @@ class RegistrationController {
              LEFT JOIN tickets t ON t.id = r.ticket_id 
              LEFT JOIN attendance a ON a.registration_id = r.id
              WHERE r.workshop_id = ? AND r.business_id = ? AND r.deleted_at IS NULL
-             ORDER BY r.created_at DESC", 
+             ORDER BY r.created_at ASC", 
             [$workshopId, $businessId]
         );
 
-        $filename = 'registrations_' . slugify($workshop['name']) . '_' . date('Ymd_His') . '.csv';
-        header('Content-Type: text/csv; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Pragma: no-cache');
+        // Calculate statistics
+        $totalCount = count($registrations);
+        $checkedInCount = 0;
+        $totalRevenue = 0.0;
+        foreach ($registrations as $r) {
+            if (!empty($r['checked_in_at'])) $checkedInCount++;
+            $totalRevenue += (float)($r['ticket_price'] ?? 0);
+        }
+        $pendingCheckinCount = $totalCount - $checkedInCount;
+
+        // Optional plain CSV fallback if requested via ?format=csv
+        if (isset($_GET['format']) && $_GET['format'] === 'csv') {
+            $filename = 'registrations_' . slugify($workshop['name']) . '_' . date('Ymd_His') . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            $output = fopen('php://output', 'w');
+            fputs($output, "\xEF\xBB\xBF");
+            fputcsv($output, ['ល.រ', 'កូដចុះឈ្មោះ', 'ឈ្មោះសិក្ខាកាម', 'ភេទ', 'លេខទូរស័ព្ទ', 'អ៊ីមែល', 'អង្គភាព/ស្ថាប័ន', 'តួនាទី', 'រាជធានី-ខេត្ត', 'ប្រភេទសំបុត្រ', 'តម្លៃ ($)', 'ស្ថានភាព', 'ការបង់ប្រាក់', 'វត្តមាន (Check-in)', 'កាលបរិច្ឆេទចុះឈ្មោះ']);
+            $no = 1;
+            foreach ($registrations as $reg) {
+                $genderText = $reg['gender'] === 'female' ? 'ស្រី' : ($reg['gender'] === 'male' ? 'ប្រុស' : 'ផ្សេងៗ');
+                $checkinText = !empty($reg['checked_in_at']) ? date('d-m-Y H:i:s', strtotime($reg['checked_in_at'])) : 'មិនទាន់ស្កេន';
+                fputcsv($output, [
+                    $no++,
+                    $reg['registration_code'],
+                    $reg['participant_name'],
+                    $genderText,
+                    $reg['phone'] ?? '',
+                    $reg['email'] ?? '',
+                    $reg['company'] ?? '',
+                    $reg['position'] ?? '',
+                    $reg['province'] ?? '',
+                    $reg['ticket_name'] ?? 'ទូទៅ',
+                    number_format((float)($reg['ticket_price'] ?? 0), 2),
+                    $reg['status'],
+                    $reg['payment_status'],
+                    $checkinText,
+                    date('d-m-Y H:i', strtotime($reg['created_at']))
+                ]);
+            }
+            fclose($output);
+            exit;
+        }
+
+        // Generate Executive-grade Styled XLSX
+        $xlsx = new SimpleXlsx();
+        $xlsx->setSheetName('បញ្ជីសិក្ខាកាម');
+        // Column widths: [No, Code, Name, Gender, Phone, Email, Company, Position, Province, Ticket, Price, Status, Payment, Checkin, RegDate]
+        $xlsx->setColWidths([6, 17, 26, 10, 16, 28, 25, 20, 16, 16, 13, 16, 16, 22, 20]);
+
+        // Row 1: Top spacing
+        $xlsx->addRow([], 10);
+
+        // Row 2: Main Title Banner (Merged A2:O2)
+        $xlsx->addRow([
+            ['v' => 'តារាងបញ្ជីឈ្មោះសិក្ខាកាមចូលរួម (PARTICIPANT LIST)', 's' => 1]
+        ], 38);
+        $xlsx->mergeCells('A2:O2');
+
+        // Row 3: Event Title Banner (Merged A3:O3)
+        $xlsx->addRow([
+            ['v' => 'ព្រឹត្តិការណ៍៖ ' . $workshop['name'], 's' => 2]
+        ], 28);
+        $xlsx->mergeCells('A3:O3');
+
+        // Row 4: Spacing
+        $xlsx->addRow([], 10);
+
+        // Format Date string
+        $dateStr = formatDate($workshop['start_date']);
+        if (!empty($workshop['end_date']) && $workshop['end_date'] !== $workshop['start_date']) {
+            $dateStr .= ' ដល់ ' . formatDate($workshop['end_date']);
+        }
+        if (!empty($workshop['start_time'])) {
+            $dateStr .= ' (' . substr($workshop['start_time'], 0, 5);
+            if (!empty($workshop['end_time'])) {
+                $dateStr .= ' - ' . substr($workshop['end_time'], 0, 5);
+            }
+            $dateStr .= ')';
+        }
+
+        $trainerStr = !empty($workshop['trainer_name']) ? $workshop['trainer_name'] : 'មិនបានបញ្ជាក់';
+        $venueStr = !empty($workshop['venue']) ? $workshop['venue'] : 'អនឡាញ (Online)';
+        if (!empty($workshop['address'])) {
+            $venueStr .= ' (' . $workshop['address'] . ')';
+        }
+        $organizerStr = !empty($workshop['organizer']) ? $workshop['organizer'] : ($workshop['business_name'] ?? 'KSH Training Institute');
+        $statsStr = $totalCount . ' នាក់ (វត្តមាន៖ ' . $checkedInCount . ' | មិនទាន់ស្កេន៖ ' . $pendingCheckinCount . ')';
+
+        // Row 5: Metadata Row 1
+        $xlsx->addRow([
+            ['v' => 'កាលបរិច្ឆេទ៖', 's' => 3],
+            ['v' => $dateStr, 's' => 4],
+            [], [],
+            ['v' => 'វាគ្មិនកិត្តិយស៖', 's' => 3],
+            ['v' => $trainerStr, 's' => 4],
+            [], [],
+            ['v' => 'ទីតាំង៖', 's' => 3],
+            ['v' => $venueStr, 's' => 4],
+        ], 24);
+        $xlsx->mergeCells('B5:D5');
+        $xlsx->mergeCells('F5:H5');
+        $xlsx->mergeCells('J5:O5');
+
+        // Row 6: Metadata Row 2
+        $xlsx->addRow([
+            ['v' => 'អ្នករៀបចំ៖', 's' => 3],
+            ['v' => $organizerStr, 's' => 4],
+            [], [],
+            ['v' => 'សរុបសិក្ខាកាម៖', 's' => 3],
+            ['v' => $statsStr, 's' => 4],
+            [], [],
+            ['v' => 'កាលបរិច្ឆេទ Export៖', 's' => 3],
+            ['v' => date('d-m-Y H:i:s'), 's' => 4],
+        ], 24);
+        $xlsx->mergeCells('B6:D6');
+        $xlsx->mergeCells('F6:H6');
+        $xlsx->mergeCells('J6:O6');
+
+        // Row 7: Spacing
+        $xlsx->addRow([], 12);
+
+        // Row 8: Table Header
+        $headers = [
+            'ល.រ', 'កូដចុះឈ្មោះ', 'ឈ្មោះសិក្ខាកាម', 'ភេទ', 'លេខទូរស័ព្ទ',
+            'អ៊ីមែល', 'អង្គភាព / ស្ថាប័ន', 'មុខតំណែង', 'រាជធានី-ខេត្ត',
+            'ប្រភេទសំបុត្រ', 'តម្លៃ ($)', 'ស្ថានភាព', 'ការបង់ប្រាក់', 'វត្តមាន (Check-in)', 'កាលបរិច្ឆេទចុះឈ្មោះ'
+        ];
+        $headerCells = [];
+        foreach ($headers as $h) {
+            $headerCells[] = ['v' => $h, 's' => 5];
+        }
+        $xlsx->addRow($headerCells, 30);
+
+        // Status Translations
+        $statusLabels = [
+            'confirmed' => 'បានបញ្ជាក់',
+            'attended' => 'បានចូលរួម',
+            'pending_payment' => 'រង់ចាំបង់ប្រាក់',
+            'pending_approval' => 'រង់ចាំអនុម័ត',
+            'pending_verification' => 'រង់ចាំផ្ទៀងផ្ទាត់',
+            'waitlisted' => 'រង់ចាំ (Waitlist)',
+            'cancelled' => 'បានបោះបង់',
+            'rejected' => 'បានបដិសេធ',
+            'draft' => 'សេចក្តីព្រាង'
+        ];
+
+        $paymentLabels = [
+            'paid' => 'បានបង់ប្រាក់',
+            'paid_cash' => 'បង់ប្រាក់សុទ្ធ',
+            'complimentary' => 'ឥតគិតថ្លៃ',
+            'waived' => 'លើកលែង',
+            'unpaid' => 'មិនទាន់បង់',
+            'refunded' => 'បានសងប្រាក់វិញ',
+            'pending' => 'រង់ចាំផ្ទៀងផ្ទាត់'
+        ];
+
+        // Rows 9+: Data Rows
+        $no = 1;
+        foreach ($registrations as $idx => $reg) {
+            $isZebra = ($idx % 2 === 1);
+            $sLeft = $isZebra ? 9 : 6;
+            $sCenter = $isZebra ? 10 : 7;
+            $sRight = $isZebra ? 11 : 8;
+
+            $genderText = $reg['gender'] === 'female' ? 'ស្រី' : ($reg['gender'] === 'male' ? 'ប្រុស' : ($reg['gender'] ? 'ផ្សេងៗ' : '-'));
+            $checkinText = !empty($reg['checked_in_at']) ? date('d-m-Y H:i:s', strtotime($reg['checked_in_at'])) : 'មិនទាន់ស្កេន';
+            $statusText = $statusLabels[$reg['status']] ?? $reg['status'];
+            $paymentText = $paymentLabels[$reg['payment_status']] ?? $reg['payment_status'];
+            $price = (float)($reg['ticket_price'] ?? 0);
+            $regDate = !empty($reg['created_at']) ? date('d-m-Y H:i', strtotime($reg['created_at'])) : '-';
+
+            $rowCells = [
+                ['v' => $no++, 's' => $sCenter, 't' => 'n'],
+                ['v' => $reg['registration_code'], 's' => $sCenter],
+                ['v' => $reg['participant_name'], 's' => $sLeft],
+                ['v' => $genderText, 's' => $sCenter],
+                ['v' => $reg['phone'] ?? '', 's' => $sCenter], // phone string preserves leading 0
+                ['v' => $reg['email'] ?? '', 's' => $sLeft],
+                ['v' => $reg['company'] ?? '', 's' => $sLeft],
+                ['v' => $reg['position'] ?? '', 's' => $sLeft],
+                ['v' => $reg['province'] ?? '', 's' => $sCenter],
+                ['v' => $reg['ticket_name'] ?? 'ទូទៅ', 's' => $sCenter],
+                ['v' => $price, 's' => $sRight, 't' => 'n'],
+                ['v' => $statusText, 's' => $sCenter],
+                ['v' => $paymentText, 's' => $sCenter],
+                ['v' => $checkinText, 's' => $sCenter],
+                ['v' => $regDate, 's' => $sCenter],
+            ];
+            $xlsx->addRow($rowCells, 24);
+        }
+
+        // Summary Row
+        $summaryRowNum = 8 + count($registrations) + 1;
+        $xlsx->addRow([
+            ['v' => 'សរុបទាំងអស់ (TOTAL)', 's' => 12],
+            [], [], [], [], [], [], [], [], [],
+            ['v' => $totalRevenue, 's' => 13, 't' => 'n'],
+            ['v' => 'សរុប ' . $totalCount . ' នាក់ (វត្តមាន: ' . $checkedInCount . ' នាក់)', 's' => 14],
+            [], [], []
+        ], 26);
+        $xlsx->mergeCells('A' . $summaryRowNum . ':J' . $summaryRowNum);
+        $xlsx->mergeCells('L' . $summaryRowNum . ':O' . $summaryRowNum);
+
+        $filename = 'បញ្ជីសិក្ខាកាម_' . slugify($workshop['name']) . '_' . date('Ymd_His') . '.xlsx';
+        $content = $xlsx->build();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"; filename*=UTF-8\'\'' . rawurlencode($filename));
+        header('Content-Length: ' . strlen($content));
+        header('Cache-Control: max-age=0, no-cache, no-store, must-revalidate');
+        header('Pragma: public');
         header('Expires: 0');
 
-        $output = fopen('php://output', 'w');
-        // UTF-8 BOM for Microsoft Excel compatibility
-        fputs($output, "\xEF\xBB\xBF");
-
-        fputcsv($output, [
-            'ល.រ',
-            'កូដចុះឈ្មោះ',
-            'ឈ្មោះសិក្ខាកាម',
-            'ភេទ',
-            'លេខទូរស័ព្ទ',
-            'អ៊ីមែល',
-            'អង្គភាព/ស្ថាប័ន',
-            'តួនាទី',
-            'រាជធានី-ខេត្ត',
-            'ប្រភេទសំបុត្រ',
-            'តម្លៃ ($)',
-            'ស្ថានភាព',
-            'ការបង់ប្រាក់',
-            'ស្កេនវត្តមាន',
-            'កាលបរិច្ឆេទចុះឈ្មោះ'
-        ]);
-
-        $no = 1;
-        foreach ($registrations as $reg) {
-            $genderText = $reg['gender'] === 'female' ? 'ស្រី' : ($reg['gender'] === 'male' ? 'ប្រុស' : 'ផ្សេងៗ');
-            $checkinText = !empty($reg['checked_in_at']) ? date('Y-m-d H:i:s', strtotime($reg['checked_in_at'])) : 'មិនទាន់ស្កេន';
-
-            fputcsv($output, [
-                $no++,
-                $reg['registration_code'],
-                $reg['participant_name'],
-                $genderText,
-                $reg['phone'] ?? '',
-                $reg['email'] ?? '',
-                $reg['company'] ?? '',
-                $reg['position'] ?? '',
-                $reg['province'] ?? '',
-                $reg['ticket_name'] ?? 'ទូទៅ',
-                number_format((float)($reg['ticket_price'] ?? 0), 2),
-                $reg['status'],
-                $reg['payment_status'],
-                $checkinText,
-                date('Y-m-d H:i', strtotime($reg['created_at']))
-            ]);
-        }
-        fclose($output);
+        echo $content;
         exit;
     }
     
