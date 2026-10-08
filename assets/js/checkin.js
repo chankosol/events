@@ -64,49 +64,65 @@ document.addEventListener('DOMContentLoaded', function() {
                 fps: 15,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    const edge = Math.max(180, Math.floor(minEdge * 0.85));
+                    // 0.78 creates equal ~43px gaps on all 4 sides and leaves room for the overlay stop button
+                    const edge = Math.max(180, Math.floor(minEdge * 0.78));
                     return { width: edge, height: edge };
                 },
-                aspectRatio: 1.333333
+                aspectRatio: 1.0
             },
             /* verbose= */ false
         );
         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
-        // Translate HTML5 QR Code Scanner buttons into Khmer
+        // Translate and style HTML5 QR Code Scanner UI
         translateScannerUI();
     }
 
     function translateScannerUI() {
+        const readerEl = document.getElementById('reader');
+
         const observer = new MutationObserver(function() {
-            const permBtn = document.getElementById('reader__camera_permission_button');
+            // Stop Button & Scanning state
+            const stopBtn = document.getElementById('html5-qrcode-button-camera-stop') || document.getElementById('reader__camera_stop_button');
+            if (stopBtn && stopBtn.style.display !== 'none' && !stopBtn.hidden) {
+                if (readerEl && !readerEl.classList.contains('is-scanning')) {
+                    readerEl.classList.add('is-scanning');
+                }
+                if (!stopBtn.querySelector('.bi-stop-circle-fill')) {
+                    stopBtn.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop Scanning';
+                }
+            } else {
+                if (readerEl && readerEl.classList.contains('is-scanning')) {
+                    readerEl.classList.remove('is-scanning');
+                }
+            }
+
+            // Camera Permission Button
+            const permBtn = document.getElementById('html5-qrcode-button-camera-permission') || document.getElementById('reader__camera_permission_button');
             if (permBtn && !permBtn.dataset.translated) {
                 permBtn.dataset.translated = "true";
                 permBtn.innerHTML = '<i class="bi bi-camera-fill me-1"></i> អនុញ្ញាតបើកកាមេរ៉ាស្កេន';
                 permBtn.className = "btn btn-primary fw-bold px-3 py-2";
             }
-            const fileScanLink = document.querySelector('#reader__dashboard_section_fsr a');
+
+            // File scan link
+            const fileScanLink = document.getElementById('html5-qrcode-anchor-scan-type-change') || document.querySelector('#reader__dashboard_section_fsr a');
             if (fileScanLink && !fileScanLink.dataset.translated) {
                 fileScanLink.dataset.translated = "true";
                 fileScanLink.innerHTML = '<i class="bi bi-image me-1"></i> ជ្រើសរើសរូបថតកូដ QR ពីកុំព្យូទ័រ';
             }
-            const startBtn = document.getElementById('reader__camera_start_button');
+
+            // Start Camera Button
+            const startBtn = document.getElementById('html5-qrcode-button-camera-start') || document.getElementById('reader__camera_start_button');
             if (startBtn && !startBtn.dataset.translated) {
                 startBtn.dataset.translated = "true";
                 startBtn.innerHTML = '<i class="bi bi-camera-video me-1"></i> ចាប់ផ្តើមកាមេរ៉ា';
                 startBtn.className = "btn btn-success fw-bold px-3 py-2";
             }
-            const stopBtn = document.getElementById('reader__camera_stop_button');
-            if (stopBtn && !stopBtn.dataset.translated) {
-                stopBtn.dataset.translated = "true";
-                stopBtn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> បិទកាមេរ៉ា';
-                stopBtn.className = "btn btn-outline-danger fw-bold px-3 py-2";
-            }
         });
 
-        const readerEl = document.getElementById('reader');
         if (readerEl) {
-            observer.observe(readerEl, { childList: true, subtree: true });
+            observer.observe(readerEl, { childList: true, subtree: true, attributes: true });
         }
     }
 

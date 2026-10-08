@@ -2,12 +2,64 @@
 // views/business/checkin/index.php
 ?>
 <style>
-    .scanner-container { position: relative; width: 100%; max-width: 460px; margin: 0 auto; }
-    #reader { width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #f8fafc; }
+    .scanner-container { position: relative; width: 100%; max-width: 390px; margin: 0 auto; }
+    #reader { width: 100%; border: none !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #1a1e21; position: relative; }
+    #reader video { object-fit: cover !important; border-radius: 12px; }
+
+    /* When scanning is active: move dashboard and Stop button over the bottom gap of the camera */
+    #reader.is-scanning #reader__dashboard,
+    #reader:has(#html5-qrcode-button-camera-stop:not([style*="display: none"])) #reader__dashboard {
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 15 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        pointer-events: none;
+    }
+    #reader.is-scanning #reader__dashboard *,
+    #reader:has(#html5-qrcode-button-camera-stop:not([style*="display: none"])) #reader__dashboard * {
+        pointer-events: auto;
+    }
+
+    /* Style the Stop Scanning button to sit over the bottom gap */
+    #html5-qrcode-button-camera-stop {
+        position: absolute !important;
+        bottom: 8px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 20 !important;
+        background-color: #0d6efd !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.45) !important;
+        padding: 4px 14px !important;
+        border-radius: 20px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+        cursor: pointer !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        line-height: 1.3 !important;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+    }
+    #html5-qrcode-button-camera-stop:hover {
+        background-color: #dc3545 !important;
+        border-color: rgba(255, 255, 255, 0.8) !important;
+        transform: translateX(-50%) scale(1.04) !important;
+    }
+
     #reader button { background-color: #0d6efd; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 6px; transition: 0.2s; font-size: 0.9rem; }
     #reader button:hover { background-color: #0b5ed7; }
     #reader a { color: #0d6efd; text-decoration: none; font-size: 0.85rem; }
-    .scan-result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; display: none; flex-direction: column; justify-content: center; align-items: center; border-radius: 12px; background: rgba(255,255,255,0.95); }
+    .scan-result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 30; display: none; flex-direction: column; justify-content: center; align-items: center; border-radius: 12px; background: rgba(255,255,255,0.95); }
     .scan-success { background: rgba(40, 167, 69, 0.95); color: white; }
     .scan-error { background: rgba(220, 53, 69, 0.95); color: white; }
     .scan-warning { background: rgba(255, 193, 7, 0.95); color: #333; }
