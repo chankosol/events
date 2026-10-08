@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fps: 15,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    // 0.78 creates equal ~43px gaps on all 4 sides and leaves room for the overlay stop button
-                    const edge = Math.max(180, Math.floor(minEdge * 0.78));
+                    // 0.82 provides a spacious square with balanced gaps on all 4 sides
+                    const edge = Math.max(180, Math.floor(minEdge * 0.82));
                     return { width: edge, height: edge };
                 },
                 aspectRatio: 1.0
@@ -88,8 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (readerEl && !readerEl.classList.contains('is-scanning')) {
                     readerEl.classList.add('is-scanning');
                 }
-                if (!stopBtn.querySelector('.bi-stop-circle-fill')) {
-                    stopBtn.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop Scanning';
+                if (!stopBtn.querySelector('.bi-stop-circle')) {
+                    stopBtn.innerHTML = '<i class="bi bi-stop-circle me-1" style="font-size: 0.72rem;"></i> Stop Scanning';
                 }
             } else {
                 if (readerEl && readerEl.classList.contains('is-scanning')) {
