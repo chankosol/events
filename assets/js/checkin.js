@@ -306,9 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td class="text-muted small text-truncate" style="max-width: 100px;" title="${escapeHtml(p.position || '-')}">${escapeHtml(p.position || '-')}</td>
             <td class="text-success fw-bold text-nowrap">${timeStr}</td>
             <td class="text-end pe-3 text-nowrap">
-                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-normal" style="font-size: 0.75rem;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.reg_id})">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន
-                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-normal" style="font-size: 0.75rem; padding: 3px 7px; line-height: 1.2;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.reg_id})"><i class="bi bi-arrow-counterclockwise" style="margin-right: 2px;"></i>លុបវត្តមាន</button>
             </td>
         `;
         recentTbody.prepend(tr);
