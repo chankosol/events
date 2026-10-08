@@ -39,12 +39,16 @@ $db = Database::getInstance();
 $searchParam = '%' . $query . '%';
 
 $sql = "SELECT r.id as registration_id, r.registration_code, r.status, r.is_vip,
-               p.name, p.phone, p.email, p.company,
+               p.name, p.phone, p.email,
+               COALESCE(d.organization, p.company, '-') as company,
+               COALESCE(d.province, p.province, 'ទូទៅ') as province,
+               COALESCE(p.position, '-') as position,
                t.name as ticket_name,
                pq.token,
                a.checked_in_at
         FROM registrations r
         JOIN participants p ON p.id = r.participant_id
+        LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
         LEFT JOIN participant_qr pq ON pq.registration_id = r.id AND pq.is_active = 1
         LEFT JOIN tickets t ON t.id = r.ticket_id
         LEFT JOIN attendance a ON a.registration_id = r.id

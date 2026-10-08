@@ -35,11 +35,15 @@ class CheckinController {
         );
 
         $recentAttendance = $db->query(
-            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone, p.company, r.id as registration_id, r.registration_code, t.name as ticket_name
+            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone,
+                    COALESCE(d.organization, p.company, '-') as company,
+                    COALESCE(d.province, p.province, 'ទូទៅ') as province,
+                    COALESCE(p.position, '-') as position,
+                    r.id as registration_id, r.registration_code
              FROM attendance a
              JOIN registrations r ON r.id = a.registration_id
              JOIN participants p ON p.id = a.participant_id
-             LEFT JOIN tickets t ON t.id = r.ticket_id
+             LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
              WHERE a.workshop_id = ? AND a.checked_in_at IS NOT NULL
              ORDER BY a.checked_in_at DESC
              LIMIT 10",

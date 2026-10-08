@@ -300,10 +300,16 @@ document.addEventListener('DOMContentLoaded', function() {
         tr.dataset.regId = p.reg_id || '';
         tr.dataset.regCode = p.reg_code || '';
         tr.innerHTML = `
-            <td class="ps-3 fw-bold text-dark">${escapeHtml(p.name)}</td>
-            <td><span class="badge bg-light text-dark font-monospace border">${escapeHtml(p.reg_code)}</span></td>
-            <td>${escapeHtml(p.ticket || 'ទូទៅ')}</td>
-            <td class="text-end pe-3 text-success fw-bold">${timeStr}</td>
+            <td class="ps-3 fw-bold text-dark text-nowrap">${escapeHtml(p.name)}</td>
+            <td><span class="badge bg-primary-subtle text-primary border">${escapeHtml(p.province || 'ទូទៅ')}</span></td>
+            <td class="text-muted small text-truncate" style="max-width: 130px;" title="${escapeHtml(p.company || '-')}">${escapeHtml(p.company || '-')}</td>
+            <td class="text-muted small text-truncate" style="max-width: 100px;" title="${escapeHtml(p.position || '-')}">${escapeHtml(p.position || '-')}</td>
+            <td class="text-success fw-bold text-nowrap">${timeStr}</td>
+            <td class="text-end pe-3 text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.reg_id})">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន
+                </button>
+            </td>
         `;
         recentTbody.prepend(tr);
         setTimeout(() => tr.classList.remove('table-success'), 3000);
@@ -432,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         recentCount.innerText = updated + ' នាក់';
                     }
                     if (recentTbody.querySelectorAll('tr').length === 0) {
-                        recentTbody.innerHTML = '<tr id="no-recent-row"><td colspan="4" class="text-center py-4 text-muted small">មិនទាន់មានការស្កេនវត្តមាននៅឡើយទេ។</td></tr>';
+                        recentTbody.innerHTML = '<tr id="no-recent-row"><td colspan="6" class="text-center py-4 text-muted small">មិនទាន់មានការស្កេនវត្តមាននៅឡើយទេ។</td></tr>';
                     }
                 }
 

@@ -50,7 +50,7 @@ if (!$workshop) {
 // Find QR token
 $qr = $db->queryOne(
     "SELECT pq.*, r.id as registration_id, r.status as reg_status, r.payment_status, r.is_vip, r.registration_code, r.id_card_number,
-            p.name, p.email, p.phone, p.company, p.photo, p.gender, p.province as participant_province,
+            p.name, p.email, p.phone, p.company, p.position, p.photo, p.gender, p.province as participant_province,
             d.province as delegation_province, d.organization as delegation_org, d.head_name as delegation_head,
             t.name as ticket_name, t.ticket_type
      FROM participant_qr pq
@@ -114,6 +114,7 @@ if ($scanType === 'checkin') {
                 'gender'       => $qr['gender'],
                 'company'      => $qr['company'] ?: ($qr['delegation_org'] ?? ''),
                 'province'     => $qr['delegation_province'] ?: ($qr['participant_province'] ?? 'ទូទៅ'),
+                'position'     => $qr['position'] ?: '-',
                 'photo_url'    => $photoUrl,
                 'id_card'      => $qr['id_card_number'],
                 'ticket'       => $qr['ticket_name'] ?? 'ស្តង់ដារ',
@@ -157,6 +158,7 @@ if ($scanType === 'checkin') {
             'gender'       => $qr['gender'],
             'company'      => $qr['company'] ?: ($qr['delegation_org'] ?? ''),
             'province'     => $qr['delegation_province'] ?: ($qr['participant_province'] ?? 'ទូទៅ'),
+            'position'     => $qr['position'] ?: '-',
             'photo_url'    => $photoUrl,
             'id_card'      => $qr['id_card_number'],
             'ticket'       => $qr['ticket_name'] ?? 'ស្តង់ដារ',

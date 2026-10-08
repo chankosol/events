@@ -197,23 +197,31 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-3">ឈ្មោះសិក្ខាកាម</th>
-                                    <th>កូដចុះឈ្មោះ</th>
-                                    <th>ប្រភេទសំបុត្រ</th>
-                                    <th class="text-end pe-3">ម៉ោងស្កេន</th>
+                                    <th>ខេត្ត</th>
+                                    <th>ស្ថាប័ន</th>
+                                    <th>តួនាទី</th>
+                                    <th>ម៉ោងស្កេន</th>
+                                    <th class="text-end pe-3">សកម្មភាព</th>
                                 </tr>
                             </thead>
                             <tbody id="recent-attendance-tbody">
                                 <?php if (!empty($recentAttendance)): ?>
                                     <?php foreach ($recentAttendance as $ra): ?>
                                         <tr data-reg-id="<?= $ra['registration_id'] ?>" data-reg-code="<?= htmlspecialchars($ra['registration_code']) ?>">
-                                            <td class="ps-3 fw-bold text-dark"><?= htmlspecialchars($ra['name']) ?></td>
-                                            <td><span class="badge bg-light text-dark font-monospace border"><?= htmlspecialchars($ra['registration_code']) ?></span></td>
-                                            <td><?= htmlspecialchars($ra['ticket_name'] ?? 'ទូទៅ') ?></td>
-                                            <td class="text-end pe-3 text-success fw-bold"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
+                                            <td class="ps-3 fw-bold text-dark text-nowrap"><?= htmlspecialchars($ra['name']) ?></td>
+                                            <td><span class="badge bg-primary-subtle text-primary border"><?= htmlspecialchars($ra['province']) ?></span></td>
+                                            <td class="text-muted small text-truncate" style="max-width: 130px;" title="<?= htmlspecialchars($ra['company']) ?>"><?= htmlspecialchars($ra['company']) ?></td>
+                                            <td class="text-muted small text-truncate" style="max-width: 100px;" title="<?= htmlspecialchars($ra['position']) ?>"><?= htmlspecialchars($ra['position']) ?></td>
+                                            <td class="text-success fw-bold text-nowrap"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
+                                            <td class="text-end pe-3 text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(<?= $ra['registration_id'] ?>)">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន
+                                                </button>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr id="no-recent-row"><td colspan="4" class="text-center py-4 text-muted small">មិនទាន់មានការស្កេនវត្តមាននៅឡើយទេ។</td></tr>
+                                    <tr id="no-recent-row"><td colspan="6" class="text-center py-4 text-muted small">មិនទាន់មានការស្កេនវត្តមាននៅឡើយទេ។</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
