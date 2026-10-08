@@ -32,14 +32,22 @@ if (file_exists($envFile)) {
 $timezone = getenv('APP_TIMEZONE') ?: 'Asia/Phnom_Penh';
 date_default_timezone_set($timezone);
 
-// Application constants
-$httpHost = $_SERVER['HTTP_HOST'] ?? null;
-if (!empty($httpHost)) {
+// Application constants & Dynamic URL detection
+$envUrl = getenv('APP_URL');
+if (!empty($envUrl)) {
+    $appUrl = rtrim($envUrl, '/');
+    $basePath = parse_url($appUrl, PHP_URL_PATH) ?: '';
+} elseif (!empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $appUrl = "{$scheme}://{$httpHost}/workshopos";
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    $basePath = ($scriptDir === '/' || $scriptDir === '\\' || $scriptDir === '.') ? '' : rtrim(str_replace('\\', '/', $scriptDir), '/');
+    $appUrl = "{$scheme}://{$_SERVER['HTTP_HOST']}{$basePath}";
 } else {
-    $appUrl = getenv('APP_URL') ?: 'http://localhost/workshopos';
+    $basePath = '/workshopos';
+    $appUrl = 'http://localhost/workshopos';
 }
+
+define('BASE_PATH',     $basePath);
 define('APP_NAME',      getenv('APP_NAME')      ?: 'Workshop OS');
 define('APP_URL',       rtrim($appUrl, '/'));
 define('APP_ENV',       getenv('APP_ENV')       ?: 'development');

@@ -203,7 +203,7 @@ function currentPath(): string {
     } else {
         $uri = parse_url($rawUri, PHP_URL_PATH) ?: '/';
     }
-    $basePath = parse_url(defined('APP_URL') ? APP_URL : 'http://localhost/workshopos', PHP_URL_PATH) ?: '/workshopos';
+    $basePath = (string)(parse_url(defined('APP_URL') ? APP_URL : 'http://localhost/workshopos', PHP_URL_PATH) ?? '');
     $basePath = rtrim($basePath, '/');
     if ($basePath !== '') {
         while (strpos($uri, $basePath) === 0) {

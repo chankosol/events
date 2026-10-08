@@ -23,7 +23,7 @@ if (Auth::check()) {
 }
 
 // Initialize Router
-$router = new Router('/workshopos');
+$router = new Router(defined('BASE_PATH') ? BASE_PATH : '');
 
 // Register routes
 require_once ROOT_PATH . '/routes.php';
