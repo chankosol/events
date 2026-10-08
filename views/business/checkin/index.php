@@ -25,7 +25,7 @@
         pointer-events: auto;
     }
 
-    /* Style the Stop Scanning button to be slim with light font and vertically centered icon */
+    /* Style the Stop Scanning button to have comfortable height with light font and vertically centered icon */
     #html5-qrcode-button-camera-stop {
         position: absolute !important;
         bottom: 8px !important;
@@ -35,10 +35,10 @@
         background-color: rgba(13, 110, 253, 0.85) !important;
         color: #ffffff !important;
         border: 1px solid rgba(255, 255, 255, 0.35) !important;
-        padding: 3px 11px !important;
-        border-radius: 14px !important;
-        font-size: 0.73rem !important;
-        font-weight: 300 !important;
+        padding: 5px 14px !important;
+        border-radius: 16px !important;
+        font-size: 0.78rem !important;
+        font-weight: 400 !important;
         letter-spacing: 0.2px !important;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
@@ -46,8 +46,8 @@
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 4px !important;
-        line-height: 1 !important;
+        gap: 5px !important;
+        line-height: 1.2 !important;
         backdrop-filter: blur(4px);
         transition: all 0.2s ease !important;
         white-space: nowrap !important;

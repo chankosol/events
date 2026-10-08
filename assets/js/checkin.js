@@ -88,8 +88,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (readerEl && !readerEl.classList.contains('is-scanning')) {
                     readerEl.classList.add('is-scanning');
                 }
-                if (!stopBtn.querySelector('.bi-stop-circle')) {
-                    stopBtn.innerHTML = '<i class="bi bi-stop-circle"></i><span>Stop Scanning</span>';
+                if (stopBtn.dataset.text !== 'stop_scan_kh') {
+                    stopBtn.dataset.text = 'stop_scan_kh';
+                    stopBtn.innerHTML = '<i class="bi bi-stop-circle"></i><span>បិទស្កេន</span>';
                 }
             } else {
                 if (readerEl && readerEl.classList.contains('is-scanning')) {
