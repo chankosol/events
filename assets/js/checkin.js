@@ -61,14 +61,22 @@ document.addEventListener('DOMContentLoaded', function() {
         html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
             {
-                fps: 15,
+                fps: 20,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
                     // 0.72 creates a spacious ~49px unused margin around the scanning box
                     const edge = Math.max(180, Math.floor(minEdge * 0.72));
                     return { width: edge, height: edge };
                 },
-                aspectRatio: 1.0
+                aspectRatio: 1.0,
+                videoConstraints: {
+                    width: { min: 640, ideal: 1920 },
+                    height: { min: 480, ideal: 1080 },
+                    facingMode: "environment"
+                },
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
             },
             /* verbose= */ false
         );
