@@ -60,7 +60,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function initScanner() {
         html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
-            { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
+            {
+                fps: 15,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const edge = Math.max(180, Math.floor(minEdge * 0.85));
+                    return { width: edge, height: edge };
+                },
+                aspectRatio: 1.333333
+            },
             /* verbose= */ false
         );
         html5QrcodeScanner.render(onScanSuccess, onScanFailure);

@@ -2,9 +2,9 @@
 // views/business/checkin/index.php
 ?>
 <style>
-    .scanner-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; }
-    #reader { width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #f8fafc; min-height: 240px; }
-    #reader button { background-color: #0d6efd; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 6px; transition: 0.2s; }
+    .scanner-container { position: relative; width: 100%; max-width: 460px; margin: 0 auto; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #f8fafc; }
+    #reader button { background-color: #0d6efd; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 6px; transition: 0.2s; font-size: 0.9rem; }
     #reader button:hover { background-color: #0b5ed7; }
     #reader a { color: #0d6efd; text-decoration: none; font-size: 0.85rem; }
     .scan-result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; display: none; flex-direction: column; justify-content: center; align-items: center; border-radius: 12px; background: rgba(255,255,255,0.95); }
