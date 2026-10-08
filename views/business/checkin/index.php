@@ -154,7 +154,7 @@
 
                     <div id="already-in-msg" class="alert alert-info py-2 mb-3" style="display: none;"></div>
 
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 mb-2">
                         <button type="button" class="btn btn-outline-primary w-50 fw-bold" id="btn-print-badge">
                             <i class="bi bi-printer me-1"></i> បោះពុម្ពប័ណ្ណ
                         </button>
@@ -162,6 +162,9 @@
                             <i class="bi bi-arrow-left-right me-1"></i> ជំនួសសមាជិក
                         </a>
                     </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold" id="btn-reset-attendance" style="display: none;">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន (Reset Check-in សាកល្បង)
+                    </button>
                 </div>
             </div>
             

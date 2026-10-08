@@ -250,6 +250,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 msg.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + (data.message || 'កំហុស');
             }
         }
+
+        const btnReset = document.getElementById('btn-reset-attendance');
+        if (btnReset) {
+            if (p.reg_id && (data.already_in || data.success)) {
+                btnReset.style.display = 'block';
+                btnReset.onclick = function() {
+                    if (confirm(`តើអ្នកពិតជាចង់លុបវត្តមាន (Reset) របស់ ${p.name || ''} មែនទេ?`)) {
+                        resetAttendance(p.reg_id);
+                    }
+                };
+            } else {
+                btnReset.style.display = 'none';
+            }
+        }
     }
 
     function addRecentCheckin(p) {
@@ -323,7 +337,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div>
                             ${isChecked 
-                                ? '<span class="badge bg-success-subtle text-success border border-success small"><i class="bi bi-check2-circle me-1"></i> បានស្កេនរួច</span>'
+                                ? `<div class="d-flex align-items-center gap-1">
+                                    <span class="badge bg-success-subtle text-success border border-success small"><i class="bi bi-check2-circle me-1"></i> បានស្កេនរួច</span>
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-2" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.registration_id})"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                   </div>`
                                 : `<button class="btn btn-sm btn-success fw-bold px-3" onclick="checkinByCode('${escapeHtml(tokenOrCode)}')"><i class="bi bi-check-lg me-1"></i> កត់ត្រា</button>`
                             }
                         </div>
@@ -358,6 +375,49 @@ document.addEventListener('DOMContentLoaded', function() {
         processScan(tokenOrCode);
         if (manualResults) manualResults.style.display = 'none';
         if (manualInput) manualInput.value = '';
+    };
+
+    window.resetAttendance = function(regId) {
+        if (!regId) return;
+        let fd = new FormData();
+        fd.append('_csrf_token', CSRF_TOKEN);
+        fd.append('workshop_id', WORKSHOP_ID);
+        fd.append('registration_id', regId);
+
+        fetch(APP_URL + '/api/checkin/reset', {
+            method: 'POST',
+            body: fd
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                if (statsCheckedIn) {
+                    let parts = statsCheckedIn.innerText.split('/');
+                    if (parts.length === 2) {
+                        let cur = Math.max(0, parseInt(parts[0].trim()) - 1);
+                        statsCheckedIn.innerText = cur + ' / ' + parts[1].trim();
+                    }
+                }
+                const msg = document.getElementById('already-in-msg');
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.className = 'alert alert-secondary py-2 mb-3';
+                    msg.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> ' + (res.message || 'បានកំណត់វត្តមានឡើងវិញដោយជោគជ័យ');
+                }
+                const btnReset = document.getElementById('btn-reset-attendance');
+                if (btnReset) btnReset.style.display = 'none';
+
+                if (manualInput && manualInput.value.trim()) {
+                    performManualSearch();
+                }
+            } else {
+                alert(res.message || 'មិនអាចកំណត់វត្តមានឡើងវិញបានទេ។');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('បញ្ហាបណ្តាញពេលលុបវត្តមាន');
+        });
     };
 
     // Badge Printing Modal Handler

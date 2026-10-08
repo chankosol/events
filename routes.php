@@ -700,6 +700,10 @@ $router->post('/api/checkin/search', function() {
     require_once ROOT_PATH . '/api/checkin/search.php';
 });
 
+$router->post('/api/checkin/reset', function() {
+    require_once ROOT_PATH . '/api/checkin/reset.php';
+});
+
 $router->post('/api/checkin/offline-sync', function() {
     require_once ROOT_PATH . '/api/checkin/offline_sync.php';
 });
