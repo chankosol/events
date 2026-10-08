@@ -35,7 +35,7 @@ class CheckinController {
         );
 
         $recentAttendance = $db->query(
-            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone, p.company, r.registration_code, t.name as ticket_name
+            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone, p.company, r.id as registration_id, r.registration_code, t.name as ticket_name
              FROM attendance a
              JOIN registrations r ON r.id = a.registration_id
              JOIN participants p ON p.id = a.participant_id

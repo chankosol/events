@@ -278,6 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const tr = document.createElement('tr');
         tr.className = 'table-success';
+        tr.dataset.regId = p.reg_id || '';
+        tr.dataset.regCode = p.reg_code || '';
         tr.innerHTML = `
             <td class="ps-3 fw-bold text-dark">${escapeHtml(p.name)}</td>
             <td><span class="badge bg-light text-dark font-monospace border">${escapeHtml(p.reg_code)}</span></td>
@@ -391,6 +393,31 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(r => r.json())
         .then(res => {
             if (res.success) {
+                // 1. Remove attendee row from recent attendance table
+                if (recentTbody) {
+                    const rows = recentTbody.querySelectorAll('tr');
+                    let removed = false;
+                    const curCode = (currentScannedParticipant && currentScannedParticipant.reg_code) ? currentScannedParticipant.reg_code : null;
+                    rows.forEach(r => {
+                        const rId = r.dataset.regId || r.getAttribute('data-reg-id');
+                        const rCode = r.dataset.regCode || r.getAttribute('data-reg-code');
+                        const cellText = r.innerText || '';
+                        if ((rId && String(rId) === String(regId)) || (rCode && rCode === curCode) || (curCode && cellText.includes(curCode))) {
+                            r.remove();
+                            removed = true;
+                        }
+                    });
+                    if (removed && recentCount) {
+                        let current = parseInt(recentCount.innerText) || 0;
+                        let updated = Math.max(0, current - 1);
+                        recentCount.innerText = updated + ' នាក់';
+                    }
+                    if (recentTbody.querySelectorAll('tr').length === 0) {
+                        recentTbody.innerHTML = '<tr id="no-recent-row"><td colspan="4" class="text-center py-4 text-muted small">មិនទាន់មានការស្កេនវត្តមាននៅឡើយទេ។</td></tr>';
+                    }
+                }
+
+                // 2. Decrement top stats counter
                 if (statsCheckedIn) {
                     let parts = statsCheckedIn.innerText.split('/');
                     if (parts.length === 2) {
@@ -398,6 +425,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         statsCheckedIn.innerText = cur + ' / ' + parts[1].trim();
                     }
                 }
+
+                // 3. Show message and return to ready state
                 const msg = document.getElementById('already-in-msg');
                 if (msg) {
                     msg.style.display = 'block';
@@ -407,6 +436,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const btnReset = document.getElementById('btn-reset-attendance');
                 if (btnReset) btnReset.style.display = 'none';
 
+                // Automatically return to waiting state after 2 seconds
+                setTimeout(() => {
+                    const card = document.getElementById('participant-info-card');
+                    const waitingState = document.getElementById('waiting-state');
+                    if (card && waitingState) {
+                        card.style.display = 'none';
+                        waitingState.style.display = 'block';
+                    }
+                    currentScannedParticipant = null;
+                }, 2000);
+
+                // 4. Refresh manual search if active
                 if (manualInput && manualInput.value.trim()) {
                     performManualSearch();
                 }

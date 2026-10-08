@@ -199,7 +199,7 @@
                             <tbody id="recent-attendance-tbody">
                                 <?php if (!empty($recentAttendance)): ?>
                                     <?php foreach ($recentAttendance as $ra): ?>
-                                        <tr>
+                                        <tr data-reg-id="<?= $ra['registration_id'] ?>" data-reg-code="<?= htmlspecialchars($ra['registration_code']) ?>">
                                             <td class="ps-3 fw-bold text-dark"><?= htmlspecialchars($ra['name']) ?></td>
                                             <td><span class="badge bg-light text-dark font-monospace border"><?= htmlspecialchars($ra['registration_code']) ?></span></td>
                                             <td><?= htmlspecialchars($ra['ticket_name'] ?? 'ទូទៅ') ?></td>
