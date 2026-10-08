@@ -35,6 +35,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
                 osc.start(ctx.currentTime);
                 osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'focus') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1400, ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.08);
             } else {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(220, ctx.currentTime);
@@ -145,14 +152,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setupZoomControls();
     }
 
-    // Zoom management: 1x, 2x, 3x, 5x
+    // Zoom management: 1x, 2x, 3x, 5x & Auto Focus
     let currentZoomLevel = 1;
 
     function applyZoom(zVal) {
         currentZoomLevel = zVal;
 
-        // Update active class on zoom buttons
-        document.querySelectorAll('.btn-zoom').forEach(btn => {
+        // Update active class on zoom buttons (only buttons with data-zoom)
+        document.querySelectorAll('.btn-zoom[data-zoom]').forEach(btn => {
             const bVal = parseFloat(btn.dataset.zoom) || 1;
             if (bVal === zVal) {
                 btn.classList.add('active');
@@ -219,13 +226,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function triggerAutoFocus() {
+        const afBtn = document.getElementById('btn-autofocus');
+        const reticle = document.getElementById('camera-focus-reticle');
+
+        if (afBtn) afBtn.classList.add('focusing');
+        if (reticle) {
+            reticle.classList.remove('focused');
+            reticle.classList.add('active');
+        }
+
+        playBeep('focus');
+
+        const videoEl = document.querySelector('#reader video');
+        if (videoEl && videoEl.srcObject) {
+            try {
+                const stream = videoEl.srcObject;
+                const track = stream.getVideoTracks()[0];
+                if (track && track.applyConstraints) {
+                    const caps = track.getCapabilities ? track.getCapabilities() : {};
+
+                    // Hardware Autofocus execution
+                    if (caps.focusMode && Array.isArray(caps.focusMode)) {
+                        if (caps.focusMode.includes('single-shot')) {
+                            track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] })
+                                .then(() => {
+                                    setTimeout(() => {
+                                        if (caps.focusMode.includes('continuous')) {
+                                            track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+                                        }
+                                    }, 400);
+                                }).catch(() => {});
+                        } else if (caps.focusMode.includes('continuous')) {
+                            track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+                        }
+                    } else {
+                        // Re-trigger constraint application to force hardware sensor recalculation
+                        const curConstraints = track.getConstraints ? track.getConstraints() : {};
+                        track.applyConstraints(curConstraints).catch(() => {});
+                    }
+                }
+            } catch(e) {
+                console.warn('Autofocus error:', e);
+            }
+        }
+
+        // Green locked-on state feedback after 350ms
+        setTimeout(() => {
+            if (reticle) reticle.classList.add('focused');
+        }, 350);
+
+        // Reset visual reticle and button state after 850ms
+        setTimeout(() => {
+            if (reticle) {
+                reticle.classList.remove('active', 'focused');
+            }
+            if (afBtn) {
+                afBtn.classList.remove('focusing');
+            }
+        }, 850);
+    }
+
     function setupZoomControls() {
         // Restore saved zoom level if any
         const savedZoom = parseFloat(localStorage.getItem('workshopos_camera_zoom')) || 1;
         currentZoomLevel = savedZoom;
 
-        // Initialize button click listeners and states
-        document.querySelectorAll('.btn-zoom').forEach(btn => {
+        // Initialize zoom buttons (1x, 2x, 3x, 5x)
+        document.querySelectorAll('.btn-zoom[data-zoom]').forEach(btn => {
             const bVal = parseFloat(btn.dataset.zoom) || 1;
             if (bVal === savedZoom) {
                 btn.classList.add('active');
@@ -240,6 +308,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 applyZoom(zVal);
             });
         });
+
+        // Initialize Auto Focus Button
+        const afBtn = document.getElementById('btn-autofocus');
+        if (afBtn) {
+            afBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                triggerAutoFocus();
+            });
+        }
+
+        // Tap on viewfinder video to also focus
+        const readerEl = document.getElementById('reader');
+        if (readerEl) {
+            readerEl.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && !e.target.closest('button') && !e.target.closest('a')) {
+                    triggerAutoFocus();
+                }
+            });
+        }
 
         // Watch for video stream to apply initial zoom
         let appliedInitial = false;

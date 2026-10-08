@@ -83,7 +83,7 @@
     #reader button:hover { background-color: #0b5ed7; }
     #reader a { color: #0d6efd; text-decoration: none; font-size: 0.85rem; }
 
-    /* Floating Zoom Sidebar on the left of scanning container */
+    /* Floating Zoom & Focus Sidebar on the left of scanning container */
     .zoom-sidebar {
         position: absolute;
         left: -46px;
@@ -91,24 +91,24 @@
         transform: translateY(-50%);
         display: none;
         flex-direction: column;
-        gap: 8px;
+        gap: 7px;
         z-index: 25;
     }
     .btn-zoom {
         width: 35px;
         height: 35px;
         border-radius: 50%;
-        border: 1.5px solid #ced4da;
+        border: 1px solid #dee2e6;
         background: #ffffff;
-        color: #495057;
-        font-size: 0.74rem;
-        font-weight: 700;
+        color: #8c959f;
+        font-size: 0.72rem;
+        font-weight: 350;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         padding: 0;
         user-select: none;
@@ -116,6 +116,7 @@
     .btn-zoom:hover {
         border-color: #0d6efd;
         color: #0d6efd;
+        font-weight: 500;
         transform: scale(1.08);
         box-shadow: 0 3px 8px rgba(13, 110, 253, 0.25);
     }
@@ -123,9 +124,58 @@
         background: #0d6efd !important;
         color: #ffffff !important;
         border-color: #0d6efd !important;
+        font-size: 0.76rem !important;
+        font-weight: 600 !important;
         box-shadow: 0 2px 8px rgba(13, 110, 253, 0.45) !important;
         transform: scale(1.05);
     }
+
+    /* Auto Focus Button & Reticle */
+    .btn-autofocus {
+        margin-top: 3px;
+        border-color: #ced4da;
+        color: #6c757d;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        background: #ffffff;
+    }
+    .btn-autofocus:hover {
+        border-color: #198754;
+        color: #198754;
+        font-weight: 600;
+    }
+    .btn-autofocus.focusing {
+        background: #198754 !important;
+        color: #ffffff !important;
+        border-color: #198754 !important;
+        box-shadow: 0 2px 10px rgba(25, 135, 84, 0.5) !important;
+        transform: scale(1.08);
+    }
+
+    .focus-reticle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 84px;
+        height: 84px;
+        transform: translate(-50%, -50%) scale(1.3);
+        border: 2px solid #0d6efd;
+        border-radius: 12px;
+        pointer-events: none;
+        z-index: 22;
+        opacity: 0;
+        transition: opacity 0.15s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+    }
+    .focus-reticle.active {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    .focus-reticle.focused {
+        border-color: #198754;
+        box-shadow: 0 0 12px rgba(25, 135, 84, 0.55), inset 0 0 8px rgba(25, 135, 84, 0.35);
+    }
+
     @media (max-width: 520px) {
         .zoom-sidebar {
             left: 8px;
@@ -215,14 +265,16 @@
                 </div>
                 <div class="card-body p-3">
                     <div class="scanner-container">
-                        <!-- Floating Zoom Buttons on Left: 1x, 2x, 3x, 5x -->
-                        <div class="zoom-sidebar" id="zoom-sidebar" title="Zoom in / out">
+                        <!-- Floating Zoom & Focus Buttons on Left: 1x, 2x, 3x, 5x, AF -->
+                        <div class="zoom-sidebar" id="zoom-sidebar" title="Zoom & Auto Focus">
                             <button type="button" class="btn-zoom active" data-zoom="1" title="ធម្មតា (1x)">1x</button>
                             <button type="button" class="btn-zoom" data-zoom="2" title="Zoom 2x">2x</button>
                             <button type="button" class="btn-zoom" data-zoom="3" title="Zoom 3x">3x</button>
                             <button type="button" class="btn-zoom" data-zoom="5" title="Zoom 5x">5x</button>
+                            <button type="button" class="btn-zoom btn-autofocus" id="btn-autofocus" title="Auto Focus (ផ្តោតច្បាស់ស្វ័យប្រវត្តិ)">AF</button>
                         </div>
 
+                        <div id="camera-focus-reticle" class="focus-reticle"></div>
                         <div id="reader"></div>
                         <div id="scan-result" class="scan-result-overlay">
                             <i id="scan-icon" class="bi display-1 mb-2"></i>
