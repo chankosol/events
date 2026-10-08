@@ -201,7 +201,7 @@
                                     <th>ស្ថាប័ន</th>
                                     <th>តួនាទី</th>
                                     <th>ម៉ោងស្កេន</th>
-                                    <th class="text-end pe-3">សកម្មភាព</th>
+                                    <th class="text-end pe-3" style="width: 125px;">សកម្មភាព</th>
                                 </tr>
                             </thead>
                             <tbody id="recent-attendance-tbody">
@@ -214,7 +214,7 @@
                                             <td class="text-muted small text-truncate" style="max-width: 100px;" title="<?= htmlspecialchars($ra['position']) ?>"><?= htmlspecialchars($ra['position']) ?></td>
                                             <td class="text-success fw-bold text-nowrap"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
                                             <td class="text-end pe-3 text-nowrap">
-                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(<?= $ra['registration_id'] ?>)">
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 fw-normal" style="font-size: 0.75rem;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(<?= $ra['registration_id'] ?>)">
                                                     <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន
                                                 </button>
                                             </td>
