@@ -145,52 +145,116 @@ document.addEventListener('DOMContentLoaded', function() {
         setupZoomControls();
     }
 
-    function setupZoomControls() {
-        const checkZoomTimer = setInterval(() => {
-            const videoEl = document.querySelector('#reader video');
-            if (videoEl && videoEl.srcObject) {
+    // Zoom management: 1x, 2x, 3x, 5x
+    let currentZoomLevel = 1;
+
+    function applyZoom(zVal) {
+        currentZoomLevel = zVal;
+
+        // Update active class on zoom buttons
+        document.querySelectorAll('.btn-zoom').forEach(btn => {
+            const bVal = parseFloat(btn.dataset.zoom) || 1;
+            if (bVal === zVal) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        try {
+            localStorage.setItem('workshopos_camera_zoom', zVal.toString());
+        } catch(e) {}
+
+        const videoEl = document.querySelector('#reader video');
+        if (!videoEl) return;
+
+        let hardwareApplied = false;
+
+        // 1. Try Hardware Camera Track Zoom (Logi HD / UVC Zoom)
+        if (videoEl.srcObject) {
+            try {
                 const stream = videoEl.srcObject;
                 const track = stream.getVideoTracks()[0];
-                if (track && track.getCapabilities) {
+                if (track && track.getCapabilities && track.applyConstraints) {
                     const caps = track.getCapabilities();
                     if (caps.zoom) {
-                        clearInterval(checkZoomTimer);
-                        const zoomControls = document.getElementById('zoom-controls');
-                        if (zoomControls) zoomControls.style.display = 'inline-flex';
-                    }
-                }
-            }
-        }, 800);
-
-        setTimeout(() => clearInterval(checkZoomTimer), 10000);
-
-        document.querySelectorAll('#zoom-controls button').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const zVal = parseFloat(this.dataset.zoom) || 1;
-                document.querySelectorAll('#zoom-controls button').forEach(b => {
-                    b.classList.remove('btn-secondary');
-                    b.classList.add('btn-outline-secondary');
-                });
-                this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-secondary');
-
-                try {
-                    const videoEl = document.querySelector('#reader video');
-                    if (videoEl && videoEl.srcObject) {
-                        const track = videoEl.srcObject.getVideoTracks()[0];
-                        if (track && track.applyConstraints) {
-                            const caps = track.getCapabilities ? track.getCapabilities() : {};
-                            const maxZ = caps.zoom ? caps.zoom.max : 3;
-                            const minZ = caps.zoom ? caps.zoom.min : 1;
-                            const target = Math.min(maxZ, Math.max(minZ, zVal));
-                            track.applyConstraints({ advanced: [{ zoom: target }] });
+                        let targetZoom;
+                        if (caps.zoom.min >= 50) {
+                            // Some UVC webcams report zoom in percentage (e.g. 100 - 400/500)
+                            targetZoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, zVal * 100));
+                        } else {
+                            targetZoom = Math.min(caps.zoom.max, Math.max(caps.zoom.min, zVal));
                         }
+                        track.applyConstraints({ advanced: [{ zoom: targetZoom }] })
+                            .then(() => {
+                                // Hardware track zoom succeeded: reset CSS transform
+                                videoEl.style.transform = 'none';
+                            })
+                            .catch(err => {
+                                console.warn('Hardware zoom constraint not applied, fallback to CSS zoom:', err);
+                                applyCssZoomFallback(videoEl, zVal);
+                            });
+                        hardwareApplied = true;
                     }
-                } catch(e) {
-                    console.warn('Could not apply zoom:', e);
                 }
+            } catch (e) {
+                console.warn('Hardware zoom error:', e);
+            }
+        }
+
+        // 2. Fallback to CSS digital zoom if hardware zoom is not supported
+        if (!hardwareApplied) {
+            applyCssZoomFallback(videoEl, zVal);
+        }
+    }
+
+    function applyCssZoomFallback(videoEl, zVal) {
+        if (!videoEl) return;
+        if (zVal === 1) {
+            videoEl.style.transform = 'none';
+        } else {
+            videoEl.style.transform = `scale(${zVal})`;
+            videoEl.style.transformOrigin = 'center center';
+            videoEl.style.transition = 'transform 0.25s ease';
+        }
+    }
+
+    function setupZoomControls() {
+        // Restore saved zoom level if any
+        const savedZoom = parseFloat(localStorage.getItem('workshopos_camera_zoom')) || 1;
+        currentZoomLevel = savedZoom;
+
+        // Initialize button click listeners and states
+        document.querySelectorAll('.btn-zoom').forEach(btn => {
+            const bVal = parseFloat(btn.dataset.zoom) || 1;
+            if (bVal === savedZoom) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const zVal = parseFloat(this.dataset.zoom) || 1;
+                applyZoom(zVal);
             });
         });
+
+        // Watch for video stream to apply initial zoom
+        let appliedInitial = false;
+        const checkVideoTimer = setInterval(() => {
+            const videoEl = document.querySelector('#reader video');
+            if (videoEl && videoEl.srcObject && videoEl.readyState >= 2) {
+                if (!appliedInitial) {
+                    if (savedZoom > 1) {
+                        applyZoom(savedZoom);
+                    }
+                    appliedInitial = true;
+                }
+            }
+        }, 300);
+        setTimeout(() => clearInterval(checkVideoTimer), 12000);
     }
 
     function translateScannerUI() {
@@ -199,17 +263,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const observer = new MutationObserver(function() {
             // Stop Button & Scanning state
             const stopBtn = document.getElementById('html5-qrcode-button-camera-stop') || document.getElementById('reader__camera_stop_button');
+            const zoomSidebar = document.getElementById('zoom-sidebar');
             if (stopBtn && stopBtn.style.display !== 'none' && !stopBtn.hidden) {
                 if (readerEl && !readerEl.classList.contains('is-scanning')) {
                     readerEl.classList.add('is-scanning');
+                }
+                if (zoomSidebar && zoomSidebar.style.display !== 'flex') {
+                    zoomSidebar.style.display = 'flex';
                 }
                 if (stopBtn.dataset.text !== 'stop_scan_kh') {
                     stopBtn.dataset.text = 'stop_scan_kh';
                     stopBtn.innerHTML = '<i class="bi bi-stop-circle"></i><span>បិទស្កេន</span>';
                 }
+                if (currentZoomLevel > 1) {
+                    const videoEl = document.querySelector('#reader video');
+                    if (videoEl && !videoEl.dataset.zoomActive) {
+                        videoEl.dataset.zoomActive = "true";
+                        applyZoom(currentZoomLevel);
+                    }
+                }
             } else {
                 if (readerEl && readerEl.classList.contains('is-scanning')) {
                     readerEl.classList.remove('is-scanning');
+                }
+                if (zoomSidebar && zoomSidebar.style.display !== 'none') {
+                    zoomSidebar.style.display = 'none';
                 }
             }
 

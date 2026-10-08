@@ -82,6 +82,64 @@
     #reader button { background-color: #0d6efd; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; margin: 6px; transition: 0.2s; font-size: 0.9rem; }
     #reader button:hover { background-color: #0b5ed7; }
     #reader a { color: #0d6efd; text-decoration: none; font-size: 0.85rem; }
+
+    /* Floating Zoom Sidebar on the left of scanning container */
+    .zoom-sidebar {
+        position: absolute;
+        left: -46px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 25;
+    }
+    .btn-zoom {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        border: 1.5px solid #ced4da;
+        background: #ffffff;
+        color: #495057;
+        font-size: 0.74rem;
+        font-weight: 700;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+        user-select: none;
+    }
+    .btn-zoom:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+        transform: scale(1.08);
+        box-shadow: 0 3px 8px rgba(13, 110, 253, 0.25);
+    }
+    .btn-zoom.active {
+        background: #0d6efd !important;
+        color: #ffffff !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.45) !important;
+        transform: scale(1.05);
+    }
+    @media (max-width: 520px) {
+        .zoom-sidebar {
+            left: 8px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 4px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+        }
+        .btn-zoom {
+            width: 30px;
+            height: 30px;
+            font-size: 0.68rem;
+        }
+    }
     .scan-result-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 30; display: none; flex-direction: column; justify-content: center; align-items: center; border-radius: 12px; background: rgba(255,255,255,0.95); }
     .scan-success { background: rgba(40, 167, 69, 0.95); color: white; }
     .scan-error { background: rgba(220, 53, 69, 0.95); color: white; }
@@ -153,16 +211,18 @@
                             <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.75rem; height: 26px; max-width: 175px;">
                             </select>
                         </div>
-                        <!-- Zoom Quick Buttons -->
-                        <div class="btn-group btn-group-sm" id="zoom-controls" style="display: none;">
-                            <button type="button" class="btn btn-sm btn-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="1">1x</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="1.5">1.5x</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="2">2x</button>
-                        </div>
                     </div>
                 </div>
                 <div class="card-body p-3">
                     <div class="scanner-container">
+                        <!-- Floating Zoom Buttons on Left: 1x, 2x, 3x, 5x -->
+                        <div class="zoom-sidebar" id="zoom-sidebar" title="Zoom in / out">
+                            <button type="button" class="btn-zoom active" data-zoom="1" title="ធម្មតា (1x)">1x</button>
+                            <button type="button" class="btn-zoom" data-zoom="2" title="Zoom 2x">2x</button>
+                            <button type="button" class="btn-zoom" data-zoom="3" title="Zoom 3x">3x</button>
+                            <button type="button" class="btn-zoom" data-zoom="5" title="Zoom 5x">5x</button>
+                        </div>
+
                         <div id="reader"></div>
                         <div id="scan-result" class="scan-result-overlay">
                             <i id="scan-icon" class="bi display-1 mb-2"></i>
