@@ -360,9 +360,30 @@ $router->get('/checkin/{workshopId}', function($workshopId) {
     CheckinController::index((int)$workshopId);
 });
 
+$router->get('/workshops/{workshopId}/checkin', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    CheckinController::index((int)$workshopId);
+});
+
 $router->get('/live/{workshopId}', function($workshopId) {
     require_once ROOT_PATH . '/controllers/business/LiveController.php';
     LiveController::index((int)$workshopId);
+});
+
+// Temporary Check-in Helper Station (No login required, token protected)
+$router->get('/scan/helper/{token}', function($token) {
+    require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
+    HelperCheckinController::station($token);
+});
+
+$router->post('/scan/helper/{token}', function($token) {
+    require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
+    HelperCheckinController::join($token);
+});
+
+$router->post('/scan/helper/{token}/join', function($token) {
+    require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
+    HelperCheckinController::join($token);
 });
 
 // ============================================================
@@ -706,6 +727,61 @@ $router->post('/api/checkin/reset', function() {
 
 $router->post('/api/checkin/offline-sync', function() {
     require_once ROOT_PATH . '/api/checkin/offline_sync.php';
+});
+
+// Check-in Helper Pass API (Admin)
+$router->post('/api/checkin/helper-passes/create', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::createHelperPass($workshopId);
+});
+
+$router->get('/api/checkin/helper-passes', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_GET['workshop_id'] ?? 0);
+    CheckinController::listHelperPasses($workshopId);
+});
+
+$router->post('/api/checkin/helper-passes/revoke', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::revokeHelperPass($workshopId);
+});
+
+$router->post('/api/checkin/helper-passes/reactivate', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::reactivateHelperPass($workshopId);
+});
+
+$router->post('/api/checkin/helper-passes/toggle-device', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::toggleHelperDevice($workshopId);
+});
+
+$router->post('/api/checkin/helper-passes/remove-device', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::removeHelperDevice($workshopId);
+});
+
+// Check-in Live Monitor Dashboard API
+$router->get('/api/checkin/live-monitor', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_GET['workshop_id'] ?? 0);
+    CheckinController::liveMonitorData($workshopId);
+});
+
+// Check-in Helper Station Public API
+$router->post('/api/checkin/helper-scan', function() {
+    require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
+    HelperCheckinController::scan();
+});
+
+$router->post('/api/checkin/helper-search', function() {
+    require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
+    HelperCheckinController::search();
 });
 
 $router->get('/api/workshop/{id}/stats', function($id) {

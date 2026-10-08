@@ -115,6 +115,11 @@
                                             <i class="bi bi-qr-code me-1"></i> បង់ប្រាក់
                                         </a>
                                     <?php endif; ?>
+                                    <?php if (Permission::has('checkin.use') && $w['billing_status'] === 'paid'): ?>
+                                        <a href="<?php echo APP_URL; ?>/checkin/<?php echo $w['id']; ?>" class="btn btn-sm btn-success shadow-sm py-1 px-2" title="ស្កេនវត្តមាន">
+                                            <i class="bi bi-qr-code-scan me-1"></i> ស្កេនវត្តមាន
+                                        </a>
+                                    <?php endif; ?>
                                     <a href="<?php echo APP_URL; ?>/workshops/<?php echo $w['id']; ?>" class="btn btn-sm btn-outline-primary" title="មើល & គ្រប់គ្រង">
                                         <i class="bi bi-gear me-1"></i> គ្រប់គ្រង
                                     </a>

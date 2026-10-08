@@ -173,19 +173,19 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'registration_staff'
 AND p.slug IN (
-  'registration.view', 'registration.create', 'registration.edit', 'registration.verify',
+  'workshop.view', 'registration.view', 'registration.create', 'registration.edit', 'registration.verify',
   'payment.view', 'payment.verify', 'participant.view', 'participant.edit'
 );
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'checkin_staff'
-AND p.slug IN ('checkin.use', 'attendance.view', 'attendance.manage', 'participant.view', 'gift.distribute', 'gift.view', 'certificate.view');
+AND p.slug IN ('workshop.view', 'checkin.use', 'attendance.view', 'attendance.manage', 'participant.view', 'gift.distribute', 'gift.view', 'certificate.view');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'moderator'
-AND p.slug IN ('question.view', 'question.moderate', 'question.answer', 'poll.view', 'poll.manage', 'request.view', 'request.manage');
+AND p.slug IN ('workshop.view', 'question.view', 'question.moderate', 'question.answer', 'poll.view', 'poll.manage', 'request.view', 'request.manage');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
@@ -195,17 +195,17 @@ AND p.slug IN ('workshop.view', 'question.view', 'question.answer', 'poll.view',
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'gift_staff'
-AND p.slug IN ('gift.view', 'gift.distribute', 'participant.view', 'checkin.use');
+AND p.slug IN ('workshop.view', 'gift.view', 'gift.distribute', 'participant.view', 'checkin.use');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'certificate_staff'
-AND p.slug IN ('certificate.view', 'certificate.issue', 'certificate.revoke', 'participant.view', 'attendance.view');
+AND p.slug IN ('workshop.view', 'certificate.view', 'certificate.issue', 'certificate.revoke', 'participant.view', 'attendance.view');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.slug = 'finance_staff'
-AND p.slug IN ('payment.view', 'payment.verify', 'payment.export', 'payment.refund', 'report.view', 'report.export', 'billing.view');
+AND p.slug IN ('workshop.view', 'billing.view', 'payment.view', 'payment.verify', 'payment.export', 'payment.refund', 'report.view', 'report.export');
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p

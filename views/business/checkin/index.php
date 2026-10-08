@@ -201,6 +201,110 @@
         70% { box-shadow: 0 0 0 10px rgba(13, 110, 253, 0); }
         100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
     }
+    .helper-pass-card {
+        border-color: #e2e8f0 !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        flex-shrink: 0 !important;
+    }
+    .helper-pass-card:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06) !important;
+    }
+    #helperPassModal .modal-body {
+        max-height: calc(85vh - 120px);
+        overflow-y: auto;
+    }
+    #helper-passes-container {
+        overflow: visible;
+        padding-bottom: 1.5rem;
+    }
+    .shadow-2xs {
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .shadow-xs {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    /* Modern SweetAlert2 Customization */
+    .swal2-popup {
+        font-family: 'Kantumruy Pro', system-ui, -apple-system, sans-serif !important;
+        border-radius: 20px !important;
+        padding: 1.75rem !important;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16) !important;
+    }
+    .swal2-title {
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+        color: #1e293b !important;
+        padding-top: 0.5rem !important;
+    }
+    .swal2-html-container {
+        font-size: 0.95rem !important;
+        color: #475569 !important;
+        line-height: 1.6 !important;
+        margin-top: 0.75rem !important;
+    }
+    .swal2-actions {
+        margin-top: 1.5rem !important;
+        gap: 12px !important;
+    }
+    .swal2-confirm, .swal2-cancel {
+        border-radius: 50rem !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.6rem 1.6rem !important;
+        transition: all 0.2s ease !important;
+    }
+    .swal2-confirm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(13, 110, 253, 0.35) !important;
+    }
+    .swal2-toast {
+        border-radius: 14px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+        padding: 0.85rem 1.15rem !important;
+    }
+    /* Live Monitor Pulse and Feed Styling */
+    .pulse-indicator {
+        position: relative;
+        width: 14px;
+        height: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #dc3545;
+        position: relative;
+        z-index: 2;
+    }
+    .pulse-indicator::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: rgba(220, 53, 69, 0.4);
+        animation: liveRipple 1.6s infinite ease-out;
+    }
+    @keyframes liveRipple {
+        0% { transform: scale(0.6); opacity: 1; }
+        100% { transform: scale(1.8); opacity: 0; }
+    }
+    .stream-item {
+        transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+    .stream-item:hover {
+        background-color: #f8fafc !important;
+    }
+    .stream-item-new {
+        animation: highlightNew 2s ease-out;
+    }
+    @keyframes highlightNew {
+        0% { background-color: rgba(25, 135, 84, 0.15); }
+        100% { background-color: transparent; }
+    }
 </style>
 
 <!-- Top Navigation & Stats Bar -->
@@ -209,40 +313,269 @@
         <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> ត្រឡប់
         </a>
-        <h5 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($workshop['name']) ?></h5>
-        <span class="badge bg-primary-subtle text-primary border ms-2">តុស្កេនវត្តមាន</span>
+        <h5 class="fw-bold mb-0 text-dark text-truncate" style="max-width: 250px;"><?= htmlspecialchars($workshop['name']) ?></h5>
+        
+        <!-- Mode Switcher Pill (Admin Live Monitor vs Camera Scanner) -->
+        <div class="btn-group btn-group-sm p-0.5 bg-light rounded-pill border ms-2" role="group">
+            <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold btn-primary text-white shadow-xs" id="btn-mode-dashboard" onclick="switchCheckinMode('dashboard')">
+                <i class="bi bi-speedometer2 me-1"></i> ផ្ទាំងបញ្ជា
+            </button>
+            <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold btn-light text-secondary" id="btn-mode-scanner" onclick="switchCheckinMode('scanner')">
+                <i class="bi bi-camera-video me-1"></i> ស្កេនកាមេរ៉ា
+            </button>
+        </div>
     </div>
+
     <div class="d-flex align-items-center gap-3">
-        <div class="text-end">
-            <div class="small text-muted mb-0" style="line-height: 1;">បានស្កេនវត្តមាន</div>
-            <div class="fw-bold fs-5 text-success" id="stats-checked-in">
-                <?= (int)($stats['checked_in'] ?? 0) ?> / <?= (int)($stats['total_confirmed'] ?? 0) ?>
+        <!-- Live Counter in Top Bar with clear container & spacing -->
+        <div class="d-none d-md-flex align-items-center gap-2 px-3 py-1.5 bg-light rounded-pill border shadow-2xs">
+            <span class="small text-muted mb-0" style="font-size: 0.75rem;">វត្តមានជាក់ស្តែង៖</span>
+            <span class="fw-bold text-success" id="stats-checked-in" style="font-size: 0.98rem;">
+                <?= $totalCheckedIn ?> / <?= $totalConfirmed ?>
+            </span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- Helper Pass Quick Button -->
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold position-relative shadow-2xs" data-bs-toggle="modal" data-bs-target="#helperPassModal" id="topbar-helper-btn" title="គ្រប់គ្រងតុជំនួយការស្កេន">
+                <i class="bi bi-qr-code me-1"></i> តុជំនួយការ
+                <span class="badge bg-primary text-white rounded-pill ms-1" id="topbar-helper-badge" style="display: <?= $activeDevicesCount > 0 ? 'inline-block' : 'none' ?>; font-size: 0.68rem;"><?= $activeDevicesCount ?> គ្រឿង</span>
+            </button>
+
+            <!-- Fullscreen Button -->
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1.5" id="btn-toggle-fullscreen" title="បើកពេញអេក្រង់" onclick="toggleFullscreen()">
+                <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+
+            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1.5" data-bs-toggle="modal" data-bs-target="#checkinHelpModal" title="របៀបប្រើ">
+                <i class="bi bi-question-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- VIEW 1: ADMIN LIVE MONITOR DASHBOARD (DEFAULT FOR ADMIN) -->
+<!-- ======================================================== -->
+<div id="view-dashboard-mode" class="container-fluid pb-5 px-0">
+    <!-- Top 4 Live Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Total Checked In / Rate -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.76rem;">វត្តមានសរុប</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" id="lm-rate-badge"><?= $checkinRate ?>%</span>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <h2 class="fw-bold mb-0 text-dark" id="lm-checked-in"><?= $totalCheckedIn ?></h2>
+                    <span class="text-muted fw-semibold" style="font-size: 0.95rem;">/ <span id="lm-total"><?= $totalConfirmed ?></span> នាក់</span>
+                </div>
+                <div class="progress" style="height: 6px; border-radius: 10px; background-color: #e2e8f0;">
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" id="lm-progress-bar" role="progressbar" style="width: <?= $checkinRate ?>%"></div>
+                </div>
+                <div class="small text-muted mt-2 d-flex align-items-center justify-content-between" style="font-size: 0.74rem;">
+                    <span><i class="bi bi-clock-history me-1 text-primary"></i>បច្ចុប្បន្នភាព</span>
+                    <span id="lm-last-updated-text" class="text-secondary">-</span>
+                </div>
             </div>
         </div>
-        <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" id="fastModeToggle" checked>
-            <label class="form-check-label small text-muted" for="fastModeToggle">ស្កេនលឿន</label>
+
+        <!-- 2. Pending Attendees -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.76rem;">មិនទាន់មកដល់</span>
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="bi bi-person-dash-fill fs-6"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <h2 class="fw-bold mb-0 text-dark" id="lm-pending"><?= $totalPending ?></h2>
+                    <span class="text-muted fw-semibold" style="font-size: 0.95rem;">នាក់</span>
+                </div>
+                <p class="small text-muted mb-0" style="font-size: 0.76rem;">
+                    <i class="bi bi-info-circle me-1 text-secondary"></i>សិក្ខាកាមបានចុះឈ្មោះតែមិនទាន់ស្កេនចូល
+                </p>
+            </div>
         </div>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#checkinHelpModal">
-            <i class="bi bi-question-circle me-1"></i> របៀបប្រើ
-        </button>
+
+        <!-- 3. VIP Attendees -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.76rem;">ភ្ញៀវកិត្តិយស VIP</span>
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="bi bi-star-fill text-warning fs-6"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <h2 class="fw-bold mb-0 text-dark" id="lm-vip"><?= $vipCheckedIn ?> / <?= $vipTotal ?></h2>
+                    <span class="text-muted fw-semibold" style="font-size: 0.95rem;">នាក់</span>
+                </div>
+                <p class="small text-muted mb-0" style="font-size: 0.76rem;">
+                    <i class="bi bi-shield-check me-1 text-success"></i>វត្តមានថ្នាក់ដឹកនាំ និងភ្ញៀវកិត្តិយស VIP
+                </p>
+            </div>
+        </div>
+
+        <!-- 4. Helper Stations -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3 bg-white position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.76rem;">តុស្កេនជំនួយការ</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill fw-bold" style="font-size: 0.72rem;" data-bs-toggle="modal" data-bs-target="#helperPassModal">
+                        <i class="bi bi-plus me-0.5"></i> បង្កើតតុ
+                    </button>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mb-2">
+                    <h2 class="fw-bold mb-0 text-primary" id="lm-stations-count"><?= $activePassesCount ?></h2>
+                    <span class="text-muted fw-semibold" style="font-size: 0.95rem;">តុ (<span id="lm-devices-count"><?= $activeDevicesCount ?></span> គ្រឿង)</span>
+                </div>
+                <p class="small text-muted mb-0" style="font-size: 0.76rem;">
+                    <i class="bi bi-phone me-1 text-primary"></i>ទូរស័ព្ទជំនួយការកំពុងជួយស្កេននៅច្រកទ្វារ
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Live Activity Feed (Left) & Helper Stations / Tools (Right) -->
+    <div class="row g-4">
+        <!-- Left: Live Activity Feed (Col 8) -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <!-- Header with Live Pulse -->
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="pulse-indicator">
+                            <span class="pulse-dot"></span>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">ចរន្តស្កេនវត្តមានផ្ទាល់</h6>
+                            <small class="text-muted" style="font-size: 0.74rem;">បង្ហាញព័ត៌មានសិក្ខាកាមភ្លាមៗរាល់ពេលស្កេនគ្រប់ច្រក</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size: 0.76rem;">
+                        <i class="bi bi-broadcast me-1 text-danger"></i> ផ្សាយផ្ទាល់
+                    </span>
+                </div>
+
+                <!-- Admin Inline Quick Search Bar -->
+                <div class="p-3 bg-light bg-opacity-75 border-bottom">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0" id="lm-manual-search-input" placeholder="វាយឈ្មោះ, លេខទូរស័ព្ទ, ឬកូដចុះឈ្មោះ ដើម្បីស្វែងរក ឬកត់ត្រាដោយដៃ...">
+                        <button class="btn btn-primary fw-bold px-3 shadow-sm" type="button" id="lm-btn-manual-search">
+                            <i class="bi bi-person-check me-1"></i> ស្វែងរក
+                        </button>
+                    </div>
+                    <!-- Inline Search Results Popup Box -->
+                    <div id="lm-search-results-box" class="mt-2 bg-white rounded-3 border p-2 shadow-sm" style="display: none; max-height: 220px; overflow-y: auto;">
+                    </div>
+                </div>
+
+                <!-- Live Stream Feed Items -->
+                <div class="card-body p-0" style="max-height: 560px; overflow-y: auto;">
+                    <div id="lm-stream-container" class="list-group list-group-flush">
+                        <div class="text-center py-5 text-muted">
+                            <span class="spinner-border spinner-border-sm me-2 text-primary"></span> កំពុងទាញទិន្នន័យផ្សាយផ្ទាល់...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Helper Stations & Tools (Col 4) -->
+        <div class="col-lg-4 d-flex flex-column gap-3">
+            <!-- Helper Stations Monitoring Card -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            <i class="bi bi-people-fill fs-6"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">តុជំនួយការស្កេន</h6>
+                            <small class="text-muted" style="font-size: 0.72rem;">តាមដានការស្កេនតាមតុនីមួយៗ</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light border px-2.5 py-1 rounded-pill text-primary fw-bold small" data-bs-toggle="modal" data-bs-target="#helperPassModal">
+                        គ្រប់គ្រង <i class="bi bi-arrow-right-short"></i>
+                    </button>
+                </div>
+                <div class="card-body p-3" style="max-height: 320px; overflow-y: auto;">
+                    <div id="lm-stations-list-container" class="d-flex flex-column gap-2">
+                        <div class="text-center py-4 text-muted small">
+                            <span class="spinner-border spinner-border-sm me-1 text-primary"></span> កំពុងផ្ទុកទិន្នន័យតុ...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organizer Action Center -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <h6 class="fw-bold text-dark mb-2.5 small text-uppercase text-secondary">
+                    <i class="bi bi-tools me-1 text-primary"></i> ឧបករណ៍ និងសកម្មភាពរហ័ស
+                </h6>
+                <div class="d-flex flex-column gap-2">
+                    <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>/registrations/export" class="btn btn-light border d-flex align-items-center justify-content-between p-2.5 rounded-3 text-dark text-decoration-none">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px;">
+                                <i class="bi bi-file-earmark-spreadsheet-fill fs-5"></i>
+                            </div>
+                            <div class="text-start">
+                                <div class="fw-bold small">ទាញយកបញ្ជីវត្តមាន Excel</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">ទាញយកបញ្ជីអ្នកបានស្កេនជាក់ស្តែង</div>
+                            </div>
+                        </div>
+                        <i class="bi bi-download text-muted"></i>
+                    </a>
+
+                    <button type="button" class="btn btn-light border d-flex align-items-center justify-content-between p-2.5 rounded-3 text-dark text-start" data-bs-toggle="modal" data-bs-target="#helperPassModal">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px;">
+                                <i class="bi bi-qr-code fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold small">បង្កើតលីងតុជំនួយការថ្មី</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">ឱ្យក្រុមការងារជួយស្កេនតាមទូរស័ព្ទ</div>
+                            </div>
+                        </div>
+                        <i class="bi bi-plus-circle-fill text-primary"></i>
+                    </button>
+
+                    <button type="button" class="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2 p-2 rounded-3 fw-bold small mt-1 shadow-2xs" onclick="switchCheckinMode('scanner')">
+                        <i class="bi bi-camera-video"></i> ប្តូរទៅរបៀបកាមេរ៉ាស្កេនផ្ទាល់ដៃ
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Quick Guidance Banner -->
-<div class="alert alert-light border shadow-sm mb-4 py-2 px-3 d-flex justify-content-between align-items-center">
-    <div class="d-flex align-items-center gap-2">
-        <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-        <span class="small text-dark">
-            <strong>វិធីស្កេនវត្តមាន៖</strong> 
-            (១) <strong>ស្កេនកូដ QR</strong> តាមកាមេរ៉ា ឬ 
-            (២) <strong>វាយឈ្មោះ / លេខទូរស័ព្ទ / កូដចុះឈ្មោះ</strong> ក្នុងប្រអប់ស្វែងរក រួចចុច <strong>កត់ត្រា</strong>។
-        </span>
+<!-- ======================================================== -->
+<!-- VIEW 2: CAMERA SCANNER MODE (FOR DIRECT SCANNING)       -->
+<!-- ======================================================== -->
+<div id="view-scanner-mode" class="container-fluid pb-5 px-0" style="display: none;">
+    <!-- Quick Guidance Banner -->
+    <div class="alert alert-light border shadow-sm mb-4 py-2 px-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill text-primary fs-5"></i>
+            <span class="small text-dark">
+                <strong>វិធីស្កេនវត្តមាន៖</strong> 
+                (១) <strong>ស្កេនកូដ QR</strong> តាមកាមេរ៉ា ឬ 
+                (២) <strong>វាយឈ្មោះ / លេខទូរស័ព្ទ / កូដចុះឈ្មោះ</strong> ក្នុងប្រអប់ស្វែងរក រួចចុច <strong>កត់ត្រា</strong>។
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="fastModeToggle" checked>
+                <label class="form-check-label small text-muted" for="fastModeToggle">ស្កេនលឿន</label>
+            </div>
+            <span class="badge bg-light text-secondary border small">សំឡេងប៊ីប: បើក</span>
+        </div>
     </div>
-    <span class="badge bg-light text-secondary border small">សំឡេងប៊ីប: បើក</span>
-</div>
 
-<div class="container-fluid pb-5 px-0">
     <div class="row g-4">
         <!-- Left Column: Camera Scanner & Manual Search -->
         <div class="col-lg-6">
@@ -261,6 +594,13 @@
                             <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.75rem; height: 26px; max-width: 175px;">
                             </select>
                         </div>
+                        <!-- Helper Pass Button (Create temporary scan link for helpers) -->
+                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem; padding: 2px 9px; height: 26px;" data-bs-toggle="modal" data-bs-target="#helperPassModal" id="btn-open-helper-modal" title="បង្កើតលីងជំនួយការស្កេនបណ្តោះអាសន្ន">
+                            <i class="bi bi-qr-code"></i>
+                            <span class="d-none d-sm-inline">បង្កើតលីងជំនួយការ</span>
+                            <span class="d-inline d-sm-none">ជំនួយការ</span>
+                            <span class="badge bg-primary text-white rounded-pill ms-1" id="active-helper-count-badge" style="display: none; font-size: 0.65rem;">0</span>
+                        </button>
                     </div>
                 </div>
                 <div class="card-body p-3">
@@ -516,10 +856,164 @@
     </div>
 </div>
 
+<!-- Modal: Helper Pass (Temporary Scan Link) -->
+<div class="modal fade" id="helperPassModal" tabindex="-1" aria-labelledby="helperPassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-white bg-opacity-20 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                        <i class="bi bi-qr-code text-white fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="helperPassModalLabel">គ្រប់គ្រងលីងជំនួយការស្កេន</h5>
+                        <small class="text-white text-opacity-75" style="font-size: 0.75rem;">បង្កើត និងតាមដានតុស្កេនជំនួយការបណ្តោះអាសន្ន</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <ul class="nav nav-pills nav-fill mb-4 bg-light p-1.5 rounded-3 border" id="helperPassTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold py-2.5 rounded-2 d-flex align-items-center justify-content-center gap-1.5" id="create-pass-tab" data-bs-toggle="tab" data-bs-target="#tab-create-pass" type="button" role="tab">
+                            <i class="bi bi-plus-circle-fill"></i>
+                            <span>បង្កើតលីងថ្មី</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2.5 rounded-2 d-flex align-items-center justify-content-center gap-1.5" id="list-pass-tab" data-bs-toggle="tab" data-bs-target="#tab-list-pass" type="button" role="tab">
+                            <i class="bi bi-list-stars"></i>
+                            <span>បញ្ជីតុជំនួយការ</span>
+                            <span class="badge bg-primary text-white rounded-pill ms-1 px-2 py-0.5" id="helper-passes-count">0</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="helperPassTabsContent">
+                    <!-- Tab 1: Create Pass -->
+                    <div class="tab-pane fade show active" id="tab-create-pass" role="tabpanel">
+                        <form id="form-create-helper-pass">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold text-dark small">ឈ្មោះសម្គាល់តុ ឬអ្នកជួយស្កេន</label>
+                                    <input type="text" class="form-control" id="hp-label" name="label" placeholder="ឧ. តុទី១ (ច្រកមុខ), ក្រុមការងារស្ម័គ្រចិត្ត A..." value="តុស្កេនជំនួយការ">
+                                    <div class="form-text small">ដាក់ឈ្មោះដើម្បីងាយស្រួលចំណាំថាតើនរណា ឬតុណាជាអ្នកស្កេន។</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark small">កំណត់ចំនួនឧបករណ៍ (Max Devices)</label>
+                                    <select class="form-select" id="hp-max-devices" name="max_devices">
+                                        <option value="1" selected>១ គ្រឿង (ណែនាំ - សម្រាប់ ១ ទូរស័ព្ទ)</option>
+                                        <option value="2">២ គ្រឿង</option>
+                                        <option value="3">៣ គ្រឿង</option>
+                                        <option value="5">៥ គ្រឿង</option>
+                                        <option value="10">១០ គ្រឿង</option>
+                                    </select>
+                                    <div class="form-text small text-danger"><i class="bi bi-shield-lock me-1"></i>បិទមិនឱ្យឧបករណ៍លើសពីនេះចូលប្រើបានឡើយ។</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-dark small">សុពលភាព / រយៈពេលផុតកំណត់</label>
+                                    <select class="form-select" id="hp-duration" name="duration_hours">
+                                        <option value="2">២ ម៉ោង</option>
+                                        <option value="4" selected>៤ ម៉ោង (ណែនាំ)</option>
+                                        <option value="8">៨ ម៉ោង</option>
+                                        <option value="12">១២ ម៉ោង</option>
+                                        <option value="24">២៤ ម៉ោង (១ ថ្ងៃ)</option>
+                                    </select>
+                                    <div class="form-text small">ផុតម៉ោងនេះ លីងនឹងខូចដោយស្វ័យប្រវត្តិ។</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 text-end">
+                                <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm" id="btn-submit-create-pass">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> បង្កើតលីងជំនួយការ
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Newly Created Pass Display Box -->
+                        <div id="new-pass-result" class="mt-4 p-3 bg-light rounded-4 border border-primary border-opacity-25" style="display: none;">
+                            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i>បង្កើតជោគជ័យ</span>
+                                <small class="text-muted" id="np-expiry-text"></small>
+                            </div>
+                            <div class="row align-items-center g-3">
+                                <div class="col-sm-5 text-center">
+                                    <div id="np-qrcode" class="d-inline-block p-2 bg-white rounded-3 shadow-sm border"></div>
+                                    <div class="small text-muted mt-2">
+                                        <i class="bi bi-camera me-1"></i>ឱ្យជំនួយការយកទូរស័ព្ទ<strong>បាញ់ QR នេះ</strong>
+                                    </div>
+                                </div>
+                                <div class="col-sm-7">
+                                    <label class="small fw-bold text-dark mb-1">តំណភ្ជាប់ស្កេនផ្ទាល់ (Direct Link)</label>
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control form-control-sm font-monospace" id="np-url-input" readonly>
+                                        <button class="btn btn-outline-primary btn-sm fw-bold" type="button" id="btn-copy-np-url">
+                                            <i class="bi bi-clipboard me-1"></i> ចម្លង
+                                        </button>
+                                    </div>
+                                    <div class="p-2 rounded bg-white border small text-muted">
+                                        <i class="bi bi-info-circle-fill text-primary me-1"></i>
+                                        ជំនួយការគ្រាន់តែចុច Link នេះតាម Telegram ឬ Browser គឺអាចស្កេនបានភ្លាមៗ <strong>ដោយមិនបាច់មានគណនី ឬចាំ Password ឡើយ</strong>!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Passes List (Active vs Closed) -->
+                    <div class="tab-pane fade" id="tab-list-pass" role="tabpanel">
+                        <!-- Filter Bar for Active vs Closed Passes -->
+                        <div class="d-flex align-items-center justify-content-between mb-3 bg-light p-1.5 rounded-pill border">
+                            <div class="d-flex gap-1" id="pass-filter-buttons">
+                                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold btn-primary text-white shadow-sm" id="btn-filter-active" onclick="filterPassList('active')">
+                                    <i class="bi bi-check-circle-fill me-1"></i> កំពុងសកម្ម (<span id="filter-count-active">0</span>)
+                                </button>
+                                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold btn-light text-secondary" id="btn-filter-closed" onclick="filterPassList('closed')">
+                                    <i class="bi bi-x-circle-fill me-1"></i> បានបិទ / ផុតកំណត់ (<span id="filter-count-closed">0</span>)
+                                </button>
+                                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold btn-light text-secondary" id="btn-filter-all" onclick="filterPassList('all')">
+                                    ទាំងអស់ (<span id="filter-count-all">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="helper-passes-container" class="d-flex flex-column gap-3">
+                            <div class="text-center py-5 text-muted">
+                                <span class="spinner-border spinner-border-sm me-2 text-primary"></span> កំពុងទាញទិន្នន័យ...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">បិទ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Show Large QR for Pass -->
+<div class="modal fade" id="viewPassQrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content text-center p-4 border-0 shadow-lg rounded-4">
+            <h6 class="fw-bold mb-1" id="vqr-label"></h6>
+            <p class="small text-muted mb-3" id="vqr-expiry"></p>
+            <div id="vqr-qrcode-box" class="d-flex justify-content-center mb-3"></div>
+            <div class="input-group input-group-sm mb-3">
+                <input type="text" class="form-control font-monospace" id="vqr-url" readonly>
+                <button class="btn btn-outline-primary" type="button" id="btn-vqr-copy"><i class="bi bi-clipboard"></i></button>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">បិទ</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="<?= APP_URL ?>/assets/js/qrcode.min.js"></script>
 <script>
     const WORKSHOP_ID = <?= $workshopId ?>;
     const CSRF_TOKEN = '<?= Session::get('_csrf_token') ?>';
     const APP_URL = '<?= APP_URL ?>';
 </script>
-<script src="<?= APP_URL ?>/assets/js/checkin.js"></script>
+<script src="<?= APP_URL ?>/assets/js/sweetalert2.all.min.js"></script>
+<script src="<?= APP_URL ?>/assets/js/checkin.js?v=<?= filemtime(ROOT_PATH . '/assets/js/checkin.js') ?>"></script>

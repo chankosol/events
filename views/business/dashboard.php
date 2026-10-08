@@ -104,6 +104,11 @@
                                         <?php echo statusBadge($ws['status']); ?>
                                     </td>
                                     <td class="text-end pe-3">
+                                        <?php if (Permission::has('checkin.use')): ?>
+                                        <a href="<?php echo APP_URL; ?>/checkin/<?php echo $ws['id']; ?>" class="btn btn-sm btn-outline-success me-1">
+                                            <i class="bi bi-qr-code-scan me-1"></i> ស្កេនវត្តមាន
+                                        </a>
+                                        <?php endif; ?>
                                         <a href="<?php echo APP_URL; ?>/workshops/<?php echo $ws['id']; ?>" class="btn btn-sm btn-light border">
                                             <i class="bi bi-eye me-1"></i> គ្រប់គ្រង
                                         </a>

@@ -9,12 +9,8 @@ class DashboardController {
         $businessId = Tenant::getId();
         
         if (!$businessId) {
-            redirect(APP_URL . '/login');
-        }
-        
-        // Require permission or be owner
-        if (!Permission::has('workshop.view') && !Auth::isBusinessOwner()) {
-            Session::flash('error', 'You do not have permission to access the dashboard.');
+            Auth::logout();
+            Session::flash('error', 'Business account not found.');
             redirect(APP_URL . '/login');
         }
 
