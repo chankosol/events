@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fps: 15,
                 qrbox: function(viewfinderWidth, viewfinderHeight) {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    // 0.82 provides a spacious square with balanced gaps on all 4 sides
-                    const edge = Math.max(180, Math.floor(minEdge * 0.82));
+                    // 0.72 creates a spacious ~49px unused margin around the scanning box
+                    const edge = Math.max(180, Math.floor(minEdge * 0.72));
                     return { width: edge, height: edge };
                 },
                 aspectRatio: 1.0
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     readerEl.classList.add('is-scanning');
                 }
                 if (!stopBtn.querySelector('.bi-stop-circle')) {
-                    stopBtn.innerHTML = '<i class="bi bi-stop-circle me-1" style="font-size: 0.72rem;"></i> Stop Scanning';
+                    stopBtn.innerHTML = '<i class="bi bi-stop-circle"></i><span>Stop Scanning</span>';
                 }
             } else {
                 if (readerEl && readerEl.classList.contains('is-scanning')) {

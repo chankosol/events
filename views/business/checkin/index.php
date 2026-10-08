@@ -2,7 +2,7 @@
 // views/business/checkin/index.php
 ?>
 <style>
-    .scanner-container { position: relative; width: 100%; max-width: 320px; margin: 0 auto; }
+    .scanner-container { position: relative; width: 100%; max-width: 350px; margin: 0 auto; }
     #reader { width: 100%; border: none !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #1a1e21; position: relative; }
     #reader video { object-fit: cover !important; border-radius: 12px; }
 
@@ -25,19 +25,19 @@
         pointer-events: auto;
     }
 
-    /* Style the Stop Scanning button to be slim with light font */
+    /* Style the Stop Scanning button to be slim with light font and vertically centered icon */
     #html5-qrcode-button-camera-stop {
         position: absolute !important;
-        bottom: 6px !important;
+        bottom: 8px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         z-index: 20 !important;
         background-color: rgba(13, 110, 253, 0.85) !important;
         color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        padding: 2px 10px !important;
-        border-radius: 12px !important;
-        font-size: 0.72rem !important;
+        border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        padding: 3px 11px !important;
+        border-radius: 14px !important;
+        font-size: 0.73rem !important;
         font-weight: 300 !important;
         letter-spacing: 0.2px !important;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
@@ -45,11 +45,33 @@
         margin: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
-        gap: 3px !important;
-        line-height: 1.2 !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        line-height: 1 !important;
         backdrop-filter: blur(4px);
         transition: all 0.2s ease !important;
         white-space: nowrap !important;
+    }
+    #html5-qrcode-button-camera-stop i,
+    #html5-qrcode-button-camera-stop .bi {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.72rem !important;
+        line-height: 1 !important;
+        vertical-align: 0 !important;
+        margin: 0 !important;
+    }
+    #html5-qrcode-button-camera-stop i::before,
+    #html5-qrcode-button-camera-stop .bi::before {
+        display: inline-block !important;
+        line-height: 1 !important;
+        vertical-align: 0 !important;
+    }
+    #html5-qrcode-button-camera-stop span {
+        display: inline-flex !important;
+        align-items: center !important;
+        line-height: 1 !important;
     }
     #html5-qrcode-button-camera-stop:hover {
         background-color: rgba(220, 53, 69, 0.9) !important;
