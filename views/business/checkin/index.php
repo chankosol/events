@@ -2,7 +2,7 @@
 // views/business/checkin/index.php
 ?>
 <style>
-    .scanner-container { position: relative; width: 100%; max-width: 100%; margin: 0; }
+    .scanner-container { position: relative; width: 100%; max-width: 320px; margin: 0 auto; }
     #reader { width: 100%; border: none !important; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background: #1a1e21; position: relative; }
     #reader video { object-fit: cover !important; border-radius: 12px; }
 
@@ -28,32 +28,32 @@
     /* Style the Stop Scanning button to be slim with light font */
     #html5-qrcode-button-camera-stop {
         position: absolute !important;
-        bottom: 8px !important;
+        bottom: 6px !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         z-index: 20 !important;
-        background-color: rgba(13, 110, 253, 0.88) !important;
+        background-color: rgba(13, 110, 253, 0.85) !important;
         color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.35) !important;
-        padding: 3px 12px !important;
-        border-radius: 14px !important;
-        font-size: 0.76rem !important;
-        font-weight: 400 !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        padding: 2px 10px !important;
+        border-radius: 12px !important;
+        font-size: 0.72rem !important;
+        font-weight: 300 !important;
         letter-spacing: 0.2px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
         cursor: pointer !important;
         margin: 0 !important;
         display: inline-flex !important;
         align-items: center !important;
         gap: 3px !important;
-        line-height: 1.25 !important;
+        line-height: 1.2 !important;
         backdrop-filter: blur(4px);
         transition: all 0.2s ease !important;
         white-space: nowrap !important;
     }
     #html5-qrcode-button-camera-stop:hover {
-        background-color: rgba(220, 53, 69, 0.92) !important;
-        border-color: rgba(255, 255, 255, 0.7) !important;
+        background-color: rgba(220, 53, 69, 0.9) !important;
+        border-color: rgba(255, 255, 255, 0.6) !important;
         transform: translateX(-50%) scale(1.03) !important;
     }
 
