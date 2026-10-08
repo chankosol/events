@@ -154,17 +154,23 @@
 
                     <div id="already-in-msg" class="alert alert-info py-2 mb-3" style="display: none;"></div>
 
-                    <div class="d-flex gap-2 mb-2">
-                        <button type="button" class="btn btn-outline-primary w-50 fw-bold" id="btn-print-badge">
-                            <i class="bi bi-printer me-1"></i> បោះពុម្ពប័ណ្ណ
-                        </button>
-                        <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>/delegations" class="btn btn-outline-warning text-dark w-50 fw-bold">
-                            <i class="bi bi-arrow-left-right me-1"></i> ជំនួសសមាជិក
-                        </a>
+                    <div class="row g-2" id="pi-action-buttons">
+                        <div class="col" id="col-print-badge">
+                            <button type="button" class="btn btn-outline-primary w-100 fw-bold py-2 small text-nowrap" id="btn-print-badge">
+                                <i class="bi bi-printer me-1"></i> បោះពុម្ពប័ណ្ណ
+                            </button>
+                        </div>
+                        <div class="col" id="col-substitute">
+                            <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>/delegations" class="btn btn-outline-warning text-dark w-100 fw-bold py-2 small text-nowrap">
+                                <i class="bi bi-arrow-left-right me-1"></i> ជំនួសសមាជិក
+                            </a>
+                        </div>
+                        <div class="col" id="col-reset-attendance" style="display: none;">
+                            <button type="button" class="btn btn-outline-danger w-100 fw-bold py-2 small text-nowrap" id="btn-reset-attendance">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold" id="btn-reset-attendance" style="display: none;">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> លុបវត្តមាន (Reset Check-in សាកល្បង)
-                    </button>
                 </div>
             </div>
             

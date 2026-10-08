@@ -238,22 +238,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const msg = document.getElementById('already-in-msg');
         if (msg) {
+            if (window._msgHideTimer) {
+                clearTimeout(window._msgHideTimer);
+                window._msgHideTimer = null;
+            }
             msg.style.display = 'block';
+            msg.style.opacity = '1';
+            msg.style.transition = 'opacity 0.4s ease';
+
             if (data.already_in) {
                 msg.className = 'alert alert-warning py-2 mb-3';
                 msg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (data.message || 'បានស្កេនរួចហើយ');
             } else if (data.success) {
                 msg.className = 'alert alert-success py-2 mb-3';
                 msg.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ' + (data.message || 'កត់ត្រាវត្តមានជោគជ័យ');
+
+                // Auto hide successful banner after 3 seconds
+                window._msgHideTimer = setTimeout(() => {
+                    msg.style.opacity = '0';
+                    setTimeout(() => {
+                        msg.style.display = 'none';
+                        msg.style.opacity = '1';
+                    }, 400);
+                }, 3000);
             } else {
                 msg.className = 'alert alert-danger py-2 mb-3';
                 msg.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + (data.message || 'កំហុស');
             }
         }
 
+        const colReset = document.getElementById('col-reset-attendance');
         const btnReset = document.getElementById('btn-reset-attendance');
         if (btnReset) {
             if (p.reg_id && (data.already_in || data.success)) {
+                if (colReset) colReset.style.display = 'block';
                 btnReset.style.display = 'block';
                 btnReset.onclick = function() {
                     if (confirm(`តើអ្នកពិតជាចង់លុបវត្តមាន (Reset) របស់ ${p.name || ''} មែនទេ?`)) {
@@ -261,6 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 };
             } else {
+                if (colReset) colReset.style.display = 'none';
                 btnReset.style.display = 'none';
             }
         }
@@ -433,6 +452,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     msg.className = 'alert alert-secondary py-2 mb-3';
                     msg.innerHTML = '<i class="bi bi-arrow-counterclockwise me-1"></i> ' + (res.message || 'បានកំណត់វត្តមានឡើងវិញដោយជោគជ័យ');
                 }
+                const colReset = document.getElementById('col-reset-attendance');
+                if (colReset) colReset.style.display = 'none';
                 const btnReset = document.getElementById('btn-reset-attendance');
                 if (btnReset) btnReset.style.display = 'none';
 
