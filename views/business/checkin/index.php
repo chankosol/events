@@ -140,11 +140,26 @@
         <div class="col-lg-6">
             <!-- Camera Scanner Card -->
             <div class="card shadow-sm border-0 mb-3">
-                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark small">
-                        <i class="bi bi-camera-video-fill text-primary me-2"></i>ស្កេនកូដ QR តាមកាមេរ៉ា
-                    </span>
-                    <span class="badge bg-success-subtle text-success small">ដំណើរការ</span>
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-dark small">
+                            <i class="bi bi-camera-video-fill text-primary me-1"></i>ស្កេនកូដ QR តាមកាមេរ៉ា
+                        </span>
+                        <span class="badge bg-success-subtle text-success small">ដំណើរការ</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Camera Switcher (Auto-selects Logi 1080P if found) -->
+                        <div id="camera-select-wrapper" style="display: none;">
+                            <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.75rem; height: 26px; max-width: 175px;">
+                            </select>
+                        </div>
+                        <!-- Zoom Quick Buttons -->
+                        <div class="btn-group btn-group-sm" id="zoom-controls" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="1">1x</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="1.5">1.5x</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 fw-semibold" style="font-size: 0.7rem; height: 26px;" data-zoom="2">2x</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-3">
                     <div class="scanner-container">

@@ -58,6 +58,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Camera Scanner
     function initScanner() {
+        const preferredCam = localStorage.getItem('workshopos_selected_camera_id');
+        if (preferredCam) {
+            try {
+                localStorage.setItem('html5qrcode__last_used_camera_id', preferredCam);
+            } catch(e){}
+        }
+
         html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
             {
@@ -84,6 +91,106 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Translate and style HTML5 QR Code Scanner UI
         translateScannerUI();
+
+        // Enumerate Cameras and Setup Switcher & Zoom
+        initCameraDevicesAndZoom();
+    }
+
+    function initCameraDevicesAndZoom() {
+        if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    const select = document.getElementById('camera-select');
+                    const wrapper = document.getElementById('camera-select-wrapper');
+                    if (select && wrapper) {
+                        select.innerHTML = '';
+                        let savedCam = localStorage.getItem('workshopos_selected_camera_id');
+                        let logiDev = null;
+
+                        devices.forEach(dev => {
+                            const opt = document.createElement('option');
+                            opt.value = dev.id;
+                            opt.textContent = dev.label || ('កាមេរ៉ា ' + dev.id.substring(0, 8));
+                            if (savedCam && dev.id === savedCam) {
+                                opt.selected = true;
+                            } else if (!savedCam && /logi|logitech|1080|c92|c93|brio/i.test(dev.label)) {
+                                opt.selected = true;
+                                logiDev = dev.id;
+                            }
+                            select.appendChild(opt);
+                        });
+
+                        if (devices.length > 1) {
+                            wrapper.style.display = 'block';
+                        }
+
+                        // Auto-switch to Logi 1080p if found and not yet explicitly set
+                        if (!savedCam && logiDev && devices.length > 1) {
+                            localStorage.setItem('workshopos_selected_camera_id', logiDev);
+                            localStorage.setItem('html5qrcode__last_used_camera_id', logiDev);
+                        }
+
+                        select.addEventListener('change', function() {
+                            const chosenId = this.value;
+                            localStorage.setItem('workshopos_selected_camera_id', chosenId);
+                            localStorage.setItem('html5qrcode__last_used_camera_id', chosenId);
+                            location.reload();
+                        });
+                    }
+                }
+            }).catch(e => console.warn('Camera enumeration error:', e));
+        }
+
+        // Setup Zoom Controls when video is running
+        setupZoomControls();
+    }
+
+    function setupZoomControls() {
+        const checkZoomTimer = setInterval(() => {
+            const videoEl = document.querySelector('#reader video');
+            if (videoEl && videoEl.srcObject) {
+                const stream = videoEl.srcObject;
+                const track = stream.getVideoTracks()[0];
+                if (track && track.getCapabilities) {
+                    const caps = track.getCapabilities();
+                    if (caps.zoom) {
+                        clearInterval(checkZoomTimer);
+                        const zoomControls = document.getElementById('zoom-controls');
+                        if (zoomControls) zoomControls.style.display = 'inline-flex';
+                    }
+                }
+            }
+        }, 800);
+
+        setTimeout(() => clearInterval(checkZoomTimer), 10000);
+
+        document.querySelectorAll('#zoom-controls button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const zVal = parseFloat(this.dataset.zoom) || 1;
+                document.querySelectorAll('#zoom-controls button').forEach(b => {
+                    b.classList.remove('btn-secondary');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-secondary');
+
+                try {
+                    const videoEl = document.querySelector('#reader video');
+                    if (videoEl && videoEl.srcObject) {
+                        const track = videoEl.srcObject.getVideoTracks()[0];
+                        if (track && track.applyConstraints) {
+                            const caps = track.getCapabilities ? track.getCapabilities() : {};
+                            const maxZ = caps.zoom ? caps.zoom.max : 3;
+                            const minZ = caps.zoom ? caps.zoom.min : 1;
+                            const target = Math.min(maxZ, Math.max(minZ, zVal));
+                            track.applyConstraints({ advanced: [{ zoom: target }] });
+                        }
+                    }
+                } catch(e) {
+                    console.warn('Could not apply zoom:', e);
+                }
+            });
+        });
     }
 
     function translateScannerUI() {
