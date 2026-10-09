@@ -34,19 +34,26 @@
         }
 
         /* ── Scanner Card ── */
+        /* ── SQUARE scanner viewport ── */
         .scanner-wrap {
             position: relative;
             background: #0f172a;
             border-radius: 10px 10px 0 0;
             overflow: hidden;
+            aspect-ratio: 1 / 1;  /* SQUARE */
+            width: 100%;
         }
 
-        /* ─── KEY FIX: Let html5-qrcode render INSIDE #qr-reader,
-               but HIDE all its own UI elements with CSS.
-               Only keep the <video> element it creates.          ─── */
-        #qr-reader { width: 100%; background: #0f172a; }
+        /* html5-qrcode fills the square wrapper fully */
+        #qr-reader {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: #0f172a;
+        }
 
-        /* Hide all html5-qrcode native UI */
+        /* Hide ALL html5-qrcode native UI elements */
         #qr-reader__dashboard,
         #qr-reader__header_message,
         #qr-reader__status_span,
@@ -55,19 +62,26 @@
         #qr-reader__filescan_input,
         #qr-reader__dashboard_section_filesel { display: none !important; }
 
-        /* Style the video html5-qrcode creates */
-        #qr-reader video {
+        /* scan_region fills the square too */
+        #qr-reader__scan_region {
+            position: absolute !important;
+            inset: 0 !important;
             width: 100% !important;
-            max-width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
+        }
+        #qr-reader__scan_region img,
+        #qr-reader__scan_region canvas { display: none !important; }
+
+        /* Video crops to fill the square (no black bars) */
+        #qr-reader video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             object-fit: cover !important;
             display: block !important;
             border-radius: 0 !important;
         }
-
-        /* Hide the built-in scan box overlay (we use our own) */
-        #qr-reader__scan_region img,
-        #qr-reader__scan_region canvas { display: none !important; }
 
         /* ── Our custom laser reticle overlaid on top of video ── */
         .laser-reticle {
