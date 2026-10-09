@@ -19,21 +19,37 @@
             min-height: 100vh;
         }
         .main-container {
-            max-width: 1240px;
+            max-width: 1200px;
             margin: 0 auto;
         }
+
+        /* Top Stats Bar */
         .stats-bar {
             background: #ffffff;
             border-radius: 14px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             border: 1px solid #e2e8f0;
-            padding: 16px 24px;
+            padding: 14px 20px;
+        }
+        .header-avatar {
+            width: 44px;
+            height: 44px;
+        }
+        .header-title {
+            font-size: 1.05rem;
+            color: #0f172a;
+        }
+        .stat-counter-pill {
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 50rem;
+            padding: 5px 14px;
         }
         .fast-mode-pill {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 50rem;
-            padding: 6px 14px;
+            padding: 5px 12px;
             transition: all 0.2s ease;
         }
         .fast-mode-pill:hover {
@@ -41,12 +57,14 @@
             border-color: #cbd5e1;
         }
         .fast-mode-pill .form-check-input {
-            width: 2.2rem;
-            height: 1.25rem;
+            width: 2rem;
+            height: 1.15rem;
             margin: 0 !important;
             float: none !important;
             cursor: pointer;
         }
+
+        /* Camera Scanner */
         .scanner-container {
             position: relative;
             width: 100%;
@@ -59,12 +77,88 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-            background: #1a1e21;
+            background: #0f172a;
             position: relative;
         }
         #reader video {
             object-fit: cover !important;
-            border-radius: 12px;
+            border-radius: 12px 12px 0 0;
+            width: 100% !important;
+        }
+
+        /* Html5Qrcode Native Dashboard Restyling */
+        #reader__dashboard {
+            background: #ffffff !important;
+            padding: 8px 12px !important;
+            border-top: 1px solid #e2e8f0 !important;
+            text-align: center !important;
+        }
+        #reader__dashboard_section_csr {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            width: 100% !important;
+        }
+        #reader__dashboard_section_csr select {
+            display: inline-block !important;
+            max-width: 180px !important;
+            font-size: 0.78rem !important;
+            padding: 5px 8px !important;
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            color: #334155 !important;
+            height: 32px !important;
+            text-overflow: ellipsis !important;
+        }
+        #html5-qrcode-button-camera-permission {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            margin: 12px auto !important;
+            display: inline-block !important;
+            font-size: 0.82rem !important;
+        }
+        #html5-qrcode-button-camera-start {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 5px 14px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 0.78rem !important;
+            height: 32px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+        #html5-qrcode-button-camera-stop {
+            position: static !important;
+            transform: none !important;
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 5px 12px !important;
+            border-radius: 8px !important;
+            font-size: 0.78rem !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+            height: 32px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        /* Hide unnecessary debug/link clutter from html5-qrcode */
+        #reader__dashboard_section_swaplink,
+        #reader__header_message,
+        #reader__status_span,
+        #html5-qrcode-anchor-scan-type-change {
+            display: none !important;
         }
 
         /* Overlay after scan */
@@ -86,98 +180,6 @@
         .scan-warning { background: rgba(245, 158, 11, 0.95); color: #ffffff; }
         .scan-error { background: rgba(220, 53, 69, 0.95); color: #ffffff; }
 
-        /* Floating Zoom & AF Controls */
-        .zoom-sidebar {
-            position: absolute;
-            left: -44px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            z-index: 25;
-        }
-        .btn-zoom {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 1px solid #dee2e6;
-            background: #ffffff;
-            color: #64748b;
-            font-size: 0.72rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            transition: all 0.2s;
-        }
-        .btn-zoom:hover {
-            border-color: #0d6efd;
-            color: #0d6efd;
-            transform: scale(1.05);
-        }
-        .btn-zoom.active {
-            background: #0d6efd !important;
-            color: #ffffff !important;
-            border-color: #0d6efd !important;
-            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.4);
-        }
-
-        @media (max-width: 520px) {
-            .zoom-sidebar {
-                left: 8px;
-                background: rgba(0, 0, 0, 0.35);
-                padding: 4px;
-                border-radius: 20px;
-                backdrop-filter: blur(4px);
-            }
-            .btn-zoom {
-                width: 30px;
-                height: 30px;
-                font-size: 0.68rem;
-            }
-        }
-
-        /* HTML5 QR Code Scanner native button restyling */
-        #html5-qrcode-button-camera-permission {
-            background-color: #0d6efd !important;
-            color: #ffffff !important;
-            border: none !important;
-            padding: 9px 18px !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            margin: 15px auto !important;
-            display: inline-block !important;
-            font-size: 0.85rem !important;
-        }
-        #html5-qrcode-button-camera-start {
-            background-color: #198754 !important;
-            color: #ffffff !important;
-            border: none !important;
-            padding: 8px 18px !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            margin: 10px auto !important;
-            font-size: 0.85rem !important;
-        }
-        #html5-qrcode-button-camera-stop {
-            position: absolute !important;
-            bottom: 8px !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            z-index: 20 !important;
-            background-color: rgba(220, 53, 69, 0.9) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255,255,255,0.4) !important;
-            padding: 5px 14px !important;
-            border-radius: 16px !important;
-            font-size: 0.78rem !important;
-            cursor: pointer !important;
-            white-space: nowrap !important;
-        }
-
         /* Pulse scan animation */
         .pulse-scan { animation: pulseBorder 1.5s infinite; }
         @keyframes pulseBorder {
@@ -185,98 +187,154 @@
             70% { box-shadow: 0 0 0 8px rgba(13, 110, 253, 0); }
             100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
         }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 576px) {
+            .main-container {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-top: 10px !important;
+                padding-bottom: 20px !important;
+            }
+            .stats-bar {
+                padding: 12px 14px;
+                border-radius: 12px;
+            }
+            .header-avatar {
+                width: 38px !important;
+                height: 38px !important;
+            }
+            .header-avatar i {
+                font-size: 1rem !important;
+            }
+            .header-title {
+                font-size: 0.92rem !important;
+            }
+            .stat-counter-pill {
+                padding: 4px 10px;
+            }
+            .fast-mode-pill {
+                padding: 4px 10px;
+            }
+            .scanner-container {
+                max-width: 100%;
+            }
+            #reader video {
+                border-radius: 10px 10px 0 0;
+                max-height: 290px;
+            }
+            #reader__dashboard_section_csr select {
+                max-width: 155px !important;
+                font-size: 0.74rem !important;
+            }
+            #waiting-state {
+                min-height: auto !important;
+                padding: 16px !important;
+            }
+            #waiting-state i {
+                font-size: 2rem !important;
+            }
+            #waiting-state h5 {
+                font-size: 0.95rem !important;
+            }
+            .table th, .table td {
+                padding: 6px 8px !important;
+                font-size: 0.78rem !important;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="main-container py-3 px-3">
-        <!-- Top Stats Bar (Spacious, Clean, Well-aligned) -->
-        <div class="stats-bar d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
-            <!-- Left Info Block -->
-            <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 46px; height: 46px;">
-                    <i class="bi bi-qr-code-scan fs-5"></i>
-                </div>
-                <div>
-                    <div class="d-flex align-items-center gap-3 flex-wrap mb-2">
-                        <h5 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($pass['workshop_name']) ?></h5>
-                        <span class="badge bg-primary-subtle text-primary border px-2.5 py-1 rounded-pill"><?= htmlspecialchars($pass['label']) ?></span>
+        <!-- Top Stats Bar: Clean, Responsive & Beautifully Aligned -->
+        <div class="stats-bar mb-3">
+            <div class="row align-items-center g-2 g-md-3">
+                <!-- Left: Workshop Title & Info -->
+                <div class="col-12 col-md-auto me-md-auto">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0 header-avatar">
+                            <i class="bi bi-qr-code-scan fs-5"></i>
+                        </div>
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                <h6 class="fw-bold mb-0 text-dark header-title text-truncate"><?= htmlspecialchars($pass['workshop_name']) ?></h6>
+                                <span class="badge bg-primary-subtle text-primary border px-2 py-0.5 rounded-pill" style="font-size: 0.72rem;"><?= htmlspecialchars($pass['label']) ?></span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-warning-subtle text-dark border px-2 py-1 rounded-pill" id="countdown-badge" style="font-size: 0.72rem;" title="សុពលភាពដែលនៅសល់">
+                                    <i class="bi bi-clock-history me-1 text-danger"></i>នៅសល់ <strong id="countdown-timer">...</strong>
+                                </span>
+                                <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill d-none d-sm-inline-flex" style="font-size: 0.72rem;">
+                                    <i class="bi bi-shield-check text-success me-1"></i>តុជំនួយការ
+                                </span>
+                                <?php if (!empty($device['helper_name'])): ?>
+                                    <span class="badge bg-primary text-white border px-2 py-1 rounded-pill shadow-sm" style="font-size: 0.72rem;" title="ឈ្មោះអ្នកស្កេន">
+                                        <i class="bi bi-person-fill me-1"></i><?= htmlspecialchars($device['helper_name']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
-                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <span class="badge bg-warning-subtle text-dark border px-3 py-1.5 rounded-pill" id="countdown-badge" title="សុពលភាពដែលនៅសល់">
-                            <i class="bi bi-clock-history me-1 text-danger"></i>នៅសល់ <strong id="countdown-timer">...</strong>
+                </div>
+
+                <!-- Right: Attendance Counter & Fast Mode Switch -->
+                <div class="col-12 col-md-auto">
+                    <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-2 gap-sm-3 pt-2 pt-md-0 border-top border-md-0 mt-1 mt-md-0">
+                        <!-- Attendance Counter Pill -->
+                        <div class="stat-counter-pill d-flex align-items-center gap-1.5">
+                            <span class="text-secondary small fw-medium" style="font-size: 0.78rem;">បានស្កេន៖</span>
+                            <strong class="text-success fs-6" id="stats-checked-in">
+                                <?= (int)($stats['checked_in'] ?? 0) ?> / <?= (int)($stats['total_confirmed'] ?? 0) ?>
+                            </strong>
+                        </div>
+
+                        <!-- Fast Mode Switch Pill -->
+                        <div class="fast-mode-pill d-flex align-items-center gap-1.5">
+                            <input class="form-check-input" type="checkbox" id="fastModeToggle" checked>
+                            <label class="form-check-label small text-secondary fw-medium text-nowrap user-select-none mb-0 ps-1" for="fastModeToggle" style="cursor: pointer; font-size: 0.8rem;">
+                                ស្កេនលឿន
+                            </label>
+                        </div>
+
+                        <!-- Sound Feedback Badge (Desktop) -->
+                        <span class="badge bg-light text-secondary border py-1.5 px-2.5 d-none d-lg-inline-flex align-items-center gap-1.5 rounded-pill" style="font-size: 0.75rem;" title="សំឡេងប៊ីប: បើក">
+                            <i class="bi bi-volume-up-fill text-primary"></i> ប៊ីប
                         </span>
-                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">
-                            <i class="bi bi-shield-check text-success me-1"></i>តុជំនួយការស្កេន
-                        </span>
-                        <?php if (!empty($device['helper_name'])): ?>
-                            <span class="badge bg-primary text-white border px-3 py-1.5 rounded-pill shadow-sm" title="អ្នកស្កេនបច្ចុប្បន្ន">
-                                <i class="bi bi-person-fill me-1"></i><?= htmlspecialchars($device['helper_name']) ?>
-                            </span>
-                        <?php endif; ?>
                     </div>
                 </div>
-            </div>
-
-            <!-- Right Controls Block -->
-            <div class="d-flex align-items-center gap-3 gap-md-4 ms-auto ms-sm-0 flex-wrap">
-                <!-- Attendance Counter with Separator -->
-                <div class="text-end pe-3 border-end">
-                    <div class="small text-muted mb-1" style="line-height: 1.2; font-size: 0.78rem;">បានស្កេនវត្តមាន</div>
-                    <div class="fw-bold fs-5 text-success" id="stats-checked-in">
-                        <?= (int)($stats['checked_in'] ?? 0) ?> / <?= (int)($stats['total_confirmed'] ?? 0) ?>
-                    </div>
-                </div>
-
-                <!-- Fast Mode Switch Pill -->
-                <div class="fast-mode-pill d-flex align-items-center gap-2">
-                    <input class="form-check-input" type="checkbox" id="fastModeToggle" checked>
-                    <label class="form-check-label small text-secondary fw-medium text-nowrap user-select-none mb-0 ps-1" for="fastModeToggle" style="cursor: pointer; font-size: 0.82rem;">
-                        ស្កេនលឿន
-                    </label>
-                </div>
-
-                <!-- Sound Feedback Badge -->
-                <span class="badge bg-light text-secondary border py-2 px-3 d-none d-md-inline-flex align-items-center gap-2 rounded-pill" title="សំឡេងប៊ីប: បើក">
-                    <i class="bi bi-volume-up-fill text-primary"></i> ប៊ីប
-                </span>
             </div>
         </div>
 
-        <!-- Quick Guidance Banner -->
-        <div class="alert alert-light border shadow-sm mb-4 py-2 px-3 d-flex justify-content-between align-items-center rounded-3">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-info-circle-fill text-primary fs-5"></i>
-                <span class="small text-dark">
-                    <strong>វិធីស្កេនវត្តមាន៖</strong> 
-                    (១) <strong>ស្កេនកូដ QR</strong> តាមកាមេរ៉ា ឬ 
-                    (២) <strong>វាយឈ្មោះ / លេខទូរស័ព្ទ / កូដ</strong> ក្នុងប្រអប់ស្វែងរក រួចចុច <strong>កត់ត្រា</strong>។
-                </span>
+        <!-- Guidance Banner: Compact & Non-intrusive -->
+        <div class="alert alert-light border shadow-sm mb-3 py-2 px-3 rounded-3">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                    <i class="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
+                    <span class="small text-dark text-truncate" style="font-size: 0.8rem;">
+                        <strong>ណែនាំ៖</strong> ស្កេន QR តាមកាមេរ៉ា ឬវាយឈ្មោះ/លេខទូរស័ព្ទ រួចចុច <strong>កត់ត្រា</strong>
+                    </span>
+                </div>
+                <span class="badge bg-success-subtle text-success border flex-shrink-0" style="font-size: 0.72rem;">ដំណើរការ</span>
             </div>
-            <span class="badge bg-success-subtle text-success border small">ដំណើរការ</span>
         </div>
 
         <!-- Main Workspace: Symmetrical 2 Columns -->
-        <div class="row g-4">
-            <!-- Left Column: Camera Scanner & Manual Input -->
+        <div class="row g-3 g-md-4">
+            <!-- Left Column: Camera Scanner & Manual Search -->
             <div class="col-lg-6">
                 <!-- Camera Scanner Card -->
                 <div class="card shadow-sm border-0 mb-3 rounded-3">
-                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <span class="fw-bold small text-dark">
-                            <i class="bi bi-camera-video-fill text-primary me-1"></i> ស្កេនកូដ QR តាមកាមេរ៉ា
+                    <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold small text-dark d-flex align-items-center gap-1.5">
+                            <i class="bi bi-camera-video-fill text-primary"></i> ស្កេនកូដ QR តាមកាមេរ៉ា
                         </span>
-                        <div id="camera-select-wrapper" style="display: none;">
-                            <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.75rem; height: 26px; max-width: 175px;"></select>
-                        </div>
+                        <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">
+                            <i class="bi bi-broadcast text-danger me-1"></i>ផ្សាយផ្ទាល់
+                        </span>
                     </div>
-                    <div class="card-body p-3">
+                    <div class="card-body p-2 p-sm-3">
                         <div class="scanner-container">
-                            <div class="zoom-sidebar" id="zoom-sidebar" title="Zoom">
-                                <button type="button" class="btn-zoom active" data-zoom="1" title="1x">1x</button>
-                                <button type="button" class="btn-zoom" data-zoom="2" title="2x">2x</button>
-                                <button type="button" class="btn-zoom" data-zoom="3" title="3x">3x</button>
-                            </div>
                             <div id="reader"></div>
                             <div id="scan-result" class="scan-result-overlay">
                                 <i id="scan-icon" class="bi display-1 mb-2"></i>
@@ -289,20 +347,20 @@
 
                 <!-- Manual Search Card -->
                 <div class="card shadow-sm border-0 rounded-3">
-                    <div class="card-header bg-white py-2">
+                    <div class="card-header bg-white py-2 px-3">
                         <span class="fw-bold small text-dark">
-                            <i class="bi bi-search text-success me-2"></i> ស្វែងរក ឬកត់ត្រាវត្តមានដោយដៃ
+                            <i class="bi bi-search text-success me-1.5"></i> ស្វែងរក ឬកត់ត្រាវត្តមានដោយដៃ
                         </span>
                     </div>
-                    <div class="card-body p-3">
+                    <div class="card-body p-2 p-sm-3">
                         <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="manual-input" class="form-control" placeholder="វាយឈ្មោះ, លេខទូរស័ព្ទ, ឬកូដចុះឈ្មោះ..." autocomplete="off">
-                            <button class="btn btn-primary fw-semibold px-3" type="button" id="btn-manual-search">
+                            <span class="input-group-text bg-white d-none d-sm-flex"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="manual-input" class="form-control" placeholder="វាយឈ្មោះ / លេខទូរស័ព្ទ / កូដ..." autocomplete="off">
+                            <button class="btn btn-primary fw-semibold px-3 text-nowrap" type="button" id="btn-manual-search" style="font-size: 0.85rem;">
                                 ស្វែងរក
                             </button>
                         </div>
-                        <div class="form-text small text-muted mt-1">
+                        <div class="form-text small text-muted mt-1" style="font-size: 0.75rem;">
                             សម្រាប់សិក្ខាកាមដែលភ្លេចកូដ QR ឬទូរស័ព្ទអស់ថ្ម។
                         </div>
                         <div id="manual-results" class="mt-2" style="display: none; max-height: 250px; overflow-y: auto;"></div>
@@ -314,34 +372,34 @@
             <div class="col-lg-6">
                 <!-- Scanned Participant Info Card -->
                 <div class="card shadow-sm border-0 rounded-3 mb-3" id="participant-info-card" style="display: none;">
-                    <div class="card-body text-center p-4">
+                    <div class="card-body text-center p-3 p-sm-4">
                         <div class="mb-3 position-relative d-inline-block">
                             <div id="pi-photo-box">
-                                <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow" style="width: 85px; height: 85px; font-size: 1.9rem;" id="pi-initials"></div>
-                                <img id="pi-photo-img" src="" alt="Profile" class="rounded-circle shadow border border-3 border-success" style="width: 85px; height: 85px; object-fit: cover; display: none;">
+                                <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle shadow" style="width: 80px; height: 80px; font-size: 1.8rem;" id="pi-initials"></div>
+                                <img id="pi-photo-img" src="" alt="Profile" class="rounded-circle shadow border border-3 border-success" style="width: 80px; height: 80px; object-fit: cover; display: none;">
                             </div>
                         </div>
 
-                        <h4 id="pi-name" class="fw-bold text-dark mb-1"></h4>
+                        <h5 id="pi-name" class="fw-bold text-dark mb-1"></h5>
                         <div class="mb-2">
-                            <span id="pi-province" class="badge bg-primary px-3 py-1 me-1"></span>
-                            <span id="pi-ticket" class="badge bg-secondary"></span>
-                            <span id="pi-vip" class="badge bg-warning text-dark" style="display: none;"><i class="bi bi-star-fill"></i> VIP</span>
+                            <span id="pi-province" class="badge bg-primary px-2.5 py-1 me-1" style="font-size: 0.75rem;"></span>
+                            <span id="pi-ticket" class="badge bg-secondary" style="font-size: 0.75rem;"></span>
+                            <span id="pi-vip" class="badge bg-warning text-dark" style="display: none; font-size: 0.75rem;"><i class="bi bi-star-fill"></i> VIP</span>
                         </div>
-                        <p id="pi-company" class="text-muted small mb-3"></p>
+                        <p id="pi-company" class="text-muted small mb-3" style="font-size: 0.8rem;"></p>
 
                         <div class="p-3 bg-light rounded-3 text-start border small">
                             <div class="row g-2">
                                 <div class="col-6">
-                                    <span class="text-muted d-block">កូដចុះឈ្មោះ</span>
+                                    <span class="text-muted d-block" style="font-size: 0.72rem;">កូដចុះឈ្មោះ</span>
                                     <strong id="pi-code" class="text-primary font-monospace"></strong>
                                 </div>
                                 <div class="col-6">
-                                    <span class="text-muted d-block">លេខទូរស័ព្ទ</span>
+                                    <span class="text-muted d-block" style="font-size: 0.72rem;">លេខទូរស័ព្ទ</span>
                                     <strong id="pi-phone"></strong>
                                 </div>
                                 <div class="col-12">
-                                    <span class="text-muted d-block">ម៉ោងស្កេនវត្តមាន</span>
+                                    <span class="text-muted d-block" style="font-size: 0.72rem;">ម៉ោងស្កេនវត្តមាន</span>
                                     <strong id="pi-time" class="text-success"></strong>
                                 </div>
                             </div>
@@ -352,11 +410,11 @@
                 </div>
 
                 <!-- Ready State Card -->
-                <div id="waiting-state" class="card border-0 shadow-sm rounded-3 p-4 text-center text-muted mb-3" style="min-height: 230px;">
-                    <div class="my-auto py-3">
-                        <i class="bi bi-qr-code-scan display-4 text-primary mb-2 d-block"></i>
-                        <h5 class="fw-bold text-dark">តុជំនួយការត្រៀមរួចរាល់</h5>
-                        <p class="small text-muted mb-0">សូមតម្រង់កាមេរ៉ាទៅកាន់កូដ QR របស់សិក្ខាកាម ឬវាយឈ្មោះស្វែងរក</p>
+                <div id="waiting-state" class="card border-0 shadow-sm rounded-3 p-3 p-sm-4 text-center text-muted mb-3" style="min-height: 220px;">
+                    <div class="my-auto py-2">
+                        <i class="bi bi-qr-code-scan display-5 text-primary mb-2 d-block"></i>
+                        <h6 class="fw-bold text-dark">តុជំនួយការត្រៀមរួចរាល់</h6>
+                        <p class="small text-muted mb-0" style="font-size: 0.8rem;">សូមតម្រង់កាមេរ៉ាទៅកាន់កូដ QR របស់សិក្ខាកាម ឬវាយឈ្មោះស្វែងរក</p>
                     </div>
                 </div>
 
@@ -366,28 +424,28 @@
                         <span class="fw-bold small text-dark">
                             <i class="bi bi-clock-history text-primary me-1"></i> វត្តមានដែលទើបស្កេនថ្មីៗ
                         </span>
-                        <span class="badge bg-light text-muted border" id="recent-count"><?= count($recentAttendance ?? []) ?> នាក់</span>
+                        <span class="badge bg-light text-muted border" id="recent-count" style="font-size: 0.72rem;"><?= count($recentAttendance ?? []) ?> នាក់</span>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                        <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.82rem;">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="ps-3">ឈ្មោះសិក្ខាកាម</th>
+                                        <th class="ps-2 ps-sm-3">ឈ្មោះសិក្ខាកាម</th>
                                         <th>ខេត្ត / ស្ថាប័ន</th>
-                                        <th class="text-end pe-3">ម៉ោងស្កេន</th>
+                                        <th class="text-end pe-2 ps-sm-3">ម៉ោងស្កេន</th>
                                     </tr>
                                 </thead>
                                 <tbody id="recent-attendance-tbody">
                                     <?php if (!empty($recentAttendance)): ?>
                                         <?php foreach ($recentAttendance as $ra): ?>
                                             <tr>
-                                                <td class="ps-3 fw-bold text-dark text-nowrap"><?= htmlspecialchars($ra['name']) ?></td>
-                                                <td class="text-muted small text-truncate" style="max-width: 150px;">
+                                                <td class="ps-2 ps-sm-3 fw-bold text-dark text-nowrap"><?= htmlspecialchars($ra['name']) ?></td>
+                                                <td class="text-muted small text-truncate" style="max-width: 130px;">
                                                     <span class="badge bg-primary-subtle text-primary border me-1"><?= htmlspecialchars($ra['province']) ?></span>
                                                     <?= htmlspecialchars($ra['company']) ?>
                                                 </td>
-                                                <td class="text-end pe-3 text-success fw-bold text-nowrap"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
+                                                <td class="text-end pe-2 pe-sm-3 text-success fw-bold text-nowrap"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
@@ -508,7 +566,7 @@
             );
             html5QrcodeScanner.render(onScanSuccess, () => {});
 
-            // Auto-translate default HTML5 QR buttons
+            // Auto-translate default HTML5 QR buttons to Khmer
             const observer = new MutationObserver(() => {
                 const permBtn = document.getElementById('html5-qrcode-button-camera-permission');
                 if (permBtn && !permBtn.dataset.kh) {
@@ -527,28 +585,6 @@
                 }
             });
             observer.observe(document.getElementById('reader'), { childList: true, subtree: true });
-
-            // Camera selector setup
-            if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
-                Html5Qrcode.getCameras().then(devices => {
-                    if (devices && devices.length > 1) {
-                        const sel = document.getElementById('camera-select');
-                        const wrap = document.getElementById('camera-select-wrapper');
-                        wrap.style.display = 'block';
-                        sel.innerHTML = '';
-                        devices.forEach(d => {
-                            const opt = document.createElement('option');
-                            opt.value = d.id;
-                            opt.textContent = d.label || ('កាមេរ៉ា ' + d.id.substring(0,6));
-                            sel.appendChild(opt);
-                        });
-                        sel.addEventListener('change', function() {
-                            localStorage.setItem('helper_cam_id', this.value);
-                            location.reload();
-                        });
-                    }
-                }).catch(() => {});
-            }
         }
 
         function onScanSuccess(decodedText) {
@@ -603,7 +639,7 @@
                 playBeep('success');
                 overlay.classList.add('scan-success');
                 icon.className = 'bi bi-check-circle-fill display-1 mb-2';
-                // update stats
+                // update stats counter
                 const st = document.getElementById('stats-checked-in');
                 if (st) {
                     const parts = st.innerText.split('/');
@@ -689,12 +725,12 @@
             const tr = document.createElement('tr');
             const timeStr = new Date().toTimeString().split(' ')[0];
             tr.innerHTML = `
-                <td class="ps-3 fw-bold text-dark text-nowrap">${escapeHtml(p.name)}</td>
-                <td class="text-muted small text-truncate" style="max-width: 150px;">
+                <td class="ps-2 ps-sm-3 fw-bold text-dark text-nowrap">${escapeHtml(p.name)}</td>
+                <td class="text-muted small text-truncate" style="max-width: 130px;">
                     <span class="badge bg-primary-subtle text-primary border me-1">${escapeHtml(p.province)}</span>
                     ${escapeHtml(p.company)}
                 </td>
-                <td class="text-end pe-3 text-success fw-bold text-nowrap">${timeStr}</td>
+                <td class="text-end pe-2 pe-sm-3 text-success fw-bold text-nowrap">${timeStr}</td>
             `;
             tbody.insertBefore(tr, tbody.firstChild);
 
@@ -749,14 +785,14 @@
                 res.data.forEach(item => {
                     const isAttended = item.checked_in_at !== null;
                     html += `
-                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3">
-                            <div>
-                                <div class="fw-bold text-dark small">${escapeHtml(item.name)}</div>
-                                <div class="text-muted" style="font-size: 0.72rem;">${escapeHtml(item.registration_code)} | ${escapeHtml(item.phone || '-')} | ${escapeHtml(item.company)}</div>
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2 py-2 px-2.5">
+                            <div class="min-w-0">
+                                <div class="fw-bold text-dark small text-truncate">${escapeHtml(item.name)}</div>
+                                <div class="text-muted text-truncate" style="font-size: 0.72rem;">${escapeHtml(item.registration_code)} | ${escapeHtml(item.phone || '-')} | ${escapeHtml(item.company)}</div>
                             </div>
-                            <div>
-                                ${isAttended ? '<span class="badge bg-success-subtle text-success border small">បានស្កេនរួច</span>' :
-                                `<button class="btn btn-sm btn-primary py-1 px-2 fw-semibold" style="font-size: 0.75rem;" onclick="processScan('${item.token || item.registration_code}')">កត់ត្រា</button>`}
+                            <div class="flex-shrink-0">
+                                ${isAttended ? '<span class="badge bg-success-subtle text-success border" style="font-size: 0.72rem;">បានស្កេនរួច</span>' :
+                                `<button class="btn btn-sm btn-primary py-1 px-2.5 fw-semibold" style="font-size: 0.75rem;" onclick="processScan('${item.token || item.registration_code}')">កត់ត្រា</button>`}
                             </div>
                         </div>
                     `;
