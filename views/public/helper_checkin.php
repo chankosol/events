@@ -33,27 +33,29 @@
             width:1.9rem; height:1.1rem; margin:0!important; float:none!important;
         }
 
-        /* ── Scanner Card ── */
-        /* ── SQUARE scanner viewport ── */
+        /* ─── SQUARE scanner viewport ───────────────────────────
+           Strategy: .scanner-wrap holds aspect-ratio:1/1 + overflow:hidden.
+           #qr-reader is left as NORMAL FLOW (not absolutely positioned)
+           so html5-qrcode can size its internal canvas correctly.
+           The tall video overflows the square wrapper and is clipped
+           visually by overflow:hidden — the decode canvas is unaffected.
+        ──────────────────────────────────────────────────────── */
         .scanner-wrap {
             position: relative;
-            background: #0f172a;
-            border-radius: 10px 10px 0 0;
-            overflow: hidden;
-            aspect-ratio: 1 / 1;  /* SQUARE */
             width: 100%;
-        }
-
-        /* html5-qrcode fills the square wrapper fully */
-        #qr-reader {
-            position: absolute !important;
-            inset: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            aspect-ratio: 1 / 1;   /* square clip window */
+            overflow: hidden;       /* clips tall video to square visually */
+            border-radius: 10px 10px 0 0;
             background: #0f172a;
         }
 
-        /* Hide ALL html5-qrcode native UI elements */
+        /* Let html5-qrcode manage #qr-reader's own sizing — don't override! */
+        #qr-reader {
+            width: 100%;
+            background: #0f172a;
+        }
+
+        /* Hide html5-qrcode native UI (buttons, select, text) — NOT the canvas */
         #qr-reader__dashboard,
         #qr-reader__header_message,
         #qr-reader__status_span,
@@ -62,26 +64,15 @@
         #qr-reader__filescan_input,
         #qr-reader__dashboard_section_filesel { display: none !important; }
 
-        /* scan_region fills the square too */
-        #qr-reader__scan_region {
-            position: absolute !important;
-            inset: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-        }
-        #qr-reader__scan_region img,
-        #qr-reader__scan_region canvas { display: none !important; }
-
-        /* Video crops to fill the square (no black bars) */
+        /* Video: fill width, object-fit cover — height stays auto (tall, clipped by wrapper) */
         #qr-reader video {
-            position: absolute !important;
-            inset: 0 !important;
             width: 100% !important;
-            height: 100% !important;
+            max-width: 100% !important;
             object-fit: cover !important;
             display: block !important;
             border-radius: 0 !important;
         }
+        /* The canvas inside scan_region is used for QR decoding — do NOT hide or override it */
 
         /* ── Our custom laser reticle overlaid on top of video ── */
         .laser-reticle {
