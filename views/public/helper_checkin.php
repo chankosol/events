@@ -159,6 +159,9 @@
         .cam-btn-zoom   { background:#334155; color:#e2e8f0; min-width:46px; justify-content:center; }
         .cam-btn-zoom.on  { background:#0d6efd; color:#fff; }
         .cam-btn-focus  { background:#334155; color:#64748b; min-width:36px; justify-content:center; }
+        .cam-btn-fs     { background:#0284c7; color:#fff; }
+        .cam-btn-fs:hover { background:#0369a1; }
+        .cam-btn-fs.active { background:#dc2626 !important; }
 
         /* Status dot */
         #cam-status-dot {
@@ -166,6 +169,71 @@
             background:#475569; transition:background .3s;
         }
         #cam-status-dot.live { background:#22c55e; box-shadow:0 0 5px #22c55e; }
+
+        /* ── Fullscreen Kiosk Mode (Locks Scroll & Expands Scanner) ── */
+        body.fullscreen-scan-lock {
+            overflow: hidden !important;
+            touch-action: none !important;
+            position: fixed !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+
+        .scanner-card.fullscreen-mode {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            z-index: 999999 !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            background: #090d16 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            touch-action: none !important;
+            overflow: hidden !important;
+        }
+
+        .fullscreen-hud-bar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            z-index: 45;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 8px 14px;
+            border-radius: 50rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .scanner-card.fullscreen-mode .card-header {
+            display: none !important;
+        }
+
+        .scanner-card.fullscreen-mode .scanner-wrap {
+            flex: 1 !important;
+            max-width: min(88vw, 68vh, 440px) !important;
+            max-height: min(88vw, 68vh, 440px) !important;
+            margin: auto !important;
+            border-radius: 16px !important;
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.25) !important;
+        }
+
+        .scanner-card.fullscreen-mode .cam-toolbar {
+            background: rgba(15, 23, 42, 0.95) !important;
+            backdrop-filter: blur(8px) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 0 !important;
+            padding: 10px 16px !important;
+            z-index: 50 !important;
+            justify-content: center !important;
+        }
 
         /* Placeholder */
         .cam-placeholder {
@@ -248,19 +316,39 @@
         <div class="col-lg-6">
 
             <!-- Camera Card -->
-            <div class="card shadow-sm border-0 mb-3 rounded-3 overflow-hidden">
+            <div class="card shadow-sm border-0 mb-3 rounded-3 overflow-hidden scanner-card" id="scanner-card">
                 <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between">
                     <span class="fw-bold small d-flex align-items-center gap-1">
                         <i class="bi bi-camera-video-fill text-primary"></i> ស្គេនកូដ QR
                     </span>
-                    <span class="d-flex align-items-center gap-1 small text-muted">
-                        <span id="cam-status-dot"></span>
-                        <span id="cam-status-text" style="font-size:.7rem;">រង់ចាំ…</span>
-                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill d-inline-flex align-items-center gap-1" id="btn-fullscreen-toggle" onclick="toggleFullscreen()" style="font-size: 0.74rem; height: 26px;">
+                            <i class="bi bi-arrows-fullscreen"></i> ពេញអេក្រង់
+                        </button>
+                        <span class="d-flex align-items-center gap-1 small text-muted">
+                            <span id="cam-status-dot"></span>
+                            <span id="cam-status-text" style="font-size:.7rem;">រង់ចាំ…</span>
+                        </span>
+                    </div>
                 </div>
 
                 <!-- ── Scanner viewport (html5-qrcode renders INSIDE #qr-reader) ── -->
                 <div class="scanner-wrap" id="scanner-wrap">
+                    <!-- Floating Fullscreen HUD (active only in fullscreen mode) -->
+                    <div class="fullscreen-hud-bar" id="fullscreen-hud-bar" style="display: none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white border px-2 py-1 rounded-pill" style="font-size: 0.72rem;">
+                                <i class="bi bi-lock-fill me-1"></i>ជាប់សោរ
+                            </span>
+                            <span class="badge bg-light text-dark border px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;">
+                                បានស្កេន៖ <strong class="text-success fs-6" id="fs-stats-checked-in"><?= (int)($stats['checked_in']??0) ?> / <?= (int)($stats['total_confirmed']??0) ?></strong>
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger py-1 px-3 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center gap-1" onclick="toggleFullscreen()" style="font-size: 0.76rem;">
+                            <i class="bi bi-fullscreen-exit"></i> ចាកចេញ
+                        </button>
+                    </div>
+
                     <!-- Placeholder shown before camera starts -->
                     <div class="cam-placeholder" id="cam-placeholder">
                         <i class="bi bi-camera-video-off" style="font-size:2.2rem;"></i>
@@ -310,6 +398,9 @@
                     </button>
                     <button class="cam-btn cam-btn-focus" id="btn-focus" onclick="triggerFocus()" style="display:none;" title="Focus">
                         <i class="bi bi-crosshair"></i>
+                    </button>
+                    <button class="cam-btn cam-btn-fs" id="btn-cam-fs" onclick="toggleFullscreen()" title="ពេញអេក្រង់">
+                        <i class="bi bi-arrows-fullscreen"></i> ពេញអេក្រង់
                     </button>
                 </div>
             </div>
@@ -638,6 +729,75 @@ function toggleZoom() {
     }).catch(()=>{});
 }
 
+// ── Fullscreen Mode (Lock Screen Scroll & Center Scanner) ──
+let isFullscreenMode = false;
+
+function toggleFullscreen() {
+    isFullscreenMode = !isFullscreenMode;
+    const card = document.getElementById('scanner-card');
+    const hud = document.getElementById('fullscreen-hud-bar');
+    const btnFs = document.getElementById('btn-fullscreen-toggle');
+    const btnCamFs = document.getElementById('btn-cam-fs');
+
+    if (isFullscreenMode) {
+        document.body.classList.add('fullscreen-scan-lock');
+        if (card) card.classList.add('fullscreen-mode');
+        if (hud) hud.style.display = 'flex';
+        if (btnCamFs) {
+            btnCamFs.classList.add('active');
+            btnCamFs.innerHTML = '<i class="bi bi-fullscreen-exit"></i> ចាកចេញ';
+        }
+        if (btnFs) {
+            btnFs.classList.replace('btn-outline-primary', 'btn-danger');
+            btnFs.innerHTML = '<i class="bi bi-fullscreen-exit"></i> ចាកចេញ';
+        }
+
+        // Sync counter
+        const origSt = document.getElementById('stats-checked-in');
+        const fsSt = document.getElementById('fs-stats-checked-in');
+        if (origSt && fsSt) fsSt.innerText = origSt.innerText;
+
+        // Try native browser fullscreen API if supported (Android / Desktop)
+        try {
+            if (card && card.requestFullscreen) {
+                card.requestFullscreen().catch(()=>{});
+            } else if (card && card.webkitRequestFullscreen) {
+                card.webkitRequestFullscreen();
+            }
+        } catch(e) {}
+    } else {
+        document.body.classList.remove('fullscreen-scan-lock');
+        if (card) card.classList.remove('fullscreen-mode');
+        if (hud) hud.style.display = 'none';
+        if (btnCamFs) {
+            btnCamFs.classList.remove('active');
+            btnCamFs.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> ពេញអេក្រង់';
+        }
+        if (btnFs) {
+            btnFs.classList.replace('btn-danger', 'btn-outline-primary');
+            btnFs.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> ពេញអេក្រង់';
+        }
+
+        // Exit native fullscreen if active
+        try {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        } catch(e) {}
+    }
+
+    setTimeout(() => { applyFocus(); }, 300);
+}
+
+// Exit fullscreen when user presses ESC or exits browser fullscreen
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && isFullscreenMode) toggleFullscreen();
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    if (!document.webkitFullscreenElement && isFullscreenMode) toggleFullscreen();
+});
+
 // ── Tap-to-Focus ───────────────────────────────────────
 function showFocusRing(x, y) {
     const r = document.getElementById('focus-ring');
@@ -682,7 +842,15 @@ function showOverlay(data) {
         ov.classList.add('success');
         ico.className = 'bi bi-check-circle-fill display-1 mb-2';
         const st = document.getElementById('stats-checked-in');
-        if (st) { const p = st.innerText.split('/'); if (p.length===2) st.innerText=(parseInt(p[0].trim())+1)+' / '+p[1].trim(); }
+        if (st) {
+            const p = st.innerText.split('/');
+            if (p.length===2) {
+                const updated = (parseInt(p[0].trim())+1)+' / '+p[1].trim();
+                st.innerText = updated;
+                const fsSt = document.getElementById('fs-stats-checked-in');
+                if (fsSt) fsSt.innerText = updated;
+            }
+        }
     } else if (data.success && data.already_in) {
         beep('warn'); vibrate([50,40,50]);
         ov.classList.add('warning');
