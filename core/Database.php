@@ -17,6 +17,8 @@ class Database {
 
         try {
             $this->pdo = new PDO($dsn, $config['user'], $config['pass'], $options);
+            $tzOffset = date('P');
+            $this->pdo->exec("SET time_zone = '{$tzOffset}'");
         } catch (PDOException $e) {
             // Do not expose exception details to user
             error_log($e->getMessage());
@@ -45,6 +47,12 @@ class Database {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch();
+    }
+
+    public function queryValue($sql, $params = []) {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
     }
 
     public function execute($sql, $params = []) {

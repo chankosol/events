@@ -26,9 +26,9 @@
             <div class="col-md-3">
                 <select name="status" class="form-select">
                     <option value="">គ្រប់ស្ថានភាព</option>
-                    <option value="draft" <?php echo (($_GET['status'] ?? '') === 'draft') ? 'selected' : ''; ?>>សេចក្តីព្រាង (Draft)</option>
-                    <option value="pending_payment" <?php echo (($_GET['status'] ?? '') === 'pending_payment') ? 'selected' : ''; ?>>រង់ចាំបង់ថ្លៃប្រព័ន្ធ</option>
-                    <option value="active" <?php echo (($_GET['status'] ?? '') === 'active') ? 'selected' : ''; ?>>សកម្ម (ត្រៀមរួចរាល់)</option>
+                    <option value="draft" <?php echo (($_GET['status'] ?? '') === 'draft') ? 'selected' : ''; ?>>សេចក្តីព្រាង</option>
+                    <option value="pending_payment" <?php echo (($_GET['status'] ?? '') === 'pending_payment') ? 'selected' : ''; ?>>រង់ចាំបង់ថ្លៃ</option>
+                    <option value="active" <?php echo (($_GET['status'] ?? '') === 'active') ? 'selected' : ''; ?>>ត្រៀមរួចរាល់</option>
                     <option value="registration_open" <?php echo (($_GET['status'] ?? '') === 'registration_open') ? 'selected' : ''; ?>>កំពុងបើកចុះឈ្មោះ</option>
                     <option value="in_progress" <?php echo (($_GET['status'] ?? '') === 'in_progress') ? 'selected' : ''; ?>>កំពុងដំណើរការ</option>
                     <option value="completed" <?php echo (($_GET['status'] ?? '') === 'completed') ? 'selected' : ''; ?>>បានបញ្ចប់</option>
@@ -145,13 +145,13 @@
                                             </li>
                                             <li><hr class="dropdown-divider my-1"></li>
                                             <li>
-                                                <a class="dropdown-item py-2" href="<?php echo APP_URL; ?>/live/<?php echo $w['id']; ?>">
-                                                    <i class="bi bi-broadcast text-danger me-2"></i> មជ្ឈមណ្ឌលផ្ទាល់ (Live)
+                                                <a class="dropdown-item py-2" href="<?php echo APP_URL; ?>/live/<?php echo $w['id']; ?>" title="ផ្ទាំងបញ្ជាផ្សាយផ្ទាល់">
+                                                    <i class="bi bi-broadcast text-danger me-2"></i> ផ្សាយផ្ទាល់
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item py-2" href="<?php echo APP_URL; ?>/checkin/<?php echo $w['id']; ?>">
-                                                    <i class="bi bi-qr-code-scan text-success me-2"></i> ស្កេនវត្តមាន (Check-in)
+                                                <a class="dropdown-item py-2" href="<?php echo APP_URL; ?>/checkin/<?php echo $w['id']; ?>" title="តុស្កេនវត្តមាន">
+                                                    <i class="bi bi-qr-code-scan text-success me-2"></i> ស្កេនវត្តមាន
                                                 </a>
                                             </li>
                                             <li>

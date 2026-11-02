@@ -6,6 +6,11 @@ $tokenCount = 0;
 if ($hasBakongToken) {
     $tokenCount = count(array_filter(array_map('trim', preg_split('/[\s,]+/', $actualBakongTokens))));
 }
+
+$isTgBotEnabled = ($settingsMap['telegram_bot_enabled'] ?? '0') === '1';
+$tgBotUsername = $settingsMap['telegram_bot_username'] ?? '';
+$tgBotToken = $settingsMap['telegram_bot_token'] ?? '';
+$hasTgBot = $isTgBotEnabled && !empty($tgBotUsername) && !empty($tgBotToken);
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -185,6 +190,107 @@ if ($hasBakongToken) {
 
             <!-- Live Test Feedback Box -->
             <div id="bakongTestFeedback" class="mt-3 d-none"></div>
+        </div>
+    </div>
+
+    <!-- Card 3: Official Telegram Bot Integration (Platform System Ticket Bot) -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="bg-info-subtle text-info p-2 rounded-3">
+                    <i class="bi bi-telegram fs-5"></i>
+                </span>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        ការកំណត់ Official Telegram Bot (System Ticket Bot)
+                    </h5>
+                    <small class="text-muted">កំណត់ Bot Token និង Username សម្រាប់ផ្ញើសំបុត្រ និង QR Code ចូលទៅ Telegram សិក្ខាកាមដោយស្វ័យប្រវត្តិ។ ងាយស្រួលផ្លាស់ប្តូរនៅទីនេះដោយផ្ទាល់ដោយមិនបាច់ប៉ះពាល់កូដ!</small>
+                </div>
+            </div>
+            <span class="badge <?php echo $hasTgBot ? 'bg-success' : 'bg-secondary'; ?> px-3 py-2 rounded-pill">
+                <i class="bi <?php echo $hasTgBot ? 'bi-check-circle-fill' : 'bi-x-circle'; ?> me-1"></i>
+                <?php echo $hasTgBot ? "Bot Active (@{$tgBotUsername})" : 'Bot មិនទាន់ដំណើរការ'; ?>
+            </span>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Instructions Alert -->
+            <div class="alert alert-primary-subtle border-0 rounded-3 p-3 mb-4 d-flex align-items-start gap-3">
+                <i class="bi bi-lightbulb-fill text-primary fs-4 mt-1"></i>
+                <div class="small">
+                    <strong>របៀបបង្កើត និងកំណត់ Bot ក្នុងរយៈពេល ១ នាទី៖</strong>
+                    <ol class="mb-0 ps-3 mt-1 text-muted">
+                        <li>បើកកម្មវិធី Telegram ហើយស្វែងរកគណនីផ្លូវការ <code>@BotFather</code> រួចផ្ញើពាក្យបញ្ជា <code>/newbot</code></li>
+                        <li>ដាក់ឈ្មោះ Bot និង Username (ឧ. <code>my_workshop_ticket_bot</code>) រួចចម្លង <strong>HTTP API Token</strong> យកមកបិទភ្ជាប់ (Paste) ក្នុងប្រអប់ខាងក្រោម</li>
+                        <li>ចុចប៊ូតុង <strong>«រក្សាទុកការកំណត់ប្រព័ន្ធ»</strong> និងចុចប៊ូតុង <strong>«ភ្ជាប់ Webhook ទៅ Telegram»</strong> ជាការស្រេច!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">ស្ថានភាពដំណើរការ Bot</label>
+                    <select name="telegram_bot_enabled" class="form-select" id="telegram_bot_enabled">
+                        <option value="1" <?php echo ($settingsMap['telegram_bot_enabled'] ?? '') === '1' ? 'selected' : ''; ?>>✓ បើកដំណើរការ (Active)</option>
+                        <option value="0" <?php echo ($settingsMap['telegram_bot_enabled'] ?? '') !== '1' ? 'selected' : ''; ?>>○ បិទដំណើរការ (Inactive)</option>
+                    </select>
+                    <small class="text-muted">ពេលបិទ ប្រព័ន្ធនឹងប្រើតំណភ្ជាប់ Telegram Share ធម្មតាជំនួសវិញ។</small>
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Telegram Bot Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted">@</span>
+                        <input type="text" name="telegram_bot_username" id="telegram_bot_username" class="form-control" placeholder="my_workshop_ticket_bot" value="<?php echo e(ltrim($settingsMap['telegram_bot_username'] ?? '', '@')); ?>">
+                        <?php if (!empty($settingsMap['telegram_bot_username'])): ?>
+                            <a href="https://t.me/<?php echo e(ltrim($settingsMap['telegram_bot_username'], '@')); ?>" target="_blank" class="btn btn-outline-info">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> បើក Bot
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    <small class="text-muted">Username របស់ Bot ដែលទទួលបានពី @BotFather (មិនបាច់ដាក់សញ្ញា @)។</small>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-bold">Telegram Bot API Token (HTTP Token)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-key-fill"></i></span>
+                        <input type="password" name="telegram_bot_token" id="telegram_bot_token" class="form-control font-monospace" placeholder="7891234567:AAFxxxxxxxxx-xxxxxxxxxxxx" value="<?php echo e($settingsMap['telegram_bot_token'] ?? ''); ?>">
+                        <button class="btn btn-outline-secondary" type="button" id="toggle-telegram-token" title="បង្ហាញ/លាក់ Token">
+                            <i class="bi bi-eye" id="toggle-telegram-icon"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Token សម្ងាត់សម្រាប់បញ្ជា Bot ផ្ញើសំបុត្រ។ កុំចែករំលែក Token នេះទៅអ្នកដទៃ។</small>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-bold">Webhook URL (System Endpoint)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-link-45deg"></i></span>
+                        <input type="text" class="form-control font-monospace bg-light" id="telegramWebhookUrlInput" readonly value="<?php echo APP_URL; ?>/api/telegram/webhook">
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('telegramWebhookUrlInput').value); alert('បានចម្លង Webhook URL!');">
+                            <i class="bi bi-clipboard me-1"></i> ចម្លង URL
+                        </button>
+                    </div>
+                    <small class="text-muted">តំណភ្ជាប់ដែល Telegram បញ្ជូនព័ត៌មានមកប្រព័ន្ធ។ ចុចប៊ូតុងខាងក្រោមដើម្បីភ្ជាប់ Webhook ដោយស្វ័យប្រវត្តិ។</small>
+                </div>
+            </div>
+
+            <!-- Action buttons for Telegram -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top">
+                <button type="button" class="btn btn-info text-white fw-bold px-3 py-2 shadow-xs" id="btnSetTelegramWebhook">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> ភ្ជាប់ Webhook ទៅ Telegram
+                </button>
+                <button type="button" class="btn btn-outline-primary fw-bold px-3 py-2" id="btnTestTelegramBot">
+                    <i class="bi bi-search me-1"></i> ពិនិត្យស្ថានភាព Bot (Test Connection)
+                </button>
+                <div class="text-muted small ms-md-2">
+                    <i class="bi bi-info-circle me-1"></i> ចុច Test ដើម្បីផ្ទៀងផ្ទាត់ Token ជាមួយ Telegram Server
+                </div>
+            </div>
+
+            <!-- Feedback box -->
+            <div id="telegramTestFeedback" class="mt-3 d-none"></div>
         </div>
     </div>
 
@@ -410,6 +516,123 @@ document.addEventListener('DOMContentLoaded', function() {
                 testBtn.innerHTML = originalHtml;
                 testFeedback.classList.remove('d-none');
                 testFeedback.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0">មិនអាចតភ្ជាប់ទៅកាន់ម៉ាស៊ីនបម្រើបានឡើយ។</div>';
+            });
+        });
+    }
+
+    // Telegram Bot Token Toggle Visibility
+    var tgTokenInput = document.getElementById('telegram_bot_token');
+    var tgToggleBtn = document.getElementById('toggle-telegram-token');
+    var tgToggleIcon = document.getElementById('toggle-telegram-icon');
+    if (tgToggleBtn && tgTokenInput) {
+        tgToggleBtn.addEventListener('click', function() {
+            if (tgTokenInput.type === 'password') {
+                tgTokenInput.type = 'text';
+                tgToggleIcon.className = 'bi bi-eye-slash';
+            } else {
+                tgTokenInput.type = 'password';
+                tgToggleIcon.className = 'bi bi-eye';
+            }
+        });
+    }
+
+    // Telegram Bot Test Connection
+    var btnTestTg = document.getElementById('btnTestTelegramBot');
+    var tgFeedback = document.getElementById('telegramTestFeedback');
+    if (btnTestTg && tgFeedback) {
+        btnTestTg.addEventListener('click', function() {
+            var token = tgTokenInput ? tgTokenInput.value.trim() : '';
+            if (!token) {
+                tgFeedback.className = 'alert alert-warning py-2 px-3 mt-3';
+                tgFeedback.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> សូមបញ្ចូល Telegram Bot Token មុនពេលធ្វើតេស្ត។';
+                tgFeedback.classList.remove('d-none');
+                return;
+            }
+
+            var origHtml = btnTestTg.innerHTML;
+            btnTestTg.disabled = true;
+            btnTestTg.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងពិនិត្យ...';
+            tgFeedback.className = 'alert alert-info py-2 px-3 mt-3';
+            tgFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> កំពុងភ្ជាប់ទៅកាន់ Telegram Server...';
+            tgFeedback.classList.remove('d-none');
+
+            var formData = new FormData();
+            formData.append('telegram_bot_token', token);
+            formData.append('_csrf_token', '<?php echo csrfToken(); ?>');
+
+            fetch('<?php echo APP_URL; ?>/platform/settings/test-telegram', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(res => {
+                btnTestTg.disabled = false;
+                btnTestTg.innerHTML = origHtml;
+                if (res.success) {
+                    tgFeedback.className = 'alert alert-success py-2 px-3 mt-3';
+                    tgFeedback.innerHTML = '<div class="fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ' + res.message + '</div>' +
+                                          '<div class="small text-muted mt-1">Bot ID: ' + (res.data ? res.data.bot_id : '') + ' | Username: ' + (res.data ? res.data.bot_username : '') + '</div>';
+                } else {
+                    tgFeedback.className = 'alert alert-danger py-2 px-3 mt-3';
+                    tgFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + (res.message || 'មិនអាចភ្ជាប់បានទេ។');
+                }
+            })
+            .catch(err => {
+                btnTestTg.disabled = false;
+                btnTestTg.innerHTML = origHtml;
+                tgFeedback.className = 'alert alert-danger py-2 px-3 mt-3';
+                tgFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> មានបញ្ហាក្នុងការភ្ជាប់ សូមព្យាយាមម្តងទៀត។';
+            });
+        });
+    }
+
+    // Telegram Set Webhook
+    var btnSetWebhook = document.getElementById('btnSetTelegramWebhook');
+    if (btnSetWebhook && tgFeedback) {
+        btnSetWebhook.addEventListener('click', function() {
+            var token = tgTokenInput ? tgTokenInput.value.trim() : '';
+            if (!token) {
+                tgFeedback.className = 'alert alert-warning py-2 px-3 mt-3';
+                tgFeedback.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> សូមបញ្ចូល Telegram Bot Token មុនពេលភ្ជាប់ Webhook។';
+                tgFeedback.classList.remove('d-none');
+                return;
+            }
+
+            var origHtml = btnSetWebhook.innerHTML;
+            btnSetWebhook.disabled = true;
+            btnSetWebhook.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងភ្ជាប់ Webhook...';
+            tgFeedback.className = 'alert alert-info py-2 px-3 mt-3';
+            tgFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-1"></i> កំពុងផ្ញើស្នើសុំ Webhook ទៅ Telegram API...';
+            tgFeedback.classList.remove('d-none');
+
+            var formData = new FormData();
+            formData.append('telegram_bot_token', token);
+            formData.append('_csrf_token', '<?php echo csrfToken(); ?>');
+
+            fetch('<?php echo APP_URL; ?>/platform/settings/set-telegram-webhook', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(res => {
+                btnSetWebhook.disabled = false;
+                btnSetWebhook.innerHTML = origHtml;
+                if (res.success) {
+                    tgFeedback.className = 'alert alert-success py-2 px-3 mt-3';
+                    tgFeedback.innerHTML = '<div class="fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ' + res.message.replace(/\n/g, '<br>') + '</div>' +
+                                          '<div class="small mt-1">ឥឡូវនេះ Telegram Bot នឹងឆ្លើយតប និងផ្ញើសំបុត្រដោយស្វ័យប្រវត្តិហើយ!</div>';
+                } else {
+                    tgFeedback.className = 'alert alert-danger py-2 px-3 mt-3';
+                    tgFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + (res.message || 'មិនអាចភ្ជាប់ Webhook បានទេ។');
+                }
+            })
+            .catch(err => {
+                btnSetWebhook.disabled = false;
+                btnSetWebhook.innerHTML = origHtml;
+                tgFeedback.className = 'alert alert-danger py-2 px-3 mt-3';
+                tgFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> មានបញ្ហាក្នុងការភ្ជាប់ សូមព្យាយាមម្តងទៀត។';
             });
         });
     }

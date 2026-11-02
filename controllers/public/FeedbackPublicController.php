@@ -1,0 +1,31 @@
+<?php
+// controllers/public/FeedbackPublicController.php
+
+class FeedbackPublicController {
+    public static function index(int $workshopId): void {
+        Session::start();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne(
+            "SELECT w.*, b.name as business_name
+             FROM workshops w
+             JOIN businesses b ON b.id = w.business_id
+             WHERE w.id = ? AND w.deleted_at IS NULL",
+            [$workshopId]
+        );
+
+        if (!$workshop) {
+            http_response_code(404);
+            require VIEWS_PATH . '/errors/404.php';
+            exit;
+        }
+
+        $currentUser = null;
+        if (Auth::isParticipant()) {
+            $currentUser = Auth::participant();
+        }
+
+        $title = 'ផ្ដល់មតិកែលម្អលើកម្មវិធី - ' . $workshop['name'];
+        require VIEWS_PATH . '/public/feedback.php';
+    }
+}

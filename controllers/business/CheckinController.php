@@ -55,21 +55,47 @@ class CheckinController {
             [$workshopId]
         );
 
-        $recentAttendance = $db->query(
-            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone,
-                    COALESCE(d.organization, p.company, '-') as company,
-                    COALESCE(d.province, p.province, 'ទូទៅ') as province,
-                    COALESCE(p.position, '-') as position,
-                    r.id as registration_id, r.registration_code
-             FROM attendance a
-             JOIN registrations r ON r.id = a.registration_id
-             JOIN participants p ON p.id = a.participant_id
-             LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
-             WHERE a.workshop_id = ? AND a.checked_in_at IS NOT NULL
-             ORDER BY a.checked_in_at DESC
-             LIMIT 10",
-            [$workshopId]
-        );
+        // Recent attendance from attendance_slots if table exists, otherwise fallback to attendance
+        $hasSlotsTable = false;
+        try {
+            $hasSlotsTable = (bool)$db->queryOne("SHOW TABLES LIKE 'attendance_slots'");
+        } catch (Throwable $e) {}
+
+        if ($hasSlotsTable) {
+            $recentAttendance = $db->query(
+                "SELECT s.id as slot_id, s.slot_number, s.slot_name, s.checked_in_at, s.check_in_method,
+                        p.name, p.phone,
+                        COALESCE(d.organization, p.company, '-') as company,
+                        COALESCE(d.province, p.province, 'ទូទៅ') as province,
+                        COALESCE(p.position, '-') as position,
+                        r.id as registration_id, r.registration_code
+                 FROM attendance_slots s
+                 JOIN registrations r ON r.id = s.registration_id
+                 JOIN participants p ON p.id = s.participant_id
+                 LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
+                 WHERE s.workshop_id = ?
+                 ORDER BY s.checked_in_at DESC
+                 LIMIT 15",
+                [$workshopId]
+            );
+        } else {
+            $recentAttendance = $db->query(
+                "SELECT 0 as slot_id, 1 as slot_number, '' as slot_name, a.checked_in_at, a.check_in_method,
+                        p.name, p.phone,
+                        COALESCE(d.organization, p.company, '-') as company,
+                        COALESCE(d.province, p.province, 'ទូទៅ') as province,
+                        COALESCE(p.position, '-') as position,
+                        r.id as registration_id, r.registration_code
+                 FROM attendance a
+                 JOIN registrations r ON r.id = a.registration_id
+                 JOIN participants p ON p.id = a.participant_id
+                 LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
+                 WHERE a.workshop_id = ? AND a.checked_in_at IS NOT NULL
+                 ORDER BY a.checked_in_at DESC
+                 LIMIT 10",
+                [$workshopId]
+            );
+        }
 
         $title = 'ស្កេនវត្តមាន - ' . $workshop['name'];
         $breadcrumbs = [
@@ -430,6 +456,8 @@ class CheckinController {
                 $sourceText = !empty($s['notes']) ? $s['notes'] : 'តុជំនួយការ';
             } elseif ($s['check_in_method'] === 'manual') {
                 $sourceText = 'ស្កេនដោយដៃ';
+            } elseif ($s['check_in_method'] === 'face') {
+                $sourceText = 'ស្កេនផ្ទៃមុខ (AI)';
             }
 
             $photoUrl = '';
@@ -515,6 +543,127 @@ class CheckinController {
             ],
             'stream'    => $formattedStream,
             'stations'  => $stations
+        ]);
+        exit;
+    }
+
+    public static function faceKiosk(int $workshopId): void {
+        requireAuth();
+        requirePermission('checkin.use');
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne(
+            "SELECT * FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL",
+            [$workshopId, $businessId]
+        );
+        if (!$workshop) { http_response_code(404); die('Workshop not found.'); }
+
+        $stats = $db->queryOne(
+            "SELECT
+               COUNT(r.id) as total_confirmed,
+               SUM(CASE WHEN a.checked_in_at IS NOT NULL THEN 1 ELSE 0 END) as checked_in
+             FROM registrations r
+             JOIN participants p ON p.id = r.participant_id
+             LEFT JOIN attendance a ON a.registration_id = r.id
+             WHERE r.workshop_id = ? AND r.business_id = ? AND r.status IN ('confirmed', 'attended') AND r.deleted_at IS NULL",
+            [$workshopId, $businessId]
+        );
+        $totalConfirmed = (int)($stats['total_confirmed'] ?? 0);
+        $totalCheckedIn = (int)($stats['checked_in'] ?? 0);
+
+        // Fetch recent check-ins
+        $recentAttendance = $db->query(
+            "SELECT a.checked_in_at, a.check_in_method, p.name, p.phone, p.photo,
+                    COALESCE(d.organization, p.company, '-') as company,
+                    t.name as ticket_name,
+                    r.registration_code
+             FROM attendance a
+             JOIN registrations r ON r.id = a.registration_id
+             JOIN participants p ON p.id = a.participant_id
+             LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
+             LEFT JOIN tickets t ON t.id = r.ticket_id
+             WHERE a.workshop_id = ? AND a.checked_in_at IS NOT NULL
+             ORDER BY a.checked_in_at DESC
+             LIMIT 15",
+            [$workshopId]
+        );
+
+        // Count enrolled faces
+        $enrolledCount = (int)($db->queryOne(
+            "SELECT COUNT(*) as c FROM participant_faces pf 
+             JOIN registrations r ON r.id = pf.registration_id 
+             WHERE r.workshop_id = ? AND pf.is_active = 1 AND r.deleted_at IS NULL",
+            [$workshopId]
+        )['c'] ?? 0);
+
+        // Participants available for enrollment
+        $unregisteredParticipants = $db->query(
+            "SELECT r.id, r.registration_code, p.name, p.phone, p.company, t.name as ticket_name
+             FROM registrations r
+             JOIN participants p ON p.id = r.participant_id
+             LEFT JOIN tickets t ON t.id = r.ticket_id
+             LEFT JOIN participant_faces pf ON pf.registration_id = r.id AND pf.is_active = 1
+             WHERE r.workshop_id = ? AND r.status IN ('confirmed', 'attended') AND r.deleted_at IS NULL AND pf.id IS NULL
+             ORDER BY p.name ASC",
+            [$workshopId]
+        );
+
+        $title = 'AI Face Check-in Kiosk - ' . $workshop['name'];
+        require VIEWS_PATH . '/business/checkin/face_kiosk.php';
+    }
+
+    public static function setScanMode(int $workshopId): void {
+        requireAuth();
+        requirePermission('checkin.use');
+        header('Content-Type: application/json; charset=utf-8');
+
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT id FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$workshopId, $businessId]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'message' => 'Workshop not found.']);
+            exit;
+        }
+
+        $mode = ($_POST['mode'] ?? 'qr') === 'face' ? 'face' : 'qr';
+        $db->execute("UPDATE workshops SET checkin_scan_mode = ? WHERE id = ?", [$mode, $workshopId]);
+
+        echo json_encode([
+            'success' => true,
+            'mode' => $mode,
+            'message' => ($mode === 'face') ? 'បានប្តូរទៅម៉ូដស្កេនផ្ទៃមុខ AI' : 'បានប្តូរទៅម៉ូដស្កេនកូដ QR'
+        ]);
+        exit;
+    }
+
+    public static function getScanMode(): void {
+        header('Content-Type: application/json; charset=utf-8');
+        $db = Database::getInstance();
+
+        $workshopId = (int)($_GET['workshop_id'] ?? 0);
+        $passToken = trim($_GET['pass_token'] ?? '');
+
+        if (!$workshopId && !empty($passToken)) {
+            $pass = $db->queryOne("SELECT workshop_id FROM checkin_helper_passes WHERE token = ? AND is_active = 1 AND expires_at > NOW()", [$passToken]);
+            if ($pass) {
+                $workshopId = (int)$pass['workshop_id'];
+            }
+        }
+
+        if (!$workshopId) {
+            echo json_encode(['success' => false, 'mode' => 'qr']);
+            exit;
+        }
+
+        $row = $db->queryOne("SELECT checkin_scan_mode FROM workshops WHERE id = ?", [$workshopId]);
+        $mode = $row['checkin_scan_mode'] ?? 'qr';
+
+        echo json_encode([
+            'success' => true,
+            'workshop_id' => $workshopId,
+            'mode' => $mode
         ]);
         exit;
     }

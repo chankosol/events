@@ -11,6 +11,50 @@ document.addEventListener('DOMContentLoaded', function() {
     let isScanning = true;
     let scanTimeout = null;
 
+    // ── Multi-Scan Slot Selector Management ──
+    function getAutoSlot(dailyScans) {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const timeStr = `${hh}:${mm}`;
+
+        if (dailyScans <= 1) return 1;
+        if (dailyScans === 2) {
+            return (timeStr < '12:30') ? 1 : 2;
+        }
+        if (dailyScans === 3) {
+            return (timeStr < '12:00') ? 1 : ((timeStr < '15:30') ? 2 : 3);
+        }
+        return (timeStr < '10:30') ? 1 : ((timeStr < '13:00') ? 2 : ((timeStr < '15:30') ? 3 : 4));
+    }
+
+    const dailyScansReq = (typeof DAILY_SCANS_REQUIRED !== 'undefined') ? parseInt(DAILY_SCANS_REQUIRED) : 1;
+    window.currentScanSlot = getAutoSlot(dailyScansReq);
+
+    window.setScanSlot = function(slot) {
+        window.currentScanSlot = parseInt(slot);
+        document.querySelectorAll('.slot-pill-btn').forEach(btn => {
+            const s = parseInt(btn.dataset.slot);
+            if (s === window.currentScanSlot) {
+                btn.classList.remove('btn-light', 'text-muted');
+                btn.classList.add('btn-primary', 'text-white', 'shadow-sm');
+            } else {
+                btn.classList.remove('btn-primary', 'text-white', 'shadow-sm');
+                btn.classList.add('btn-light', 'text-muted');
+            }
+        });
+        const hint = document.getElementById('slot-auto-hint');
+        if (hint) {
+            hint.innerHTML = '<i class="bi bi-hand-index me-1"></i>ជ្រើសដោយដៃ';
+            hint.className = 'badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill';
+        }
+    };
+
+    // Auto-init slot button visual highlight
+    if (document.querySelector('.slot-pill-btn')) {
+        setScanSlot(window.currentScanSlot);
+    }
+
     // Modern & Beautiful Dialogs for Workshop OS (SweetAlert2)
     const AppDialog = {
         toast: function(message, icon = 'success') {
@@ -173,7 +217,345 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Enumerate Cameras and Setup Switcher & Zoom
         initCameraDevicesAndZoom();
+
+        // If workshop scan mode is face, activate Face AI mode automatically
+        if (currentScanMode === 'face') {
+            setTimeout(() => {
+                if (typeof window.switchScanMode === 'function') {
+                    window.switchScanMode('face', false);
+                }
+            }, 800);
+        }
     }
+
+    // ==============================================================
+    // UNIFIED SCANNER: QR CODE ⇄ AI FACE RECOGNITION (HOST SWITCHABLE)
+    // ==============================================================
+    let currentScanMode = (typeof INITIAL_SCAN_MODE !== 'undefined') ? INITIAL_SCAN_MODE : 'qr';
+    let faceMatcher = null;
+    let faceModelsLoaded = false;
+    let faceDescriptorsLoaded = false;
+    let enrolledAttendees = [];
+    let faceDetectInterval = null;
+    let lastFaceScannedCode = null;
+    let lastFaceScannedTime = 0;
+    let isFaceProcessing = false;
+    let faceMatchStreak = { code: null, count: 0 };
+    const MODEL_CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+    async function ensureFaceModels() {
+        if (faceModelsLoaded) return true;
+        const pillText = document.getElementById('face-pill-text');
+        if (pillText) pillText.textContent = 'កំពុងទាញយក AI Models...';
+
+        try {
+            if (typeof faceapi === 'undefined') {
+                console.error('faceapi library is not loaded');
+                if (pillText) pillText.textContent = 'ខ្វះបណ្ណាល័យ face-api';
+                return false;
+            }
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_CDN_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_CDN_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_CDN_URL)
+            ]);
+            faceModelsLoaded = true;
+            return true;
+        } catch (e) {
+            console.error('Failed to load face-api models:', e);
+            if (pillText) pillText.textContent = 'បរាជ័យទាញ AI Models';
+            return false;
+        }
+    }
+
+    async function loadFaceDescriptors() {
+        const countBadge = document.getElementById('face-count-header-badge');
+        const countText = document.getElementById('face-count-text');
+        const noFaceAlert = document.getElementById('no-face-alert');
+
+        try {
+            const res = await fetch(APP_URL + '/api/face/descriptors?workshop_id=' + WORKSHOP_ID);
+            const data = await res.json();
+
+            if (!data.success || !Array.isArray(data.attendees) || data.attendees.length === 0) {
+                if (countText) countText.textContent = '0 មុខបានចុះ';
+                if (noFaceAlert) {
+                    noFaceAlert.classList.remove('d-none');
+                    noFaceAlert.classList.add('d-flex');
+                }
+                faceMatcher = null;
+                return false;
+            }
+
+            if (noFaceAlert) {
+                noFaceAlert.classList.remove('d-flex');
+                noFaceAlert.classList.add('d-none');
+            }
+
+            enrolledAttendees = data.attendees;
+            const labeledDescriptors = [];
+
+            data.attendees.forEach(att => {
+                if (att.descriptor && att.descriptor.length === 128) {
+                    const descFloat32 = new Float32Array(att.descriptor);
+                    labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(att.registration_code, [descFloat32]));
+                }
+            });
+
+            if (labeledDescriptors.length > 0) {
+                // Strict threshold: 0.38 (requires >= 62% match to prevent false positives)
+                faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.38);
+                faceDescriptorsLoaded = true;
+                if (countText) countText.textContent = labeledDescriptors.length + ' មុខបានចុះ';
+                return true;
+            } else {
+                if (countText) countText.textContent = '0 មុខ';
+                faceMatcher = null;
+                return false;
+            }
+        } catch (e) {
+            console.error('Failed to load face descriptors:', e);
+            return false;
+        }
+    }
+
+    function startFaceDetectionLoop() {
+        if (faceDetectInterval) clearInterval(faceDetectInterval);
+
+        const canvas = document.getElementById('face-hud-canvas');
+        if (!canvas) return;
+        canvas.style.display = 'block';
+
+        faceDetectInterval = setInterval(async () => {
+            if (currentScanMode !== 'face') return;
+            if (isFaceProcessing) return;
+
+            const video = document.querySelector('#reader video');
+            if (!video || video.ended || !video.videoWidth) return;
+            if (video.paused) {
+                video.play().catch(e => {});
+                return;
+            }
+
+            // Align canvas resolution with video dimensions
+            if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+                canvas.width = video.clientWidth;
+                canvas.height = video.clientHeight;
+            }
+
+            const ctx = canvas.getContext('2d');
+            const displaySize = { width: canvas.width, height: canvas.height };
+
+            try {
+                const detections = await faceapi.detectAllFaces(
+                    video,
+                    new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 })
+                ).withFaceLandmarks().withFaceDescriptors();
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (!detections || detections.length === 0) {
+                    return;
+                }
+
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                for (let i = 0; i < resizedDetections.length; i++) {
+                    const det = resizedDetections[i];
+                    const box = det.detection.box;
+
+                    let labelText = 'មិនស្គាល់អត្តសញ្ញាណ';
+                    let boxColor = '#f59e0b'; // amber
+                    let isMatched = false;
+                    let matchedCode = null;
+
+                    if (faceMatcher) {
+                        const bestMatch = faceMatcher.findBestMatch(det.descriptor);
+                        // Strict biometric check: distance < 0.38 (conf >= 62%)
+                        if (bestMatch.label !== 'unknown' && bestMatch.distance < 0.38) {
+                            matchedCode = bestMatch.label;
+                            const att = enrolledAttendees.find(a => a.registration_code === matchedCode);
+                            const name = att ? att.name : matchedCode;
+                            const conf = Math.round((1 - bestMatch.distance) * 100);
+                            labelText = `${name} (${conf}%)`;
+                            boxColor = '#10b981'; // emerald green
+                            isMatched = true;
+                        }
+                    }
+
+                    // Draw sleek glowing HUD box
+                    ctx.save();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = boxColor;
+                    ctx.shadowColor = boxColor;
+                    ctx.shadowBlur = 10;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+                    // Corner accents
+                    const cLen = Math.min(18, box.width * 0.2);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#ffffff';
+                    // top-left
+                    ctx.beginPath(); ctx.moveTo(box.x, box.y + cLen); ctx.lineTo(box.x, box.y); ctx.lineTo(box.x + cLen, box.y); ctx.stroke();
+                    // top-right
+                    ctx.beginPath(); ctx.moveTo(box.x + box.width - cLen, box.y); ctx.lineTo(box.x + box.width, box.y); ctx.lineTo(box.x + box.width, box.y + cLen); ctx.stroke();
+                    // bottom-left
+                    ctx.beginPath(); ctx.moveTo(box.x, box.y + box.height - cLen); ctx.lineTo(box.x, box.y + box.height); ctx.lineTo(box.x + cLen, box.y + box.height); ctx.stroke();
+                    // bottom-right
+                    ctx.beginPath(); ctx.moveTo(box.x + box.width - cLen, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height - cLen); ctx.stroke();
+
+                    // Label tag background
+                    ctx.font = 'bold 13px "Kantumruy Pro", sans-serif';
+                    const textWidth = ctx.measureText(labelText).width;
+                    const tagH = 24;
+                    const tagY = Math.max(0, box.y - tagH - 4);
+
+                    ctx.fillStyle = boxColor;
+                    ctx.shadowBlur = 4;
+                    ctx.beginPath();
+                    ctx.roundRect(box.x, tagY, textWidth + 16, tagH, [4]);
+                    ctx.fill();
+
+                    // Text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(labelText, box.x + 8, tagY + 16);
+                    ctx.restore();
+
+                    // Multi-frame verification: must stably match the same person for at least 3 consecutive frames (~540ms)
+                    if (isMatched && matchedCode) {
+                        if (faceMatchStreak.code === matchedCode) {
+                            faceMatchStreak.count++;
+                        } else {
+                            faceMatchStreak.code = matchedCode;
+                            faceMatchStreak.count = 1;
+                        }
+
+                        if (faceMatchStreak.count >= 3) {
+                            const now = Date.now();
+                            const isSamePersonRecent = (lastFaceScannedCode === matchedCode && (now - lastFaceScannedTime) < 3500);
+
+                            if (!isSamePersonRecent && !isFaceProcessing) {
+                                lastFaceScannedCode = matchedCode;
+                                lastFaceScannedTime = now;
+                                isFaceProcessing = true;
+                                faceMatchStreak = { code: null, count: 0 };
+
+                                // Call processScan with scan_type = 'face'
+                                processScan(matchedCode, 'face');
+
+                                setTimeout(() => {
+                                    isFaceProcessing = false;
+                                }, 1800);
+                            }
+                        }
+                    } else {
+                        faceMatchStreak = { code: null, count: 0 };
+                    }
+                }
+            } catch (err) {
+                // frame loop error caught
+            }
+        }, 180);
+    }
+
+    function stopFaceDetectionLoop() {
+        if (faceDetectInterval) {
+            clearInterval(faceDetectInterval);
+            faceDetectInterval = null;
+        }
+        const canvas = document.getElementById('face-hud-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.style.display = 'none';
+        }
+    }
+
+    // Switch Scan Mode (Host Switcher: Main Host Only)
+    window.switchScanMode = async function(targetMode, persist = true) {
+        if (targetMode !== 'qr' && targetMode !== 'face') return;
+        currentScanMode = targetMode;
+
+        const btnQr = document.getElementById('btn-mode-qr');
+        const btnFace = document.getElementById('btn-mode-face');
+        const titleIcon = document.getElementById('scanner-title-icon');
+        const titleText = document.getElementById('scanner-title-text');
+        const reticle = document.getElementById('camera-focus-reticle');
+        const countBadge = document.getElementById('face-count-header-badge');
+        const scannerWrap = document.getElementById('scanner-main-wrap');
+        const noFaceAlert = document.getElementById('no-face-alert');
+
+        if (targetMode === 'face') {
+            if (scannerWrap) scannerWrap.classList.add('mode-face');
+            if (btnQr) btnQr.className = 'scan-seg-btn';
+            if (btnFace) btnFace.className = 'scan-seg-btn active btn-face-active';
+            if (titleIcon) titleIcon.className = 'bi bi-person-bounding-box text-primary';
+            if (titleText) titleText.textContent = 'AI ស្កេនមុខ';
+            if (countBadge) countBadge.classList.remove('d-none');
+            if (reticle) reticle.style.display = 'none';
+
+            // Ensure camera video is playing continuously for Face AI (never pause video stream)
+            if (html5QrcodeScanner) {
+                try {
+                    html5QrcodeScanner.resume();
+                } catch(e){}
+            }
+            const videoEl = document.querySelector('#reader video');
+            if (videoEl && videoEl.paused) {
+                videoEl.play().catch(e => console.warn('Video play error:', e));
+            }
+
+            // Start Face AI engine
+            const modelsOk = await ensureFaceModels();
+            if (modelsOk) {
+                await loadFaceDescriptors();
+                startFaceDetectionLoop();
+            }
+            AppDialog.toast('បានប្តូរទៅម៉ូដ «AI ស្កេនមុខ»', 'info');
+
+        } else {
+            // QR Mode
+            if (scannerWrap) scannerWrap.classList.remove('mode-face');
+            if (btnQr) btnQr.className = 'scan-seg-btn active';
+            if (btnFace) btnFace.className = 'scan-seg-btn';
+            if (titleIcon) titleIcon.className = 'bi bi-camera-video-fill text-primary';
+            if (titleText) titleText.textContent = 'ស្កេន QR';
+            if (countBadge) countBadge.classList.add('d-none');
+            if (noFaceAlert) {
+                noFaceAlert.classList.remove('d-flex');
+                noFaceAlert.classList.add('d-none');
+            }
+            if (reticle) reticle.style.display = '';
+
+            // Stop Face AI
+            stopFaceDetectionLoop();
+
+            // Resume QR Scanner
+            if (html5QrcodeScanner) {
+                try { html5QrcodeScanner.resume(); } catch(e){}
+            }
+            AppDialog.toast('បានប្តូរទៅម៉ូដ «ស្កេន QR»', 'info');
+        }
+
+        // Persist to Server for this Workshop so all Helper Stations synchronize
+        if (persist) {
+            try {
+                const fd = new URLSearchParams();
+                fd.append('_csrf_token', CSRF_TOKEN);
+                fd.append('workshop_id', WORKSHOP_ID);
+                fd.append('mode', targetMode);
+                fetch(APP_URL + '/api/checkin/set-scan-mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: fd
+                }).then(r => r.json()).then(res => {
+                    console.log('Scan mode persisted to workshop:', res);
+                }).catch(err => console.warn('Could not persist scan mode:', err));
+            } catch(e) {}
+        }
+    };
+
 
     function initCameraDevicesAndZoom() {
         if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
@@ -481,32 +863,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function onScanSuccess(decodedText, decodedResult) {
-        if (!isScanning) return;
+        if (!isScanning || currentScanMode !== 'qr') return;
         isScanning = false;
         
         if (html5QrcodeScanner) {
             try { html5QrcodeScanner.pause(); } catch(e){}
         }
 
-        processScan(decodedText);
+        processScan(decodedText, 'checkin');
     }
 
     function onScanFailure(error) {
         // ignore scan ticks
     }
 
-    function processScan(token) {
+    function processScan(token, scanType = 'checkin') {
         let fd = new FormData();
         fd.append('_csrf_token', CSRF_TOKEN);
         fd.append('token', token);
         fd.append('workshop_id', WORKSHOP_ID);
-        fd.append('scan_type', 'checkin');
+        fd.append('scan_type', scanType);
+        if (window.currentScanSlot) {
+            fd.append('slot_number', window.currentScanSlot);
+        }
 
         fetch(APP_URL + '/api/checkin/scan', {
             method: 'POST',
             body: fd
         })
-        .then(res => res.json())
+        .then(async res => {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Non-JSON response from server:', text);
+                return { success: false, message: 'កំហុសម៉ាស៊ីនបម្រើ (HTTP ' + res.status + ')' };
+            }
+        })
         .then(data => {
             showResult(data);
             updateParticipantCard(data);
@@ -530,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.success && !data.already_in) {
             playBeep('success');
             scanResultOverlay.classList.add('scan-success');
-            scanIcon.className = 'bi bi-check-circle-fill display-1 mb-2';
+            scanIcon.className = 'bi bi-check-circle-fill display-1 mb-2 text-white';
             
             // update stats
             if (statsCheckedIn) {
@@ -539,18 +932,84 @@ document.addEventListener('DOMContentLoaded', function() {
                     statsCheckedIn.innerText = (parseInt(parts[0].trim()) + 1) + ' / ' + parts[1].trim();
                 }
             }
+
+            let timeStr = data.checkin_time || '';
+            if (!timeStr) {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                timeStr = `${hh}:${mm}:${ss}`;
+            }
+
+            let slotStr = data.slot_display || data.slot_name || '';
+            if (slotStr) {
+                slotStr = slotStr.replace(/^ពេល/, 'វេន');
+            }
+
+            const isFace = (data.scan_type === 'face' || data.method === 'face' || (data.message && data.message.includes('ស្គេនមុខ')));
+            const titleLine = isFace ? 'ស្គេនមុខបានជោគជ័យ' : 'ស្កេនកូដ QR ជោគជ័យ';
+            const secondLine = (slotStr && slotStr !== 'ទូទៅ') ? `${slotStr} ${timeStr}` : timeStr;
+
+            // Exactly 3 lines as requested:
+            // ជួរទី១: ស្គេនមុខបានជោគជ័យ
+            // ជួរទី២: វេនព្រឹក 09:44:18
+            // ជួរទី៣: Sasa
+            scanMessage.innerHTML = `
+                <div class="fw-bold text-white mb-1" style="font-size: 1.25rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">${titleLine}</div>
+                <div class="fw-bold text-white" style="font-size: 1.15rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif; opacity: 0.95;">${secondLine}</div>
+            `;
+            let pNameText = data.participant ? data.participant.name : '';
+            scanName.className = 'fs-3 fw-bold mt-2 text-white text-center px-2';
+            scanName.style.fontFamily = "'Kantumruy Pro', system-ui, sans-serif";
+            scanName.innerText = pNameText;
         } else if (data.success && data.already_in) {
             playBeep('warning');
             scanResultOverlay.classList.add('scan-warning');
-            scanIcon.className = 'bi bi-exclamation-triangle-fill display-1 mb-2';
+            scanIcon.className = 'bi bi-exclamation-triangle-fill display-2 mb-2 text-dark';
+
+            let timeStr = data.checked_in_at || '';
+            if (!timeStr && data.participant && data.participant.checked_in) {
+                const dt = new Date(data.participant.checked_in);
+                if (!isNaN(dt.getTime())) {
+                    const hh = String(dt.getHours()).padStart(2, '0');
+                    const mm = String(dt.getMinutes()).padStart(2, '0');
+                    const ss = String(dt.getSeconds()).padStart(2, '0');
+                    const dd = String(dt.getDate()).padStart(2, '0');
+                    const mo = String(dt.getMonth() + 1).padStart(2, '0');
+                    const yyyy = dt.getFullYear();
+                    timeStr = `${hh}:${mm}:${ss}, ${dd}/${mo}/${yyyy}`;
+                }
+            }
+            if (!timeStr && data.message) {
+                const m = data.message.match(/(\d{2}:\d{2}(?::\d{2})?,\s*\d{2}\/\d{2}\/\d{4})/);
+                if (m) timeStr = m[1];
+            }
+
+            // Exactly 3 lines as requested:
+            // ជួរទី១: បានកត់ត្រាវត្តមានរួចនៅម៉ោង
+            // ជួរទី២: 09:44:18, 23/10/2026
+            // ជួរទី៣: Sasa • ពេលព្រឹក
+            scanMessage.innerHTML = `
+                <div class="fw-bold text-dark mb-1" style="font-size: 1.15rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">បានកត់ត្រាវត្តមានរួចនៅម៉ោង</div>
+                <div class="fw-bold text-dark" style="font-size: 1.15rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">${timeStr}</div>
+            `;
+            let pNameText = data.participant ? data.participant.name : '';
+            if (data.slot_name) {
+                pNameText += (pNameText ? ' • ' : '') + data.slot_name;
+            }
+            scanName.className = 'fs-5 fw-bold mt-2 text-dark text-center px-2';
+            scanName.style.fontFamily = "'Kantumruy Pro', system-ui, sans-serif";
+            scanName.innerText = pNameText;
         } else {
             playBeep('error');
             scanResultOverlay.classList.add('scan-error');
             scanIcon.className = 'bi bi-x-circle-fill display-1 mb-2';
+            scanMessage.innerText = data.message || 'កំហុស';
+            let pNameText = data.participant ? data.participant.name : '';
+            scanName.className = 'fs-4 fw-bold mt-2';
+            scanName.innerText = pNameText;
         }
-
-        scanMessage.innerText = data.message || 'កំហុស';
-        scanName.innerText = data.participant ? data.participant.name : '';
 
         const fastMode = document.getElementById('fastModeToggle') ? document.getElementById('fastModeToggle').checked : true;
         
@@ -567,8 +1026,13 @@ document.addEventListener('DOMContentLoaded', function() {
         scanResultOverlay.style.display = 'none';
         scanResultOverlay.onclick = null;
         isScanning = true;
+        isFaceProcessing = false;
         if (html5QrcodeScanner) {
             try { html5QrcodeScanner.resume(); } catch(e){}
+        }
+        const videoEl = document.querySelector('#reader video');
+        if (videoEl && videoEl.paused) {
+            videoEl.play().catch(e => {});
         }
     }
 
@@ -655,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (colReset) colReset.style.display = 'block';
                 btnReset.style.display = 'block';
                 btnReset.onclick = async function() {
+                    const currentSlot = (typeof window.currentScanSlot !== 'undefined') ? window.currentScanSlot : 0;
                     const confirmed = await AppDialog.confirm({
                         title: 'កំណត់វត្តមានឡើងវិញ (Reset)?',
                         html: `តើអ្នកពិតជាចង់កំណត់វត្តមានរបស់ «<strong>${escapeHtml(p.name || '')}</strong>» ឡើងវិញមែនទេ?`,
@@ -663,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         confirmText: '<i class="bi bi-arrow-counterclockwise me-1"></i> Reset ឡើងវិញ'
                     });
                     if (confirmed) {
-                        resetAttendance(p.reg_id);
+                        resetAttendance(p.reg_id, currentSlot, p.slot_id || 0);
                     }
                 };
             } else {
@@ -683,18 +1148,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         String(now.getMinutes()).padStart(2, '0') + ':' + 
                         String(now.getSeconds()).padStart(2, '0');
 
+        const slotNum = p.slot_number || (typeof window.currentScanSlot !== 'undefined' ? window.currentScanSlot : 1);
+        const slotName = p.slot_name ? p.slot_name.replace(/^ពេល/, 'វេន') : '';
+        const slotId = p.slot_id || 0;
+
         const tr = document.createElement('tr');
         tr.className = 'table-success';
         tr.dataset.regId = p.reg_id || '';
         tr.dataset.regCode = p.reg_code || '';
+        tr.dataset.slotNumber = slotNum;
+        tr.dataset.slotId = slotId;
+
+        const slotBadge = slotName ? `<span class="badge bg-light text-secondary border me-1 fw-normal" style="font-size: 0.72rem;">${escapeHtml(slotName)}</span>` : '';
+
         tr.innerHTML = `
             <td class="ps-3 fw-bold text-dark text-nowrap">${escapeHtml(p.name)}</td>
             <td><span class="badge bg-primary-subtle text-primary border">${escapeHtml(p.province || 'ទូទៅ')}</span></td>
             <td class="text-muted small text-truncate" style="max-width: 130px;" title="${escapeHtml(p.company || '-')}">${escapeHtml(p.company || '-')}</td>
             <td class="text-muted small text-truncate" style="max-width: 100px;" title="${escapeHtml(p.position || '-')}">${escapeHtml(p.position || '-')}</td>
-            <td class="text-success fw-bold text-nowrap">${timeStr}</td>
+            <td class="text-success fw-bold text-nowrap">${slotBadge}${timeStr}</td>
             <td class="text-end pe-3 text-nowrap">
-                <button type="button" class="btn btn-sm btn-outline-danger fw-normal" style="font-size: 0.75rem; padding: 3px 7px; line-height: 1.2;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.reg_id})"><i class="bi bi-arrow-counterclockwise" style="margin-right: 2px;"></i>លុបវត្តមាន</button>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-normal" style="font-size: 0.75rem; padding: 3px 7px; line-height: 1.2;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(${p.reg_id}, ${slotNum}, ${slotId}, this)"><i class="bi bi-arrow-counterclockwise" style="margin-right: 2px;"></i>លុបវត្តមាន</button>
             </td>
         `;
         recentTbody.prepend(tr);
@@ -790,12 +1264,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (manualInput) manualInput.value = '';
     };
 
-    window.resetAttendance = function(regId) {
+    window.resetAttendance = function(regId, slotNumber = 0, slotId = 0, btnElement = null) {
         if (!regId) return;
         let fd = new FormData();
         fd.append('_csrf_token', CSRF_TOKEN);
         fd.append('workshop_id', WORKSHOP_ID);
         fd.append('registration_id', regId);
+        if (slotId) fd.append('slot_id', slotId);
+        if (slotNumber) fd.append('slot_number', slotNumber);
 
         fetch(APP_URL + '/api/checkin/reset', {
             method: 'POST',
@@ -806,18 +1282,31 @@ document.addEventListener('DOMContentLoaded', function() {
             if (res.success) {
                 // 1. Remove attendee row from recent attendance table
                 if (recentTbody) {
-                    const rows = recentTbody.querySelectorAll('tr');
                     let removed = false;
-                    const curCode = (currentScannedParticipant && currentScannedParticipant.reg_code) ? currentScannedParticipant.reg_code : null;
-                    rows.forEach(r => {
-                        const rId = r.dataset.regId || r.getAttribute('data-reg-id');
-                        const rCode = r.dataset.regCode || r.getAttribute('data-reg-code');
-                        const cellText = r.innerText || '';
-                        if ((rId && String(rId) === String(regId)) || (rCode && rCode === curCode) || (curCode && cellText.includes(curCode))) {
-                            r.remove();
-                            removed = true;
-                        }
-                    });
+                    if (btnElement && btnElement.closest('tr')) {
+                        btnElement.closest('tr').remove();
+                        removed = true;
+                    } else if (slotId) {
+                        const tr = recentTbody.querySelector(`tr[data-slot-id="${slotId}"]`);
+                        if (tr) { tr.remove(); removed = true; }
+                    } else if (slotNumber) {
+                        const tr = recentTbody.querySelector(`tr[data-reg-id="${regId}"][data-slot-number="${slotNumber}"]`);
+                        if (tr) { tr.remove(); removed = true; }
+                    } else {
+                        // Full reset: remove all rows for this registration
+                        const rows = recentTbody.querySelectorAll('tr');
+                        const curCode = (currentScannedParticipant && currentScannedParticipant.reg_code) ? currentScannedParticipant.reg_code : null;
+                        rows.forEach(r => {
+                            const rId = r.dataset.regId || r.getAttribute('data-reg-id');
+                            const rCode = r.dataset.regCode || r.getAttribute('data-reg-code');
+                            const cellText = r.innerText || '';
+                            if ((rId && String(rId) === String(regId)) || (rCode && rCode === curCode) || (curCode && cellText.includes(curCode))) {
+                                r.remove();
+                                removed = true;
+                            }
+                        });
+                    }
+
                     if (removed && recentCount) {
                         let current = parseInt(recentCount.innerText) || 0;
                         let updated = Math.max(0, current - 1);
@@ -828,8 +1317,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // 2. Decrement top stats counter
-                if (statsCheckedIn) {
+                // 2. Decrement top stats counter ONLY IF all slots are cleared for this participant
+                if (res.all_cleared && statsCheckedIn) {
                     let parts = statsCheckedIn.innerText.split('/');
                     if (parts.length === 2) {
                         let cur = Math.max(0, parseInt(parts[0].trim()) - 1);
@@ -867,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof fetchLiveMonitorData === 'function') {
                     fetchLiveMonitorData();
                 }
-                AppDialog.toast('បានកំណត់វត្តមានឡើងវិញជោគជ័យ!', 'success');
+                AppDialog.toast(res.message || 'បានកំណត់វត្តមានឡើងវិញជោគជ័យ!', 'success');
             } else {
                 AppDialog.error('កំហុស', res.message || 'មិនអាចកំណត់វត្តមានឡើងវិញបានទេ។');
             }
@@ -1906,6 +2395,9 @@ document.addEventListener('DOMContentLoaded', function() {
         fd.append('token', tokenOrCode);
         fd.append('workshop_id', WORKSHOP_ID);
         fd.append('scan_type', 'checkin');
+        if (window.currentScanSlot) {
+            fd.append('slot_number', window.currentScanSlot);
+        }
 
         fetch(APP_URL + '/api/checkin/scan', {
             method: 'POST',

@@ -31,27 +31,49 @@ class LiveController {
             [$workshopId, $businessId]
         );
         
-        $openQuestions = $db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id = ? AND status='pending'", [$workshopId])['c'];
-        $openRequests  = $db->queryOne("SELECT COUNT(*) as c FROM participant_requests WHERE workshop_id = ? AND status IN ('new','assigned','in_progress')", [$workshopId])['c'];
-        $giftCount     = $db->queryOne("SELECT COUNT(*) as c FROM gift_distributions WHERE workshop_id = ?", [$workshopId])['c'];
-        $certCount     = $db->queryOne("SELECT COUNT(*) as c FROM certificates WHERE workshop_id = ? AND status='issued'", [$workshopId])['c'];
-        $feedbackCount = $db->queryOne("SELECT COUNT(*) as c FROM feedback_responses WHERE workshop_id = ?", [$workshopId])['c'];
+        $pendingCount  = (int)$db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id = ? AND status='pending'", [$workshopId])['c'];
+        $approvedCount = (int)$db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id = ? AND status='approved'", [$workshopId])['c'];
+        $openQuestions = $pendingCount + $approvedCount;
+        $answeredCount = (int)$db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id = ? AND status='answered'", [$workshopId])['c'];
+        $openRequests  = (int)$db->queryOne("SELECT COUNT(*) as c FROM participant_requests WHERE workshop_id = ? AND status IN ('new','assigned','in_progress')", [$workshopId])['c'];
+        $giftCount     = (int)$db->queryOne("SELECT COUNT(*) as c FROM gift_distributions WHERE workshop_id = ?", [$workshopId])['c'];
+        $certCount     = (int)$db->queryOne("SELECT COUNT(*) as c FROM certificates WHERE workshop_id = ? AND status='issued'", [$workshopId])['c'];
+        $feedbackCount = (int)$db->queryOne("SELECT COUNT(*) as c FROM feedback_responses WHERE workshop_id = ?", [$workshopId])['c'];
         
-        // Recent questions
-        $questions = $db->query(
-            "SELECT q.*, p.name as participant_name
+        // Pending questions (Waiting for moderation)
+        $pendingQuestions = $db->query(
+            "SELECT q.*, COALESCE(q.author_name, p.name, 'មិនបញ្ចេញឈ្មោះ') as participant_name
              FROM questions q LEFT JOIN participants p ON p.id = q.participant_id
-             WHERE q.workshop_id = ? AND q.status IN ('pending','approved','pinned')
-             ORDER BY q.is_pinned DESC, q.upvotes DESC, q.created_at DESC LIMIT 20",
+             WHERE q.workshop_id = ? AND q.status = 'pending'
+             ORDER BY q.created_at DESC LIMIT 50",
+            [$workshopId]
+        );
+
+        // Approved questions (Live on screen)
+        $approvedQuestions = $db->query(
+            "SELECT q.*, COALESCE(q.author_name, p.name, 'មិនបញ្ចេញឈ្មោះ') as participant_name
+             FROM questions q LEFT JOIN participants p ON p.id = q.participant_id
+             WHERE q.workshop_id = ? AND q.status = 'approved'
+             ORDER BY q.is_pinned DESC, q.upvotes DESC, q.created_at DESC LIMIT 50",
+            [$workshopId]
+        );
+        $questions = $approvedQuestions; // fallback compatibility
+
+        // Answered questions
+        $answeredQuestions = $db->query(
+            "SELECT q.*, COALESCE(q.author_name, p.name, 'មិនបញ្ចេញឈ្មោះ') as participant_name
+             FROM questions q LEFT JOIN participants p ON p.id = q.participant_id
+             WHERE q.workshop_id = ? AND q.status = 'answered'
+             ORDER BY COALESCE(q.answered_at, q.updated_at) DESC LIMIT 50",
             [$workshopId]
         );
         
         // Open requests
         $requests = $db->query(
-            "SELECT pr.*, p.name as participant_name
-             FROM participant_requests pr JOIN participants p ON p.id = pr.participant_id
+            "SELECT pr.*, COALESCE(pr.requester_name, p.name, 'សិក្ខាកាម') as participant_name
+             FROM participant_requests pr LEFT JOIN participants p ON p.id = pr.participant_id
              WHERE pr.workshop_id = ? AND pr.status IN ('new','assigned','in_progress')
-             ORDER BY pr.priority DESC, pr.created_at ASC LIMIT 20",
+             ORDER BY (CASE WHEN pr.priority = 'urgent' THEN 1 WHEN pr.priority = 'high' THEN 2 ELSE 3 END), pr.created_at ASC LIMIT 30",
             [$workshopId]
         );
         

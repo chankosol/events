@@ -13,22 +13,22 @@ $breadcrumbs = [
     <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
         <div>
             <h1 class="h3 fw-bold text-gray-800 mb-1">
-                <i class="bi bi-geo-alt-fill text-primary me-2"></i>គ្រប់គ្រងកូតា និងប្រតិភូ ២៥ រាជធានី-ខេត្ត
+                <i class="bi bi-geo-alt-fill text-primary me-2"></i>កូតា និងប្រតិភូ
             </h1>
             <p class="text-muted mb-0">សិក្ខាសាលា៖ <strong><?= htmlspecialchars($workshop['name']) ?></strong></p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#delegationFormFieldsModal">
-                <i class="bi bi-sliders me-1"></i> កំណត់ទម្រង់ប្រតិភូ
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#delegationFormFieldsModal" title="កំណត់ទម្រង់បំពេញព័ត៌មានប្រតិភូ">
+                <i class="bi bi-sliders me-1"></i> កំណត់ទម្រង់
             </button>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#autoGenerateModal">
-                <i class="bi bi-magic me-1"></i> បង្កើតកូតា ២៥ ខេត្តស្វ័យប្រវត្តិ
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#autoGenerateModal" title="បង្កើតកូតា ២៥ រាជធានី-ខេត្ត">
+                <i class="bi bi-magic me-1"></i> បង្កើតកូតាស្វ័យប្រវត្តិ
             </button>
-            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDelegationModal">
-                <i class="bi bi-plus-circle me-1"></i> បន្ថែមប្រតិភូ/ស្ថាប័នថ្មី
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDelegationModal" title="បន្ថែមប្រតិភូ ឬស្ថាប័នថ្មី">
+                <i class="bi bi-plus-circle me-1"></i> បន្ថែមប្រតិភូ
             </button>
-            <button type="button" class="btn btn-warning text-dark fw-medium" data-bs-toggle="modal" data-bs-target="#substituteModal">
-                <i class="bi bi-arrow-left-right me-1"></i> ជំនួសសមាជិក (Substitute)
+            <button type="button" class="btn btn-warning text-dark fw-medium" data-bs-toggle="modal" data-bs-target="#substituteModal" title="ជំនួសសមាជិកប្រតិភូនៅថ្ងៃកម្មវិធី">
+                <i class="bi bi-arrow-left-right me-1"></i> ជំនួសសមាជិក
             </button>
         </div>
     </div>
@@ -48,47 +48,47 @@ $breadcrumbs = [
     <?php endif; ?>
 
     <!-- Summary KPI Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-2">
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
-                <div class="card-body">
-                    <div class="text-xs text-uppercase fw-bold text-primary mb-1">ចំនួនប្រតិភូ/ខេត្ត</div>
-                    <div class="h4 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_delegations']) ?> ខេត្ត</div>
+                <div class="card-body p-3">
+                    <div class="text-xs text-uppercase fw-bold text-primary mb-1">ខេត្ត / ស្ថាប័ន</div>
+                    <div class="h5 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_delegations']) ?> ខេត្ត</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-2">
+        <div class="col-6 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
-                <div class="card-body">
-                    <div class="text-xs text-uppercase fw-bold text-info mb-1">កូតាកៅអីសរុប</div>
-                    <div class="h4 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_quota']) ?> កៅអី</div>
+                <div class="card-body p-3">
+                    <div class="text-xs text-uppercase fw-bold text-info mb-1">កូតាសរុប</div>
+                    <div class="h5 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_quota']) ?> កៅអី</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-6 col-md-4 col-xl-3">
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
-                <div class="card-body">
-                    <div class="text-xs text-uppercase fw-bold text-success mb-1">សមាជិកបានចុះឈ្មោះ</div>
-                    <div class="h4 fw-bold mb-0 text-gray-800">
+                <div class="card-body p-3">
+                    <div class="text-xs text-uppercase fw-bold text-success mb-1">បានចុះឈ្មោះ</div>
+                    <div class="h5 fw-bold mb-0 text-gray-800">
                         <?= number_format($stats['total_registered']) ?> / <?= number_format($stats['total_quota']) ?>
                         <small class="text-muted fs-6">(<?= $stats['total_quota'] > 0 ? round(($stats['total_registered'] / $stats['total_quota']) * 100) : 0 ?>%)</small>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-2">
+        <div class="col-6 col-md-4 col-xl-2">
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
-                <div class="card-body">
-                    <div class="text-xs text-uppercase fw-bold text-warning mb-1">វត្តមានជាក់ស្តែង</div>
-                    <div class="h4 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_attended']) ?> នាក់</div>
+                <div class="card-body p-3">
+                    <div class="text-xs text-uppercase fw-bold text-warning mb-1">វត្តមាន</div>
+                    <div class="h5 fw-bold mb-0 text-gray-800"><?= number_format($stats['total_attended']) ?> នាក់</div>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-12 col-md-8 col-xl-3">
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
-                <div class="card-body">
-                    <div class="text-xs text-uppercase fw-bold text-danger mb-1">ថវិកាបានបើកផ្តល់</div>
-                    <div class="h4 fw-bold mb-0 text-gray-800">$<?= number_format((float)$stats['disbursed_amount'], 2) ?> <small class="text-muted fs-6">(<?= $stats['total_disbursed'] ?> នាក់)</small></div>
+                <div class="card-body p-3">
+                    <div class="text-xs text-uppercase fw-bold text-danger mb-1">ថវិកាបើកហើយ</div>
+                    <div class="h5 fw-bold mb-0 text-gray-800">$<?= number_format((float)$stats['disbursed_amount'], 2) ?> <small class="text-muted fs-6">(<?= $stats['total_disbursed'] ?> នាក់)</small></div>
                 </div>
             </div>
         </div>
@@ -107,13 +107,13 @@ $breadcrumbs = [
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light text-nowrap">
                         <tr>
-                            <th>រាជធានី-ខេត្ត / ស្ថាប័ន</th>
-                            <th>ប្រធានប្រតិភូ / ទំនាក់ទំនង</th>
+                            <th>ខេត្ត / ស្ថាប័ន</th>
+                            <th title="ព័ត៌មានប្រធានប្រតិភូ និងលេខទំនាក់ទំនង">ប្រធានប្រតិភូ</th>
                             <th class="text-center">កូតា</th>
-                            <th class="text-center">បានចុះឈ្មោះ</th>
+                            <th class="text-center">ចុះឈ្មោះ</th>
                             <th class="text-center">វត្តមាន</th>
                             <th class="text-center">បើកថវិកា</th>
-                            <th>តំណភ្ជាប់ស្វ័យសេវា (Portal Link)</th>
+                            <th title="តំណភ្ជាប់សម្រាប់ប្រធានប្រតិភូបំពេញសមាជិក">តំណភ្ជាប់</th>
                             <th class="text-end">សកម្មភាព</th>
                         </tr>
                     </thead>
@@ -227,13 +227,13 @@ $breadcrumbs = [
                                                                 <input type="email" name="head_email" class="form-control" value="<?= htmlspecialchars($d['head_email'] ?? '') ?>">
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label fw-bold">កូតាកៅអីអនុញ្ញាត (Seats)</label>
+                                                                <label class="form-label fw-bold" title="ចំនួនកៅអីអនុញ្ញាត">កូតាកៅអី</label>
                                                                 <input type="number" name="quota_seats" class="form-control" value="<?= $d['quota_seats'] ?>" min="1" required>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">បោះបង់</button>
-                                                            <button type="submit" class="btn btn-primary">រក្សាទុកការកែប្រែ</button>
+                                                            <button type="submit" class="btn btn-primary">រក្សាទុក</button>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -252,20 +252,20 @@ $breadcrumbs = [
 
 <!-- Modal: Auto-Generate 25 Provinces -->
 <div class="modal fade" id="autoGenerateModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/delegations/auto-generate">
                 <?= csrfField() ?>
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-magic me-2"></i>បង្កើតកូតា ២៥ រាជធានី-ខេត្តស្វ័យប្រវត្តិ</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-magic me-2"></i>បង្កើតកូតា ២៥ ខេត្តស្វ័យប្រវត្តិ</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <p class="text-muted">
-                        ប្រព័ន្ធនឹងបង្កើតបញ្ជីប្រតិភូសម្រាប់រាជធានី-ខេត្តទាំង ២៥ នៃព្រះរាជាណាចក្រកម្ពុជាដោយស្វ័យប្រវត្តិ ព្រមទាំងផ្តល់នូវតំណភ្ជាប់ (Self-service Portal Link) សម្ងាត់រៀងៗខ្លួនសម្រាប់ប្រធានខេត្តបំពេញឈ្មោះសមាជិក។
+                        ប្រព័ន្ធនឹងបង្កើតបញ្ជីប្រតិភូសម្រាប់រាជធានី-ខេត្តទាំង ២៥ ដោយស្វ័យប្រវត្តិ ព្រមទាំងផ្តល់នូវតំណភ្ជាប់សម្ងាត់រៀងៗខ្លួនសម្រាប់ប្រធានខេត្តបំពេញឈ្មោះសមាជិក។
                     </p>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">កំណត់ចំនួនកៅអី (Quota) ក្នុង ១ ខេត្ត៖</label>
+                        <label class="form-label fw-bold">កូតាក្នុង ១ ខេត្ត៖</label>
                         <div class="input-group">
                             <input type="number" name="quota_per_province" class="form-control" value="5" min="1" max="100" required>
                             <span class="input-group-text">កៅអី / ខេត្ត</span>
@@ -338,19 +338,19 @@ $breadcrumbs = [
                 <?= csrfField() ?>
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title fw-bold">
-                        <i class="bi bi-arrow-left-right me-2"></i>ជំនួសសមាជិកនៅថ្ងៃកម្មវិធី (On-Site Member Substitution)
+                        <i class="bi bi-arrow-left-right me-2"></i>ជំនួសសមាជិក
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning py-2 mb-3">
-                        <i class="bi bi-info-circle me-1"></i> ប្រើប្រាស់មុខងារនេះនៅពេលសមាជិកចាស់ក្នុងបញ្ជីអវត្តមាន ហើយមានសមាជិកថ្មីមកចូលរួមជំនួស។ ប្រព័ន្ធនឹងលុបចោលសមាជិកចាស់ និងបង្កើត QR Code ថ្មីជូនសមាជិកថ្មីភ្លាមៗក្នុងរយៈពេលតែ ១៥ វិនាទី!
+                    <div class="alert alert-warning py-2 mb-3 small">
+                        <i class="bi bi-info-circle me-1"></i> ប្រើប្រាស់មុខងារនេះនៅពេលសមាជិកចាស់អវត្តមាន ហើយមានសមាជិកថ្មីមកចូលរួមជំនួស។ ប្រព័ន្ធនឹងចេញ QR ថ្មីជូនសមាជិកថ្មីភ្លាមៗ។
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">ជ្រើសរើសសមាជិកចាស់ដែលអវត្តមាន <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">សមាជិកចាស់ដែលអវត្តមាន <span class="text-danger">*</span></label>
                         <select name="old_registration_id" class="form-select select2" required>
-                            <option value="">-- ជ្រើសរើសឈ្មោះសមាជិកអវត្តមាន --</option>
+                            <option value="">-- ជ្រើសរើសឈ្មោះសមាជិក --</option>
                             <?php foreach ($members as $m): ?>
                                 <option value="<?= $m['id'] ?>">
                                     <?= htmlspecialchars($m['name']) ?> (<?= htmlspecialchars($m['delegation_province'] ?: $m['province'] ?: 'ទូទៅ') ?>) - កូដ: <?= $m['registration_code'] ?>
@@ -359,11 +359,11 @@ $breadcrumbs = [
                         </select>
                     </div>
 
-                    <h6 class="fw-bold text-primary border-bottom pb-2 mt-4">ព័ត៌មានសមាជិកថ្មីដែលមកជំនួស</h6>
+                    <h6 class="fw-bold text-primary border-bottom pb-2 mt-4">ព័ត៌មានសមាជិកថ្មី</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">ឈ្មោះសមាជិកថ្មី <span class="text-danger">*</span></label>
-                            <input type="text" name="new_name" class="form-control" placeholder="ឧ. លោក សេង វណ្ណា" required>
+                            <label class="form-label fw-bold">ឈ្មោះពេញ <span class="text-danger">*</span></label>
+                            <input type="text" name="new_name" class="form-control" placeholder="ឧ. សេង វណ្ណា" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">លេខទូរស័ព្ទ</label>
@@ -378,20 +378,20 @@ $breadcrumbs = [
                             </select>
                         </div>
                         <div class="col-md-8">
-                            <label class="form-label fw-bold">លេខអត្តសញ្ញាណប័ណ្ណ (បើមាន សម្រាប់បើកថវិកា)</label>
+                            <label class="form-label fw-bold">អត្តសញ្ញាណប័ណ្ណ</label>
                             <input type="text" name="new_id_card" class="form-control" placeholder="ឧ. 010203040">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">ឈ្មោះធនាគារ (បើមាន)</label>
+                            <label class="form-label fw-bold">ធនាគារ</label>
                             <input type="text" name="new_bank_name" class="form-control" placeholder="Bakong / ABA / ACLEDA">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">លេខគណនីធនាគារ (បើមាន)</label>
+                            <label class="form-label fw-bold">លេខគណនី</label>
                             <input type="text" name="new_bank_account" class="form-control" placeholder="000 123 456">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">មូលហេតុនៃការជំនួស</label>
-                            <input type="text" name="reason" class="form-control" value="មកជំនួសនៅថ្ងៃកម្មវិធីផ្ទាល់ (On-site delegation replacement)">
+                            <input type="text" name="reason" class="form-control" value="មកជំនួសនៅថ្ងៃកម្មវិធី">
                         </div>
                     </div>
                 </div>
@@ -485,7 +485,7 @@ $breadcrumbs = [
                                 <!-- 4. Position -->
                                 <tr>
                                     <td>
-                                        <span class="fw-bold text-dark"><i class="bi bi-briefcase me-2 text-secondary"></i> តួនាទី / មុខតំណែង</span>
+                                        <span class="fw-bold text-dark" title="តួនាទី ឬមុខតំណែង"><i class="bi bi-briefcase me-2 text-secondary"></i> តួនាទី</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block">
@@ -503,7 +503,7 @@ $breadcrumbs = [
                                 <!-- 5. Organization -->
                                 <tr>
                                     <td>
-                                        <span class="fw-bold text-dark"><i class="bi bi-building me-2 text-primary"></i> អង្គភាព / ស្ថាប័ន</span>
+                                        <span class="fw-bold text-dark" title="អង្គភាព ឬស្ថាប័ន"><i class="bi bi-building me-2 text-primary"></i> អង្គភាព</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block">
@@ -521,7 +521,7 @@ $breadcrumbs = [
                                 <!-- 6. ID Card -->
                                 <tr>
                                     <td>
-                                        <span class="fw-bold text-dark"><i class="bi bi-card-heading me-2 text-danger"></i> លេខអត្តសញ្ញាណប័ណ្ណ</span>
+                                        <span class="fw-bold text-dark"><i class="bi bi-card-heading me-2 text-danger"></i> អត្តសញ្ញាណប័ណ្ណ</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block">
@@ -539,7 +539,7 @@ $breadcrumbs = [
                                 <!-- 7. Bank Name -->
                                 <tr>
                                     <td>
-                                        <span class="fw-bold text-dark"><i class="bi bi-bank me-2 text-info"></i> ឈ្មោះធនាគារ</span>
+                                        <span class="fw-bold text-dark"><i class="bi bi-bank me-2 text-info"></i> ធនាគារ</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block">
@@ -557,7 +557,7 @@ $breadcrumbs = [
                                 <!-- 8. Bank Account -->
                                 <tr>
                                     <td>
-                                        <span class="fw-bold text-dark"><i class="bi bi-credit-card me-2 text-success"></i> លេខគណនីធនាគារ</span>
+                                        <span class="fw-bold text-dark"><i class="bi bi-credit-card me-2 text-success"></i> លេខគណនី</span>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch d-inline-block">
@@ -589,6 +589,29 @@ $breadcrumbs = [
                                         </div>
                                     </td>
                                 </tr>
+
+                                <!-- 10. Face Pre-registration (AI Face Scan) -->
+                                <tr class="table-primary-subtle">
+                                    <td>
+                                        <span class="fw-bold text-dark"
+                                              data-bs-toggle="tooltip" data-bs-placement="right"
+                                              title="ថតមុខពេលចុះឈ្មោះ សម្រាប់ Check-in ដោយ AI ជំនួសសំបុត្រ QR">
+                                            <i class="bi bi-person-bounding-box me-2 text-primary"></i> ស្គេនមុខ
+                                            <i class="bi bi-info-circle text-muted small ms-1"></i>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input" type="checkbox" name="show_face_enroll" id="del_show_face_enroll" value="1" <?= !empty($delegationFormFields['show_face_enroll']) ? 'checked' : '' ?> onchange="toggleDelReq('face_enroll')">
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-inline-block">
+                                            <input class="form-check-input" type="checkbox" name="require_face_enroll" id="del_req_face_enroll" value="1" <?= !empty($delegationFormFields['require_face_enroll']) ? 'checked' : '' ?> <?= empty($delegationFormFields['show_face_enroll']) ? 'disabled' : '' ?>>
+                                            <label class="form-check-label small" for="del_req_face_enroll">ចាំបាច់</label>
+                                        </div>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -605,6 +628,21 @@ $breadcrumbs = [
 </div>
 
 <script>
+// Init Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        new bootstrap.Tooltip(el, { trigger: 'hover' });
+    });
+    // Re-init inside modal when it opens
+    document.querySelectorAll('.modal').forEach(function(modal) {
+        modal.addEventListener('shown.bs.modal', function() {
+            modal.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+                new bootstrap.Tooltip(el, { trigger: 'hover' });
+            });
+        });
+    });
+});
+
 function toggleDelReq(field) {
     const showChk = document.getElementById('del_show_' + field);
     const reqChk = document.getElementById('del_req_' + field);

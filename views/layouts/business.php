@@ -81,8 +81,8 @@ $bizBranding = ($business && !empty($business['id'])) ? Database::getInstance()-
             
             <div class="nav-label">ហិរញ្ញវត្ថុ និងវិក្កយបត្រ</div>
             <?php if (Permission::has('billing.view')): ?>
-                <a href="<?php echo $appUrl; ?>/billing" class="nav-link <?php echo navActive('/billing'); ?>">
-                    <i class="bi bi-receipt"></i> ថ្លៃសេវាប្រព័ន្ធ (System A)
+                <a href="<?php echo $appUrl; ?>/billing" class="nav-link <?php echo navActive('/billing'); ?>" data-bs-toggle="tooltip" data-bs-placement="right" title="បង់ថ្លៃសេវាដំណើរការប្រព័ន្ធ">
+                    <i class="bi bi-receipt"></i> ថ្លៃសេវាប្រព័ន្ធ
                 </a>
             <?php endif; ?>
 

@@ -49,6 +49,32 @@ $router->get('/event/{slug}/confirmation', function($slug) {
     require VIEWS_PATH . '/layouts/public.php';
 });
 
+// Direct Public E-Ticket & QR Code Lookup
+$router->get('/demo/face-checkin', function() {
+    require VIEWS_PATH . '/demo/face_checkin.php';
+});
+
+$router->get('/ticket/{code}', function($code) {
+    require_once ROOT_PATH . '/controllers/public/RegisterController.php';
+    PublicRegisterController::showTicketByCode($code);
+});
+
+// API: Find Ticket by Phone Number
+$router->post('/api/ticket/find', function() {
+    require_once ROOT_PATH . '/controllers/public/RegisterController.php';
+    PublicRegisterController::findTicketByPhone();
+});
+
+// API: Official Telegram Bot Webhook (Sends QR ticket to Telegram)
+$router->post('/api/telegram/webhook', function() {
+    require_once ROOT_PATH . '/controllers/public/TelegramWebhookController.php';
+    TelegramWebhookController::handle();
+});
+$router->get('/api/telegram/webhook', function() {
+    require_once ROOT_PATH . '/controllers/public/TelegramWebhookController.php';
+    TelegramWebhookController::handle();
+});
+
 $router->get('/certificate/verify/{token}', function($token) {
     require_once ROOT_PATH . '/controllers/public/CertificateVerifyController.php';
     CertificateVerifyController::show($token);
@@ -280,6 +306,52 @@ $router->post('/workshops/{id}/upgrade-capacity', function($id) {
     WorkshopController::upgradeCapacity((int)$id);
 });
 
+$router->post('/workshops/{id}/telegram-settings', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::saveTelegramSettings((int)$id);
+});
+
+$router->post('/workshops/{id}/telegram-report', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::sendTelegramReport((int)$id);
+});
+
+$router->post('/workshops/{id}/scan-telegram-groups', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::scanTelegramGroups((int)$id);
+});
+
+$router->post('/workshops/{id}/daily-scans', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::saveDailyScans((int)$id);
+});
+
+// Workshop Agenda / Sessions
+$router->post('/workshops/{id}/sessions', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::storeSession((int)$id);
+});
+
+$router->post('/workshops/{id}/sessions/{sessionId}/update', function($id, $sessionId) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::updateSession((int)$id, (int)$sessionId);
+});
+
+$router->post('/workshops/{id}/sessions/{sessionId}/delete', function($id, $sessionId) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::deleteSession((int)$id, (int)$sessionId);
+});
+
+$router->post('/workshops/{id}/sessions/auto-generate', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::autoGenerateStandardAgenda((int)$id);
+});
+
+$router->get('/workshops/{id}/agenda/print', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::printAgenda((int)$id);
+});
+
 // Registrations
 $router->get('/workshops/{id}/registrations', function($id) {
     require_once ROOT_PATH . '/controllers/business/RegistrationController.php';
@@ -360,6 +432,11 @@ $router->get('/checkin/{workshopId}', function($workshopId) {
     CheckinController::index((int)$workshopId);
 });
 
+$router->get('/checkin/{workshopId}/face', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    CheckinController::faceKiosk((int)$workshopId);
+});
+
 $router->get('/workshops/{workshopId}/checkin', function($workshopId) {
     require_once ROOT_PATH . '/controllers/business/CheckinController.php';
     CheckinController::index((int)$workshopId);
@@ -368,6 +445,39 @@ $router->get('/workshops/{workshopId}/checkin', function($workshopId) {
 $router->get('/live/{workshopId}', function($workshopId) {
     require_once ROOT_PATH . '/controllers/business/LiveController.php';
     LiveController::index((int)$workshopId);
+});
+
+// Stage / Projector Screen View (Hall Screen & Speakers)
+$router->get('/live/{workshopId}/screen', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/LiveStageController.php';
+    LiveStageController::index((int)$workshopId);
+});
+
+$router->get('/live/{workshopId}/stage', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/LiveStageController.php';
+    LiveStageController::index((int)$workshopId);
+});
+
+// Participant Live Interactive Q&A & Requests (Mobile Scan)
+$router->get('/live/{workshopId}/interactive', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/LiveInteractiveController.php';
+    LiveInteractiveController::index((int)$workshopId);
+});
+
+$router->get('/live/{workshopId}/join', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/LiveInteractiveController.php';
+    LiveInteractiveController::index((int)$workshopId);
+});
+
+$router->get('/live/{workshopId}/qa', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/LiveInteractiveController.php';
+    LiveInteractiveController::index((int)$workshopId);
+});
+
+// Participant Live Feedback & Survey (Mobile Scan)
+$router->get('/live/{workshopId}/feedback', function($workshopId) {
+    require_once ROOT_PATH . '/controllers/public/FeedbackPublicController.php';
+    FeedbackPublicController::index((int)$workshopId);
 });
 
 // Temporary Check-in Helper Station (No login required, token protected)
@@ -553,6 +663,12 @@ $router->get('/workshops/{id}/gifts', function($id) {
     GiftController::index((int)$id);
 });
 
+// Workshop Feedback & Evaluation
+$router->get('/workshops/{id}/feedback', function($id) {
+    require_once ROOT_PATH . '/controllers/business/FeedbackController.php';
+    FeedbackController::index((int)$id);
+});
+
 // ============================================================
 // PLATFORM SUPER ADMIN ROUTES
 // ============================================================
@@ -641,6 +757,16 @@ $router->post('/platform/settings/test-bakong', function() {
     PlatformSettingsController::testBakong();
 });
 
+$router->post('/platform/settings/test-telegram', function() {
+    require_once ROOT_PATH . '/controllers/platform/SettingsController.php';
+    PlatformSettingsController::testTelegram();
+});
+
+$router->post('/platform/settings/set-telegram-webhook', function() {
+    require_once ROOT_PATH . '/controllers/platform/SettingsController.php';
+    PlatformSettingsController::setTelegramWebhook();
+});
+
 $router->get('/platform/audit-logs', function() {
     require_once ROOT_PATH . '/controllers/platform/AuditController.php';
     PlatformAuditController::index();
@@ -709,6 +835,17 @@ $router->post('/platform/ai/test', function() {
 // ============================================================
 // AJAX / REST API ROUTES
 // ============================================================
+// Face Recognition Real Check-in & Enrollment APIs
+$router->post('/api/face/enroll', function() {
+    require_once ROOT_PATH . '/api/face/enroll.php';
+});
+$router->get('/api/face/descriptors', function() {
+    require_once ROOT_PATH . '/api/face/descriptors.php';
+});
+$router->post('/api/face/descriptors', function() {
+    require_once ROOT_PATH . '/api/face/descriptors.php';
+});
+
 $router->post('/api/checkin/scan', function() {
     require_once ROOT_PATH . '/api/checkin/scan.php';
 });
@@ -773,6 +910,18 @@ $router->get('/api/checkin/live-monitor', function() {
     CheckinController::liveMonitorData($workshopId);
 });
 
+// Check-in Scan Mode API (Host sets, Helpers follow)
+$router->post('/api/checkin/set-scan-mode', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    $workshopId = (int)($_POST['workshop_id'] ?? 0);
+    CheckinController::setScanMode($workshopId);
+});
+
+$router->get('/api/checkin/scan-mode', function() {
+    require_once ROOT_PATH . '/controllers/business/CheckinController.php';
+    CheckinController::getScanMode();
+});
+
 // Check-in Helper Station Public API
 $router->post('/api/checkin/helper-scan', function() {
     require_once ROOT_PATH . '/controllers/public/HelperCheckinController.php';
@@ -798,18 +947,47 @@ $router->post('/api/questions/submit', function() {
     require_once ROOT_PATH . '/api/questions/submit.php';
 });
 
+$router->post('/api/questions/bulk-moderate', function() {
+    require_once ROOT_PATH . '/api/questions/moderate.php';
+    api_bulk_moderate_questions();
+});
+
 $router->post('/api/questions/{id}/moderate', function($id) {
     require_once ROOT_PATH . '/api/questions/moderate.php';
     api_moderate_question((int)$id);
 });
 
-$router->post('/api/polls/{id}/respond', function($id) {
-    require_once ROOT_PATH . '/api/polls/respond.php';
-    api_poll_respond((int)$id);
+$router->post('/api/questions/{id}/upvote', function($id) {
+    require_once ROOT_PATH . '/api/questions/upvote.php';
+    api_upvote_question((int)$id);
+});
+
+$router->get('/api/workshop/{id}/questions', function($id) {
+    require_once ROOT_PATH . '/api/workshops/questions.php';
+    api_workshop_questions((int)$id);
+});
+
+$router->post('/api/workshop/{id}/qa-timer', function($id) {
+    require_once ROOT_PATH . '/api/workshops/qa_timer.php';
+    api_workshop_qa_timer((int)$id);
+});
+
+$router->get('/api/workshop/{id}/requests', function($id) {
+    require_once ROOT_PATH . '/api/workshops/requests.php';
+    api_workshop_requests((int)$id);
 });
 
 $router->post('/api/requests/submit', function() {
     require_once ROOT_PATH . '/api/requests/submit.php';
+});
+
+$router->post('/api/requests/{id}/resolve', function($id) {
+    require_once ROOT_PATH . '/api/requests/resolve.php';
+    api_resolve_request((int)$id);
+});
+
+$router->post('/api/feedback/submit', function() {
+    require_once ROOT_PATH . '/api/feedback/submit.php';
 });
 
 $router->get('/api/pricing/calculate', function() {

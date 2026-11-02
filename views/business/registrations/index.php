@@ -92,18 +92,21 @@
         </div>
     <?php endif; ?>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <h1 class="h3 mb-0 text-gray-800 fw-bold">បញ្ជីចុះឈ្មោះ - <?= htmlspecialchars($workshop['name']) ?></h1>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#formFieldsModal" onclick="openFormFieldsModal()" title="កំណត់ទម្រង់ចុះឈ្មោះ">
-                <i class="bi bi-sliders me-1"></i> កំណត់ទម្រង់ចុះឈ្មោះ
+                <i class="bi bi-sliders me-1"></i> កំណត់ទម្រង់
             </button>
-            <button type="button" class="btn btn-outline-info text-dark d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#shareLinksModal">
+            <button type="button" class="btn btn-outline-info text-dark d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#shareLinksModal" title="តំណភ្ជាប់ចុះឈ្មោះ និង QR Code">
                 <i class="bi bi-qr-code-scan me-1 text-primary"></i> តំណភ្ជាប់ & QR
             </button>
-            <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/registrations/export" class="btn btn-outline-success d-inline-flex align-items-center fw-medium" title="ទាញយកជា Excel (.xlsx)">
-                <i class="bi bi-file-earmark-excel-fill me-1 text-success"></i> ទាញយក Excel
+            <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/registrations/export" class="btn btn-outline-success d-inline-flex align-items-center fw-medium" title="ទាញយកបញ្ជីជា Excel">
+                <i class="bi bi-file-earmark-excel-fill me-1 text-success"></i> Excel
             </a>
+            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" onclick="sendTelegramReport()" title="បញ្ជូនរបាយការណ៍បច្ចុប្បន្នភាពទៅ Telegram">
+                <i class="bi bi-telegram me-1"></i> របាយការណ៍ Telegram
+            </button>
             <?php if ($isUnpaid): ?>
                 <a href="<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/activate" class="btn btn-outline-primary d-inline-flex align-items-center" title="បង់ថ្លៃប្រព័ន្ធដើម្បីដំណើរការ">
                     <i class="bi bi-file-earmark-arrow-up me-1"></i> នាំចូល
@@ -112,10 +115,10 @@
                     <i class="bi bi-plus-lg me-1"></i> ចុះឈ្មោះ
                 </a>
             <?php else: ?>
-                <button class="btn btn-outline-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#importModal">
+                <button class="btn btn-outline-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#importModal" title="នាំចូលទិន្នន័យពី Excel">
                     <i class="bi bi-file-earmark-arrow-up me-1"></i> នាំចូល
                 </button>
-                <button class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addRegistrationModal">
+                <button class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addRegistrationModal" title="ចុះឈ្មោះសិក្ខាកាមថ្មី">
                     <i class="bi bi-plus-lg me-1"></i> ចុះឈ្មោះ
                 </button>
             <?php endif; ?>
@@ -123,13 +126,13 @@
     </div>
 
     <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white py-3">
-            <ul class="nav nav-tabs card-header-tabs" id="statusTabs">
+        <div class="card-header bg-white py-2 overflow-x-auto">
+            <ul class="nav nav-tabs card-header-tabs flex-nowrap text-nowrap" id="statusTabs">
                 <li class="nav-item"><a class="nav-link active" href="#" data-status="all">ទាំងអស់</a></li>
-                <li class="nav-item"><a class="nav-link" href="#" data-status="pending">រង់ចាំពិនិត្យ / អនុម័ត</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" data-status="pending" title="រង់ចាំពិនិត្យ និងអនុម័ត">រង់ចាំ</a></li>
                 <li class="nav-item"><a class="nav-link" href="#" data-status="confirmed">បានបញ្ជាក់</a></li>
                 <li class="nav-item"><a class="nav-link" href="#" data-status="waitlisted">បញ្ជីរង់ចាំ</a></li>
-                <li class="nav-item"><a class="nav-link" href="#" data-status="cancelled">បានលុបចោល / បដិសេធ</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" data-status="cancelled">បានបដិសេធ</a></li>
             </ul>
         </div>
         <div class="card-body">
@@ -216,6 +219,11 @@
                                     </div>
                                 <?php else: ?>
                                     <div class="d-inline-flex align-items-center gap-1 justify-content-end">
+                                        <?php if (in_array($reg['status'], ['confirmed', 'attended', 'completed'])): ?>
+                                            <a href="<?= APP_URL ?>/ticket/<?= urlencode($reg['registration_code']) ?>" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-2" title="បើកមើលសំបុត្រ & QR Code">
+                                                <i class="bi bi-ticket-perforated"></i>
+                                            </a>
+                                        <?php endif; ?>
                                         <button type="button" class="btn-action-view" onclick="showRegModal(<?= htmlspecialchars(json_encode($reg), ENT_QUOTES, 'UTF-8') ?>)" title="មើលព័ត៌មានលម្អិត">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -254,11 +262,11 @@
                 <div class="card bg-success-subtle border border-success-subtle mb-4">
                     <div class="card-body p-3">
                         <div class="d-flex align-items-center justify-content-between mb-1">
-                            <strong class="text-success"><i class="bi bi-star-fill text-warning me-1"></i> តំណភ្ជាប់ពិសេស (Direct Invite - ចេញ QR ភ្លាមៗ)</strong>
-                            <span class="badge bg-success">Auto-Approve</span>
+                            <strong class="text-success" title="ចុះឈ្មោះរួចចេញ QR ភ្លាមៗ មិនបាច់រង់ចាំអនុម័ត"><i class="bi bi-star-fill text-warning me-1"></i> តំណភ្ជាប់ពិសេស</strong>
+                            <span class="badge bg-success">ចេញ QR ភ្លាមៗ</span>
                         </div>
                         <p class="small text-muted mb-2">
-                            សិក្ខាកាមដែលចុះឈ្មោះតាមតំណភ្ជាប់នេះ នឹងទទួលបានសំបុត្រ និង QR កូដភ្លាមៗដោយស្វ័យប្រវត្តិ ដោយមិនចាំបាច់បុគ្គលិកចុចអនុម័តឡើយ។
+                            អ្នកចុះឈ្មោះតាមតំណនេះ នឹងទទួលបានសំបុត្រ និង QR កូដភ្លាមៗ ដោយស្វ័យប្រវត្តិ។
                         </p>
                         <div class="input-group">
                             <input type="text" id="directInviteLinkInput" class="form-control form-control-sm bg-white" readonly value="<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug']) ?>/register?invite=direct">
@@ -271,8 +279,8 @@
 
                 <!-- Public Link -->
                 <div class="mb-3">
-                    <label class="form-label fw-bold text-dark small mb-1">
-                        <i class="bi bi-globe me-1 text-primary"></i> តំណភ្ជាប់សាធារណៈ (Public Registration Link)
+                    <label class="form-label fw-bold text-dark small mb-1" title="តំណភ្ជាប់សម្រាប់ចែករំលែកទូទៅ">
+                        <i class="bi bi-globe me-1 text-primary"></i> តំណចុះឈ្មោះទូទៅ
                     </label>
                     <div class="input-group">
                         <input type="text" id="publicLinkInput" class="form-control form-control-sm bg-light" readonly value="<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug']) ?>/register">
@@ -284,15 +292,15 @@
 
                 <!-- Workshop Settings Status -->
                 <div class="p-3 bg-light rounded border small">
-                    <div class="fw-bold mb-1 text-secondary">ស្ថានភាពការកំណត់បច្ចុប្បន្ន:</div>
+                    <div class="fw-bold mb-1 text-secondary">ស្ថានភាពកំណត់បច្ចុប្បន្ន៖</div>
                     <div class="d-flex justify-content-between py-1 border-bottom">
-                        <span>របៀបគិតប្រាក់:</span>
-                        <strong class="text-primary"><?= $workshop['payment_mode'] === 'free' ? 'ឥតគិតថ្លៃ (Free Mode)' : 'មានបង់ប្រាក់ (Paid)' ?></strong>
+                        <span>របៀបគិតប្រាក់៖</span>
+                        <strong class="text-primary"><?= $workshop['payment_mode'] === 'free' ? 'ឥតគិតថ្លៃ' : 'បង់ប្រាក់' ?></strong>
                     </div>
                     <div class="d-flex justify-content-between py-1">
-                        <span>ការចេញសំបុត្រ/QR ស្វ័យប្រវត្តិ:</span>
+                        <span>ចេញសំបុត្រស្វ័យប្រវត្តិ៖</span>
                         <strong class="<?= !empty($workshop['auto_confirm']) && empty($workshop['requires_approval']) ? 'text-success' : 'text-warning' ?>">
-                            <?= !empty($workshop['auto_confirm']) && empty($workshop['requires_approval']) ? '✓ បើក (Auto-Approved គ្រប់គ្នា)' : 'រង់ចាំអនុម័តដោយដៃ' ?>
+                            <?= !empty($workshop['auto_confirm']) && empty($workshop['requires_approval']) ? '✓ បើកស្វ័យប្រវត្តិ' : 'រង់ចាំអនុម័ត' ?>
                         </strong>
                     </div>
                 </div>
@@ -328,9 +336,9 @@
                         <div class="col-md-5">
                             <label class="form-label fw-bold">ភេទ</label>
                             <select name="gender" class="form-select">
-                                <option value="male" selected>ប្រុស (Male)</option>
-                                <option value="female">ស្រី (Female)</option>
-                                <option value="other">ផ្សេងៗ (Other)</option>
+                                <option value="male" selected>ប្រុស</option>
+                                <option value="female">ស្រី</option>
+                                <option value="other">ផ្សេងទៀត</option>
                             </select>
                         </div>
 
@@ -346,7 +354,7 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">រាជធានី-ខេត្ត</label>
                             <select name="province" class="form-select">
-                                <option value="">-- ជ្រើសរើសរាជធានី-ខេត្ត --</option>
+                                <option value="">-- ជ្រើសរើស --</option>
                                 <?php foreach ($provinces ?? [] as $prov): ?>
                                     <option value="<?= htmlspecialchars($prov) ?>"><?= htmlspecialchars($prov) ?></option>
                                 <?php endforeach; ?>
@@ -358,13 +366,13 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">តួនាទី / មុខតំណែង</label>
+                            <label class="form-label fw-bold">តួនាទី</label>
                             <input type="text" name="position" class="form-control" placeholder="ឧ. ប្រធានការិយាល័យ">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">ប្រភេទសំបុត្រ</label>
+                            <label class="form-label fw-bold">សំបុត្រ</label>
                             <select name="ticket_id" class="form-select">
-                                <option value="">-- សំបុត្រទូទៅ (Standard) --</option>
+                                <option value="">-- សំបុត្រទូទៅ --</option>
                                 <?php foreach ($tickets ?? [] as $t): ?>
                                     <option value="<?= $t['id'] ?>">
                                         <?= htmlspecialchars($t['name']) ?> ($<?= number_format((float)$t['price'], 2) ?>)
@@ -376,28 +384,28 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">ស្ថានភាពចុះឈ្មោះ</label>
                             <select name="status" class="form-select">
-                                <option value="confirmed" selected>បានបញ្ជាក់ (Confirmed)</option>
-                                <option value="pending">រង់ចាំពិនិត្យ (Pending)</option>
+                                <option value="confirmed" selected>បានបញ្ជាក់</option>
+                                <option value="pending">រង់ចាំ</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">ស្ថានភាពទូទាត់</label>
                             <select name="payment_status" class="form-select">
-                                <option value="paid_cash" selected>បានបង់ជាសាច់ប្រាក់ (Paid Cash)</option>
-                                <option value="paid">បានបង់តាមធនាគារ (Paid Bank)</option>
-                                <option value="complimentary">ឥតគិតថ្លៃ (Complimentary / VIP)</option>
-                                <option value="unpaid">មិនទាន់បង់ (Unpaid)</option>
+                                <option value="paid_cash" selected>សាច់ប្រាក់</option>
+                                <option value="paid">ធនាគារ</option>
+                                <option value="complimentary">ឥតគិតថ្លៃ</option>
+                                <option value="unpaid">មិនទាន់បង់</option>
                             </select>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold">ប្រភេទអ្នកចូលរួម</label>
                             <select name="attendee_type" class="form-select">
-                                <option value="general" selected>អ្នកចូលរួមទូទៅ (General Attendee)</option>
-                                <option value="delegate">សមាជិកប្រតិភូ (Delegate)</option>
-                                <option value="vip">ភ្ញៀវកិត្តិយស (VIP)</option>
-                                <option value="assistant">ជំនួយការ / អ្នកបើកបរ (Driver/Assistant)</option>
-                                <option value="media">អ្នកសារព័ត៌មាន / ជាងថត (Media / Photographer)</option>
+                                <option value="general" selected>ទូទៅ</option>
+                                <option value="delegate">ប្រតិភូ</option>
+                                <option value="vip">VIP</option>
+                                <option value="assistant">ជំនួយការ</option>
+                                <option value="media">សារព័ត៌មាន</option>
                             </select>
                         </div>
                         <div class="col-md-6 d-flex align-items-center pt-4">
@@ -598,6 +606,47 @@
                         <div class="fw-bold" id="mDate"></div>
                     </div>
                 </div>
+
+                <!-- Ticket & QR Code Section -->
+                <div class="mt-4 pt-3 border-top" id="mQrSection">
+                    <div class="card bg-light border-0 rounded-3 p-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold small text-dark">
+                                <i class="bi bi-qr-code text-primary me-1"></i> សំបុត្រ និង QR Code សម្រាប់ស្កេន
+                            </span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" id="mQrStatusBadge">
+                                <i class="bi bi-patch-check-fill me-1"></i> មានសុពលភាព
+                            </span>
+                        </div>
+                        <div class="row align-items-center g-3">
+                            <div class="col-auto text-center">
+                                <div class="bg-white p-2 rounded-3 border shadow-sm d-inline-block">
+                                    <img id="mQrImage" src="" alt="QR Code" width="125" height="125" style="display: block;">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="small text-muted mb-1">តំណសំបុត្រ៖</div>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input type="text" id="mTicketUrlInput" class="form-control font-monospace" readonly style="font-size: 0.78rem;">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyModalTicketUrl()" id="btnCopyModalTicketUrl" title="ចម្លងតំណភ្ជាប់">
+                                        <i class="bi bi-clipboard"></i> ចម្លង
+                                    </button>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a id="mTelegramShareBtn" href="#" target="_blank" class="btn btn-sm btn-info text-white fw-bold">
+                                        <i class="bi bi-telegram me-1"></i> Telegram
+                                    </a>
+                                    <a id="mViewTicketBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-ticket-perforated me-1"></i> សំបុត្រ
+                                    </a>
+                                    <a id="mTelegramChatBtn" href="#" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-chat-dots me-1"></i> ឆាត
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer bg-light py-2">
                 <div class="w-100 d-flex justify-content-between align-items-center">
@@ -756,6 +805,29 @@
                                         <div class="form-check d-inline-block">
                                             <input class="form-check-input" type="checkbox" name="require_position" id="chk_req_position" value="1" <?= !empty($formConfig['require_position']) ? 'checked' : '' ?> <?= empty($formConfig['show_position']) ? 'disabled' : '' ?>>
                                             <label class="form-check-label small" for="chk_req_position">ចាំបាច់</label>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- 8. Face Pre-registration (AI Face Scan) -->
+                                <tr class="table-primary-subtle">
+                                    <td>
+                                        <span class="fw-bold text-dark"
+                                              data-bs-toggle="tooltip" data-bs-placement="right"
+                                              title="ថតមុខពេលចុះឈ្មោះ សម្រាប់ Check-in ដោយ AI ជំនួសសំបុត្រ QR">
+                                            <i class="bi bi-person-bounding-box me-2 text-primary"></i> ស្គេនមុខ
+                                            <i class="bi bi-info-circle text-muted small ms-1"></i>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input" type="checkbox" name="show_face_enroll" id="chk_show_face_enroll" value="1" <?= !empty($formConfig['show_face_enroll']) ? 'checked' : '' ?> onchange="toggleReq('face_enroll')">
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-inline-block">
+                                            <input class="form-check-input" type="checkbox" name="require_face_enroll" id="chk_req_face_enroll" value="1" <?= !empty($formConfig['require_face_enroll']) ? 'checked' : '' ?> <?= empty($formConfig['show_face_enroll']) ? 'disabled' : '' ?>>
+                                            <label class="form-check-label small" for="chk_req_face_enroll">ចាំបាច់</label>
                                         </div>
                                     </td>
                                 </tr>
@@ -922,91 +994,159 @@
 
     let detailModalInstance = null;
     const workshopPaymentMode = <?= json_encode($workshop['payment_mode'] ?? 'free') ?>;
+    const APP_URL = <?= json_encode(APP_URL) ?>;
 
     function showRegModal(reg) {
-        document.getElementById('mRegCode').innerText = reg.registration_code || '-';
-        document.getElementById('mName').innerText = reg.participant_name || '-';
-        document.getElementById('mPhone').innerText = reg.phone || '-';
-        document.getElementById('mEmail').innerText = reg.email || '-';
-        document.getElementById('mCompany').innerText = reg.company || '-';
-        document.getElementById('mPosition').innerText = reg.position || '-';
+        if (!reg) return;
+        try {
+            document.getElementById('mRegCode').innerText = reg.registration_code || '-';
+            document.getElementById('mName').innerText = reg.participant_name || '-';
+            document.getElementById('mPhone').innerText = reg.phone || '-';
+            document.getElementById('mEmail').innerText = reg.email || '-';
+            document.getElementById('mCompany').innerText = reg.company || '-';
+            document.getElementById('mPosition').innerText = reg.position || '-';
 
-        // 1. Status Badge at top right
-        const statusEl = document.getElementById('mStatusBadge');
-        if (statusEl) {
-            const regStatusMap = {
-                'confirmed': '<span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i> បានបញ្ជាក់រួចរាល់</span>',
-                'attended': '<span class="badge bg-primary px-2 py-1"><i class="bi bi-person-check me-1"></i> បានចូលរួម</span>',
-                'completed': '<span class="badge bg-info px-2 py-1">បានបញ្ចប់</span>',
-                'pending': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំអនុម័ត</span>',
-                'pending_approval': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំអនុម័ត</span>',
-                'pending_verification': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំផ្ទៀងផ្ទាត់</span>',
-                'waitlisted': '<span class="badge bg-info text-dark px-2 py-1">ក្នុងបញ្ជីរង់ចាំ</span>',
-                'cancelled': '<span class="badge bg-danger px-2 py-1">បានលុបចោល</span>',
-                'rejected': '<span class="badge bg-danger px-2 py-1">បានបដិសេធ</span>'
-            };
-            statusEl.innerHTML = regStatusMap[reg.status] || `<span class="badge bg-secondary">${reg.status || '-'}</span>`;
+            // 1. Status Badge at top right
+            const statusEl = document.getElementById('mStatusBadge');
+            if (statusEl) {
+                const regStatusMap = {
+                    'confirmed': '<span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i> បានបញ្ជាក់រួចរាល់</span>',
+                    'attended': '<span class="badge bg-primary px-2 py-1"><i class="bi bi-person-check me-1"></i> បានចូលរួម</span>',
+                    'completed': '<span class="badge bg-info px-2 py-1">បានបញ្ចប់</span>',
+                    'pending': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំអនុម័ត</span>',
+                    'pending_approval': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំអនុម័ត</span>',
+                    'pending_verification': '<span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-clock me-1"></i> រង់ចាំផ្ទៀងផ្ទាត់</span>',
+                    'waitlisted': '<span class="badge bg-info text-dark px-2 py-1">ក្នុងបញ្ជីរង់ចាំ</span>',
+                    'cancelled': '<span class="badge bg-danger px-2 py-1">បានលុបចោល</span>',
+                    'rejected': '<span class="badge bg-danger px-2 py-1">បានបដិសេធ</span>'
+                };
+                statusEl.innerHTML = regStatusMap[reg.status] || `<span class="badge bg-secondary">${reg.status || '-'}</span>`;
+            }
+
+            // 2. Free Detection
+            const isFree = (workshopPaymentMode === 'free') || 
+                           (reg.workshop_payment_mode === 'free') ||
+                           (parseFloat(reg.final_amount || 0) === 0 && parseFloat(reg.ticket_price || 0) === 0) ||
+                           (reg.is_complimentary == 1) || 
+                           (reg.payment_status === 'complimentary');
+
+            // 3. Ticket name
+            const ticketEl = document.getElementById('mTicket');
+            if (ticketEl) {
+                const ticketBaseName = reg.ticket_name || 'សំបុត្រទូទៅ';
+                ticketEl.innerHTML = isFree
+                    ? `${ticketBaseName} <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">ឥតគិតថ្លៃ</span>`
+                    : ticketBaseName;
+            }
+
+            // 4. Payment status
+            const payEl = document.getElementById('mPayment');
+            if (payEl) {
+                if (isFree) {
+                    payEl.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ</span>';
+                } else {
+                    const payStatusMap = {
+                        'paid': '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> បានបង់ប្រាក់</span>',
+                        'paid_cash': '<span class="badge bg-success"><i class="bi bi-cash me-1"></i> បង់ប្រាក់សុទ្ធ</span>',
+                        'pending': '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> រង់ចាំទូទាត់</span>',
+                        'unpaid': '<span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i> មិនទាន់បង់</span>',
+                        'refunded': '<span class="badge bg-secondary">បានសងប្រាក់វិញ</span>',
+                        'waived': '<span class="badge bg-info text-dark">មិនគិតប្រាក់</span>',
+                        'complimentary': '<span class="badge bg-success-subtle text-success border">ឥតគិតថ្លៃ</span>',
+                        'rejected': '<span class="badge bg-danger">បដិសេធ</span>'
+                    };
+                    const pBadge = payStatusMap[reg.payment_status] || `<span class="badge bg-secondary">${reg.payment_status || 'មិនទាន់បង់'}</span>`;
+                    const amt = parseFloat(reg.final_amount || 0);
+                    const amountStr = amt > 0 ? ` ($${amt.toFixed(2)})` : '';
+                    payEl.innerHTML = pBadge + amountStr;
+                }
+            }
+
+            const dateEl = document.getElementById('mDate');
+            if (dateEl) dateEl.innerText = reg.created_at || '-';
+
+            // 5. Action Buttons:
+            const isPending = ['pending', 'pending_approval', 'pending_verification', 'waitlisted'].includes(reg.status);
+            const actionsGroup = document.getElementById('modalActionsGroup');
+            if (actionsGroup) {
+                if (isPending) {
+                    actionsGroup.classList.remove('d-none');
+                    actionsGroup.classList.add('d-flex');
+                    document.getElementById('modalApproveBtn').onclick = () => {
+                        detailModalInstance.hide();
+                        approveReg(reg.id);
+                    };
+                    document.getElementById('modalRejectBtn').onclick = () => {
+                        detailModalInstance.hide();
+                        rejectReg(reg.id);
+                    };
+                } else {
+                    actionsGroup.classList.remove('d-flex');
+                    actionsGroup.classList.add('d-none');
+                }
+            }
+
+            // 6. QR Code & E-Ticket Preview
+            const regCode = reg.registration_code || '';
+            const qrData = reg.qr_token || regCode;
+            const ticketUrl = `${APP_URL}/ticket/${encodeURIComponent(regCode)}`;
+
+            const qrImg = document.getElementById('mQrImage');
+            if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrData)}`;
+
+            const urlInput = document.getElementById('mTicketUrlInput');
+            if (urlInput) urlInput.value = ticketUrl;
+
+            const viewBtn = document.getElementById('mViewTicketBtn');
+            if (viewBtn) viewBtn.href = ticketUrl;
+
+            // Telegram Share link
+            const participantName = reg.participant_name || 'សិក្ខាកាម';
+            const workshopTitle = reg.workshop_name || 'សិក្ខាសាលា';
+            const shareMsg = `សួស្តី ${participantName}!\nនេះជាសំបុត្រ និង QR Code សម្រាប់ចូលរួមកម្មវិធី "${workshopTitle}":\n${ticketUrl}`;
+            const tgShareBtn = document.getElementById('mTelegramShareBtn');
+            if (tgShareBtn) {
+                tgShareBtn.href = `https://t.me/share/url?url=${encodeURIComponent(ticketUrl)}&text=${encodeURIComponent(shareMsg)}`;
+            }
+
+            // Direct Telegram chat link if phone is present
+            let cleanPhone = (reg.phone || '').replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) cleanPhone = '855' + cleanPhone.substring(1);
+            const tgChatBtn = document.getElementById('mTelegramChatBtn');
+            if (tgChatBtn) {
+                if (cleanPhone && cleanPhone.length >= 8) {
+                    tgChatBtn.href = `https://t.me/+${cleanPhone}`;
+                    tgChatBtn.classList.remove('d-none');
+                } else {
+                    tgChatBtn.classList.add('d-none');
+                }
+            }
+
+            const modalEl = document.getElementById('viewDetailsModal');
+            if (modalEl) {
+                detailModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                detailModalInstance.show();
+            }
+        } catch (e) {
+            console.error('Error opening details modal:', e);
+            const modalEl = document.getElementById('viewDetailsModal');
+            if (modalEl) {
+                detailModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                detailModalInstance.show();
+            }
         }
+    }
 
-        // 2. Free Detection
-        const isFree = (workshopPaymentMode === 'free') || 
-                       (reg.workshop_payment_mode === 'free') ||
-                       (parseFloat(reg.final_amount || 0) === 0 && parseFloat(reg.ticket_price || 0) === 0) ||
-                       (reg.is_complimentary == 1) || 
-                       (reg.payment_status === 'complimentary');
-
-        // 3. Ticket name
-        const ticketBaseName = reg.ticket_name || 'សំបុត្រទូទៅ';
-        document.getElementById('mTicket').innerHTML = isFree
-            ? `${ticketBaseName} <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">ឥតគិតថ្លៃ</span>`
-            : ticketBaseName;
-
-        // 4. Payment status
-        if (isFree) {
-            document.getElementById('mPayment').innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ</span>';
-        } else {
-            const payStatusMap = {
-                'paid': '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> បានបង់ប្រាក់</span>',
-                'paid_cash': '<span class="badge bg-success"><i class="bi bi-cash me-1"></i> បង់ប្រាក់សុទ្ធ</span>',
-                'pending': '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> រង់ចាំទូទាត់</span>',
-                'unpaid': '<span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i> មិនទាន់បង់</span>',
-                'refunded': '<span class="badge bg-secondary">បានសងប្រាក់វិញ</span>',
-                'waived': '<span class="badge bg-info text-dark">មិនគិតប្រាក់</span>',
-                'complimentary': '<span class="badge bg-success-subtle text-success border">ឥតគិតថ្លៃ</span>',
-                'rejected': '<span class="badge bg-danger">បដិសេធ</span>'
-            };
-            const pBadge = payStatusMap[reg.payment_status] || `<span class="badge bg-secondary">${reg.payment_status || 'មិនទាន់បង់'}</span>`;
-            const amt = parseFloat(reg.final_amount || 0);
-            const amountStr = amt > 0 ? ` ($${amt.toFixed(2)})` : '';
-            document.getElementById('mPayment').innerHTML = pBadge + amountStr;
-        }
-
-        document.getElementById('mDate').innerText = reg.created_at || '-';
-
-        // 5. Action Buttons:
-        // Only show Approve/Reject when the registration actually needs approval (pending/waitlisted)!
-        const isPending = ['pending', 'pending_approval', 'pending_verification', 'waitlisted'].includes(reg.status);
-        const actionsGroup = document.getElementById('modalActionsGroup');
-        if (isPending) {
-            actionsGroup.classList.remove('d-none');
-            actionsGroup.classList.add('d-flex');
-            document.getElementById('modalApproveBtn').onclick = () => {
-                detailModalInstance.hide();
-                approveReg(reg.id);
-            };
-            document.getElementById('modalRejectBtn').onclick = () => {
-                detailModalInstance.hide();
-                rejectReg(reg.id);
-            };
-        } else {
-            // Already confirmed, attended, cancelled, etc. -> In this condition, HIDE approval buttons!
-            actionsGroup.classList.remove('d-flex');
-            actionsGroup.classList.add('d-none');
-        }
-
-        const modalEl = document.getElementById('viewDetailsModal');
-        detailModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-        detailModalInstance.show();
+    function copyModalTicketUrl() {
+        const input = document.getElementById('mTicketUrlInput');
+        if (!input) return;
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            const btn = document.getElementById('btnCopyModalTicketUrl');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check2 text-success"></i> បានចម្លង!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        });
     }
 
     // Toggle required checkbox based on show checkbox
@@ -1072,5 +1212,30 @@
                 }, 1200);
             }
         }).catch(e => console.error('Copy failed:', e));
+    }
+
+    async function sendTelegramReport() {
+        if (!confirm('តើអ្នកពិតជាចង់បញ្ជូនរបាយការណ៍បច្ចុប្បន្នភាពនៃការចុះឈ្មោះទៅកាន់ក្រុម Telegram មែនទេ?')) return;
+        const fd = new FormData();
+        fd.append('_csrf_token', '<?= generateCsrfToken() ?>');
+
+        try {
+            const res = await fetch('<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>/telegram-report', {
+                method: 'POST',
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+            } else if (data.need_setup) {
+                if (confirm(data.message + '\n\nតើអ្នកចង់ទៅកាន់ទំព័រព័ត៌មានសិក្ខាសាលាដើម្បីកំណត់ Group Chat ID ឥឡូវនេះទេ?')) {
+                    window.location.href = '<?= APP_URL ?>/workshops/<?= $workshop['id'] ?>';
+                }
+            } else {
+                alert(data.message || 'បរាជ័យក្នុងការផ្ញើរបាយការណ៍។');
+            }
+        } catch (e) {
+            alert('កំហុសភ្ជាប់ប្រព័ន្ធ សូមព្យាយាមម្តងទៀត។');
+        }
     }
 </script>

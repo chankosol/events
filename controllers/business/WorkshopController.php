@@ -166,6 +166,7 @@ class WorkshopController {
             'auto_confirm'            => isset($_POST['auto_confirm']) ? 1 : 0,
             'allow_waitlist'          => isset($_POST['allow_waitlist']) ? 1 : 0,
             'payment_mode'            => in_array($_POST['payment_mode'] ?? 'free', ['free','paid','freemium']) ? $_POST['payment_mode'] : 'free',
+            'daily_scans_required'    => max(1, min(4, (int)($_POST['daily_scans_required'] ?? 1))),
         ];
 
         $errors = [];
@@ -191,7 +192,7 @@ class WorkshopController {
                  trainer_title=?, trainer_name=?, trainer_bio=?, organizer=?, start_date=?, end_date=?, start_time=?, end_time=?,
                  timezone=?, venue=?, address=?, google_maps_url=?, online_meeting_url=?, capacity=?, language=?,
                  visibility=?, registration_open_date=?, registration_close_date=?, requires_approval=?,
-                 auto_confirm=?, allow_waitlist=?, payment_mode=?, updated_at=NOW()
+                 auto_confirm=?, allow_waitlist=?, payment_mode=?, daily_scans_required=?, updated_at=NOW()
                  WHERE id = ? AND business_id = ?",
                 [
                     $data['name'], $data['description'], $data['short_description'], $data['category'], $data['workshop_type'],
@@ -200,6 +201,7 @@ class WorkshopController {
                     $data['google_maps_url'], $data['online_meeting_url'], $data['capacity'], $data['language'],
                     $data['visibility'], $data['registration_open_date'], $data['registration_close_date'],
                     $data['requires_approval'], $data['auto_confirm'], $data['allow_waitlist'], $data['payment_mode'],
+                    $data['daily_scans_required'],
                     $workshopId, $businessId
                 ]
             );
@@ -219,8 +221,8 @@ class WorkshopController {
                 "INSERT INTO workshops (business_id, slug, name, description, short_description, category, workshop_type,
                  trainer_title, trainer_name, trainer_bio, organizer, start_date, end_date, start_time, end_time, timezone, venue,
                  address, google_maps_url, online_meeting_url, capacity, language, visibility, registration_open_date,
-                 registration_close_date, requires_approval, auto_confirm, allow_waitlist, payment_mode, status, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)",
+                 registration_close_date, requires_approval, auto_confirm, allow_waitlist, payment_mode, daily_scans_required, status, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)",
                 [
                     $businessId, $slug,
                     $data['name'], $data['description'], $data['short_description'], $data['category'], $data['workshop_type'],
@@ -229,6 +231,7 @@ class WorkshopController {
                     $data['google_maps_url'], $data['online_meeting_url'], $data['capacity'], $data['language'],
                     $data['visibility'], $data['registration_open_date'], $data['registration_close_date'],
                     $data['requires_approval'], $data['auto_confirm'], $data['allow_waitlist'], $data['payment_mode'],
+                    $data['daily_scans_required'],
                     Auth::id()
                 ]
             );
@@ -952,4 +955,386 @@ class WorkshopController {
         $_POST['step'] = 1;
         self::store();
     }
+
+    public static function saveTelegramSettings(int $id): void {
+        requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+        $workshop = $db->queryOne("SELECT id FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$id, $businessId]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'message' => 'រកមិនឃើញសិក្ខាសាលាឡើយ។']);
+            exit;
+        }
+
+        $chatId = trim($_POST['telegram_chat_id'] ?? '');
+        $autoNotify = !empty($_POST['telegram_notify_registration']) ? 1 : 0;
+
+        $db->execute("UPDATE workshops SET telegram_chat_id = ?, telegram_notify_registration = ? WHERE id = ?", [$chatId, $autoNotify, $id]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'បានរក្សាទុកការកំណត់ Telegram ជោគជ័យ!',
+            'telegram_chat_id' => $chatId,
+            'telegram_notify_registration' => $autoNotify
+        ]);
+        exit;
+    }
+
+    public static function saveDailyScans(int $id): void {
+        requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+        $workshop = $db->queryOne("SELECT id FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$id, $businessId]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'message' => 'រកមិនឃើញសិក្ខាសាលាឡើយ។']);
+            exit;
+        }
+
+        $dailyScans = max(1, min(4, (int)($_POST['daily_scans_required'] ?? 1)));
+
+        // Try updating, auto-heal column if missing on live server
+        try {
+            $db->execute("UPDATE workshops SET daily_scans_required = ? WHERE id = ? AND business_id = ?", [$dailyScans, $id, $businessId]);
+        } catch (Throwable $e) {
+            try {
+                $db->execute("ALTER TABLE workshops ADD COLUMN daily_scans_required TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER capacity");
+                $db->execute("UPDATE workshops SET daily_scans_required = ? WHERE id = ? AND business_id = ?", [$dailyScans, $id, $businessId]);
+            } catch (Throwable $e2) {
+                echo json_encode(['success' => false, 'message' => 'កំហុស Database: ' . $e2->getMessage()]);
+                exit;
+            }
+        }
+
+        // Auto-heal attendance_slots table if missing on live server
+        try {
+            $db->execute("CREATE TABLE IF NOT EXISTS attendance_slots (
+              id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+              business_id INT UNSIGNED NOT NULL,
+              workshop_id INT UNSIGNED NOT NULL,
+              registration_id INT UNSIGNED NOT NULL,
+              participant_id INT UNSIGNED NOT NULL,
+              checkin_date DATE NOT NULL,
+              slot_number TINYINT UNSIGNED NOT NULL DEFAULT 1,
+              slot_name VARCHAR(50) NULL,
+              checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              check_in_method ENUM('qr','manual','offline','face','helper_station') DEFAULT 'qr',
+              check_in_staff_id INT UNSIGNED NULL,
+              notes VARCHAR(255) NULL,
+              UNIQUE KEY unique_reg_date_slot (registration_id, checkin_date, slot_number),
+              INDEX idx_workshop_date_slot (workshop_id, checkin_date, slot_number)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $te) {}
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'បានរក្សាទុកចំនួនដងស្កេន (' . $dailyScans . ' ដង/ថ្ងៃ) ដោយជោគជ័យ!',
+            'daily_scans_required' => $dailyScans
+        ]);
+        exit;
+    }
+
+    public static function sendTelegramReport(int $id): void {
+        requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+        $workshop = $db->queryOne("SELECT * FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$id, $businessId]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'message' => 'រកមិនឃើញសិក្ខាសាលាឡើយ។']);
+            exit;
+        }
+
+        if (empty($workshop['telegram_chat_id'])) {
+            echo json_encode([
+                'success' => false,
+                'need_setup' => true,
+                'message' => 'មិនទាន់បានកំណត់ Telegram Group Chat ID នៅឡើយទេ។ សូមចុច «កំណត់ក្រុម Telegram» ដើម្បីបញ្ចូល Chat ID ជាមុនសិន។'
+            ]);
+            exit;
+        }
+
+        require_once ROOT_PATH . '/helpers/telegram_helper.php';
+        $res = telegram_send_workshop_summary_report($id);
+
+        if (!empty($res['ok'])) {
+            echo json_encode(['success' => true, 'message' => '✓ បានបញ្ជូនរបាយការណ៍បច្ចុប្បន្នភាពទៅកាន់ក្រុម Telegram ដោយជោគជ័យ!']);
+        } else {
+            $err = $res['description'] ?? 'មិនអាចផ្ញើសារបានទេ។';
+            echo json_encode(['success' => false, 'message' => 'បរាជ័យក្នុងការផ្ញើ៖ ' . $err]);
+        }
+        exit;
+    }
+
+    public static function scanTelegramGroups(int $id): void {
+        requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+        $workshop = $db->queryOne("SELECT id FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$id, $businessId]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'message' => 'រកមិនឃើញសិក្ខាសាលាឡើយ។']);
+            exit;
+        }
+
+        $groups = [];
+
+        // 1. Try from telegram_groups table
+        try {
+            $dbGroups = $db->query("SELECT chat_id, title, chat_type, last_active_at FROM telegram_groups ORDER BY last_active_at DESC LIMIT 8");
+            if (!empty($dbGroups)) {
+                foreach ($dbGroups as $g) {
+                    $timeAgoStr = function_exists('timeAgo') ? timeAgo($g['last_active_at'] ?? '') : '';
+                    $groups[] = [
+                        'chat_id'   => $g['chat_id'],
+                        'title'     => $g['title'],
+                        'type'      => $g['chat_type'] ?? 'group',
+                        'time'      => $g['last_active_at'],
+                        'time_ago'  => $timeAgoStr
+                    ];
+                }
+            }
+        } catch (Throwable $e) {}
+
+        // 2. Fallback to platform_settings
+        if (empty($groups)) {
+            try {
+                $row = $db->queryOne("SELECT setting_value FROM platform_settings WHERE setting_key = 'telegram_recent_groups'");
+                if (!empty($row['setting_value'])) {
+                    $jsonGroups = json_decode($row['setting_value'], true);
+                    if (is_array($jsonGroups)) {
+                        foreach ($jsonGroups as $g) {
+                            $timeAgoStr = function_exists('timeAgo') ? timeAgo($g['time'] ?? '') : '';
+                            $groups[] = [
+                                'chat_id'  => $g['chat_id'],
+                                'title'    => $g['title'] ?? 'ក្រុមការងារ',
+                                'type'     => $g['type'] ?? 'group',
+                                'time'     => $g['time'] ?? '',
+                                'time_ago' => $timeAgoStr
+                            ];
+                        }
+                    }
+                }
+            } catch (Throwable $e) {}
+        }
+
+        if (empty($groups)) {
+            echo json_encode([
+                'success' => false,
+                'groups'  => [],
+                'message' => 'មិនទាន់រកឃើញក្រុម Telegram ថ្មីៗនៅឡើយទេ។ សូម Add Bot ចូលក្នុង Telegram Group រួចវាយពាក្យ «hi» ឬ «/id» ក្នុងក្រុមនោះ ហើយចុចស្កេនម្តងទៀត។'
+            ]);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'groups'  => $groups,
+            'message' => 'រកឃើញ ' . count($groups) . ' ក្រុមថ្មីៗ!'
+        ]);
+        exit;
+    }
+
+    /**
+     * Store new agenda session
+     */
+    public static function storeSession(int $workshopId): void {
+        requireAuth();
+        if (!validateCsrf()) {
+            jsonResponse(false, 'សុពលភាពទម្រង់ (CSRF) មិនត្រឹមត្រូវ ឬបានផុតកំណត់ សូម Refresh ទំព័រឡើងវិញ');
+        }
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT id, business_id, start_date FROM workshops WHERE id = ? AND (business_id = ? OR ?)", [$workshopId, $businessId, Auth::isPlatformAdmin()]);
+        if (!$workshop) {
+            jsonResponse(false, 'រកមិនឃើញសិក្ខាសាលា');
+        }
+
+        $businessId = $workshop['business_id'] ?? $businessId;
+        $name = trim($_POST['name'] ?? '');
+        $startTime = trim($_POST['start_time'] ?? '');
+        $endTime = trim($_POST['end_time'] ?? '');
+        $facilitator = trim($_POST['facilitator'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+
+        $rawDate = trim($_POST['session_date'] ?? '');
+        $sessionDate = $workshop['start_date'] ?: date('Y-m-d');
+        if (!empty($rawDate)) {
+            $ts = strtotime($rawDate);
+            if ($ts !== false) {
+                $sessionDate = date('Y-m-d', $ts);
+            }
+        }
+
+        if (empty($name)) {
+            jsonResponse(false, 'សូមបញ្ចូលឈ្មោះកម្មវិធី ឬ វគ្គ');
+        }
+
+        $maxSort = (int)($db->queryOne("SELECT MAX(sort_order) as m FROM workshop_sessions WHERE workshop_id = ?", [$workshopId])['m'] ?? 0);
+
+        try {
+            $db->execute(
+                "INSERT INTO workshop_sessions (workshop_id, business_id, name, session_date, start_time, end_time, location, facilitator, description, sort_order, status, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())",
+                [$workshopId, $businessId, $name, $sessionDate, $startTime ?: null, $endTime ?: null, $location ?: null, $facilitator ?: null, $description ?: null, $maxSort + 1]
+            );
+            jsonResponse(true, 'បានបន្ថែមវគ្គកម្មវិធីជោគជ័យ');
+        } catch (Throwable $e) {
+            error_log('Error saving session: ' . $e->getMessage());
+            jsonResponse(false, 'បរាជ័យក្នុងការរក្សាទុក៖ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update existing agenda session
+     */
+    public static function updateSession(int $workshopId, int $sessionId): void {
+        requireAuth();
+        if (!validateCsrf()) {
+            jsonResponse(false, 'សុពលភាពទម្រង់ (CSRF) មិនត្រឹមត្រូវ ឬបានផុតកំណត់ សូម Refresh ទំព័រឡើងវិញ');
+        }
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $name = trim($_POST['name'] ?? '');
+        $startTime = trim($_POST['start_time'] ?? '');
+        $endTime = trim($_POST['end_time'] ?? '');
+        $facilitator = trim($_POST['facilitator'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+
+        if (empty($name)) {
+            jsonResponse(false, 'សូមបញ្ចូលឈ្មោះកម្មវិធី ឬ វគ្គ');
+        }
+
+        try {
+            $db->execute(
+                "UPDATE workshop_sessions 
+                 SET name = ?, start_time = ?, end_time = ?, location = ?, facilitator = ?, description = ?
+                 WHERE id = ? AND workshop_id = ? AND (business_id = ? OR ?)",
+                [$name, $startTime ?: null, $endTime ?: null, $location ?: null, $facilitator ?: null, $description ?: null, $sessionId, $workshopId, $businessId, Auth::isPlatformAdmin()]
+            );
+            jsonResponse(true, 'បានកែសម្រួលវគ្គកម្មវិធីជោគជ័យ');
+        } catch (Throwable $e) {
+            error_log('Error updating session: ' . $e->getMessage());
+            jsonResponse(false, 'បរាជ័យក្នុងការកែសម្រួល៖ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete agenda session
+     */
+    public static function deleteSession(int $workshopId, int $sessionId): void {
+        requireAuth();
+        if (!validateCsrf()) {
+            jsonResponse(false, 'សុពលភាពទម្រង់ (CSRF) មិនត្រឹមត្រូវ ឬបានផុតកំណត់ សូម Refresh ទំព័រឡើងវិញ');
+        }
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        try {
+            $db->execute(
+                "DELETE FROM workshop_sessions WHERE id = ? AND workshop_id = ? AND (business_id = ? OR ?)",
+                [$sessionId, $workshopId, $businessId, Auth::isPlatformAdmin()]
+            );
+            jsonResponse(true, 'បានលុបវគ្គកម្មវិធីជោគជ័យ');
+        } catch (Throwable $e) {
+            error_log('Error deleting session: ' . $e->getMessage());
+            jsonResponse(false, 'បរាជ័យក្នុងការលុប៖ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Auto generate standard full day agenda template (10 sessions)
+     */
+    public static function autoGenerateStandardAgenda(int $workshopId): void {
+        requireAuth();
+        if (!validateCsrf()) {
+            jsonResponse(false, 'សុពលភាពទម្រង់ (CSRF) មិនត្រឹមត្រូវ ឬបានផុតកំណត់ សូម Refresh ទំព័រឡើងវិញ');
+        }
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT id, business_id, start_date, venue, trainer_name FROM workshops WHERE id = ? AND (business_id = ? OR ?)", [$workshopId, $businessId, Auth::isPlatformAdmin()]);
+        if (!$workshop) {
+            jsonResponse(false, 'រកមិនឃើញសិក្ខាសាលា');
+        }
+
+        $businessId = $workshop['business_id'] ?? $businessId;
+        $defaultDate = $workshop['start_date'] ?: date('Y-m-d');
+        $trainer = $workshop['trainer_name'] ?: 'គ្រូឧទ្ទេស';
+        $venue = $workshop['venue'] ?: 'សាលប្រជុំ';
+
+        $template = [
+            ['name' => 'ចុះឈ្មោះ និងទទួលកាហ្វេពេលព្រឹក', 'start_time' => '07:30', 'end_time' => '08:30', 'facilitator' => 'ក្រុមការងារចុះឈ្មោះ'],
+            ['name' => 'ពិធីបើកកម្មវិធី & មតិស្វាគមន៍', 'start_time' => '08:30', 'end_time' => '09:00', 'facilitator' => 'គណៈអធិបតី'],
+            ['name' => 'វគ្គទី ១: បទបង្ហាញគន្លឹះសំខាន់ៗ', 'start_time' => '09:00', 'end_time' => '10:15', 'facilitator' => $trainer],
+            ['name' => 'សម្រាកពិសារអាហារសម្រន់ពេលព្រឹក (Coffee Break)', 'start_time' => '10:15', 'end_time' => '10:30', 'facilitator' => ''],
+            ['name' => 'វគ្គទី ២: ការអនុវត្តផ្ទាល់ & សិក្សាជាក្រុម', 'start_time' => '10:30', 'end_time' => '12:00', 'facilitator' => $trainer],
+            ['name' => 'សម្រាកពិសារអាហារថ្ងៃត្រង់ (Lunch Break)', 'start_time' => '12:00', 'end_time' => '13:30', 'facilitator' => ''],
+            ['name' => 'វគ្គទី ៣: ការចែករំលែកបទពិសោធន៍ & ការដោះស្រាយបញ្ហា', 'start_time' => '13:30', 'end_time' => '15:00', 'facilitator' => $trainer],
+            ['name' => 'សម្រាកពិសារអាហារសម្រន់ពេលរសៀល', 'start_time' => '15:00', 'end_time' => '15:15', 'facilitator' => ''],
+            ['name' => 'វេទិកាសួរ-ឆ្លើយ (Q&A) & ការបូកសរុប', 'start_time' => '15:15', 'end_time' => '16:30', 'facilitator' => $trainer],
+            ['name' => 'ពិធីប្រគល់វិញ្ញាបនបត្រ & ពិធីបិទកម្មវិធី', 'start_time' => '16:30', 'end_time' => '17:00', 'facilitator' => 'គណៈអធិបតី']
+        ];
+
+        try {
+            foreach ($template as $idx => $item) {
+                $db->execute(
+                    "INSERT INTO workshop_sessions (workshop_id, business_id, name, session_date, start_time, end_time, location, facilitator, sort_order, status, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', NOW())",
+                    [$workshopId, $businessId, $item['name'], $defaultDate, $item['start_time'], $item['end_time'], $venue, $item['facilitator'], $idx + 1]
+                );
+            }
+            jsonResponse(true, 'បានបង្កើតរបៀបវារៈកម្មវិធីពេញមួយថ្ងៃស្តង់ដារជោគជ័យ (១០ វគ្គ)');
+        } catch (Throwable $e) {
+            error_log('Error generating agenda: ' . $e->getMessage());
+            jsonResponse(false, 'បរាជ័យក្នុងការបង្កើតរបៀបវារៈ៖ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Printable A4 official agenda view
+     */
+    public static function printAgenda(int $workshopId): void {
+        requireAuth();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne(
+            "SELECT w.*, 
+                    COALESCE(NULLIF(bb.logo_path, ''), NULLIF(wb.logo, '')) as logo, 
+                    wb.banner, 
+                    b.name as business_name, 
+                    b.phone as business_phone, 
+                    b.email as business_email, 
+                    b.address as business_address,
+                    b.city as business_city,
+                    bb.logo_path as business_logo,
+                    COALESCE(NULLIF(bb.primary_color, ''), '#1e3c72') as primary_color
+             FROM workshops w
+             LEFT JOIN workshop_branding wb ON wb.workshop_id = w.id
+             LEFT JOIN businesses b ON b.id = w.business_id
+             LEFT JOIN business_branding bb ON bb.business_id = w.business_id
+             WHERE w.id = ? AND (w.business_id = ? OR ?)",
+            [$workshopId, $businessId, Auth::isPlatformAdmin()]
+        );
+
+        if (!$workshop) {
+            http_response_code(404);
+            die('Workshop not found.');
+        }
+
+        $sessions = $db->query("SELECT * FROM workshop_sessions WHERE workshop_id = ? ORDER BY session_date, start_time, sort_order", [$workshopId]);
+
+        require_once VIEWS_PATH . '/business/workshops/agenda_print.php';
+    }
 }
+

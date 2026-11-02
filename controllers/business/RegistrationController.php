@@ -36,15 +36,32 @@ class RegistrationController {
                         LIMIT 1
                     )) as position,
                     t.name as ticket_name, t.price as ticket_price,
-                    w.payment_mode as workshop_payment_mode
+                    w.name as workshop_name, w.slug as workshop_slug,
+                    w.payment_mode as workshop_payment_mode,
+                    pq.token as qr_token
              FROM registrations r 
              JOIN workshops w ON w.id = r.workshop_id
              JOIN participants p ON p.id = r.participant_id 
              LEFT JOIN tickets t ON t.id = r.ticket_id 
+             LEFT JOIN participant_qr pq ON pq.registration_id = r.id AND pq.is_active = 1
              WHERE r.workshop_id = ? AND r.business_id = ? AND r.deleted_at IS NULL
              ORDER BY r.created_at DESC", 
             [$workshopId, $businessId]
         );
+
+        // Ensure confirmed registrations have active QR tokens
+        foreach ($registrations as &$reg) {
+            if (empty($reg['qr_token']) && in_array($reg['status'], ['confirmed', 'attended', 'completed'])) {
+                $newToken = bin2hex(random_bytes(16));
+                $db->execute(
+                    "INSERT INTO participant_qr (registration_id, participant_id, business_id, workshop_id, token, is_active)
+                     VALUES (?, ?, ?, ?, ?, 1)",
+                    [$reg['id'], $reg['participant_id'], $businessId, $workshopId, $newToken]
+                );
+                $reg['qr_token'] = $newToken;
+            }
+        }
+        unset($reg);
         
         $tickets = $db->query(
             "SELECT * FROM tickets WHERE workshop_id = ? AND business_id = ? AND status = 'active' ORDER BY sort_order ASC",
@@ -67,6 +84,8 @@ class RegistrationController {
             'require_company'  => 0,
             'show_position'    => 1,
             'require_position' => 0,
+            'show_face_enroll'    => 0,
+            'require_face_enroll' => 0,
         ];
         if (!empty($workshop['form_fields'])) {
             $saved = is_string($workshop['form_fields']) ? json_decode($workshop['form_fields'], true) : $workshop['form_fields'];
@@ -1027,6 +1046,8 @@ class RegistrationController {
             'require_company'  => (isset($_POST['show_company']) && isset($_POST['require_company'])) ? 1 : 0,
             'show_position'    => isset($_POST['show_position']) ? 1 : 0,
             'require_position' => (isset($_POST['show_position']) && isset($_POST['require_position'])) ? 1 : 0,
+            'show_face_enroll'    => isset($_POST['show_face_enroll']) ? 1 : 0,
+            'require_face_enroll' => (isset($_POST['show_face_enroll']) && isset($_POST['require_face_enroll'])) ? 1 : 0,
         ];
 
         // Update custom fields active/inactive status if passed

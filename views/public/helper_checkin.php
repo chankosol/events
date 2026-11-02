@@ -317,11 +317,18 @@
 
             <!-- Camera Card -->
             <div class="card shadow-sm border-0 mb-3 rounded-3 overflow-hidden scanner-card" id="scanner-card">
-                <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between">
-                    <span class="fw-bold small d-flex align-items-center gap-1">
-                        <i class="bi bi-camera-video-fill text-primary"></i> ស្គេនកូដ QR
+                <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <span class="fw-bold small d-flex align-items-center gap-1" id="helper-scanner-title">
+                        <i class="bi bi-camera-video-fill text-primary" id="helper-cam-icon"></i> <span id="helper-scanner-title-text">ស្កេនកូដ QR</span>
                     </span>
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Host Controlled Mode Indicator Badge (Helper cannot switch - follows Host) -->
+                        <div class="d-flex align-items-center gap-1 px-2 py-0.5 bg-light rounded-pill border" title="ម៉ូដស្កេនកំណត់ដោយម្ចាស់កម្មវិធី Host (ជំនួយការរត់តាមស្វ័យប្រវត្តិ)">
+                            <i class="bi bi-shield-lock-fill text-primary" style="font-size: 0.75rem;"></i>
+                            <span class="small text-muted" style="font-size: 0.7rem;">ម៉ូដ៖</span>
+                            <span class="fw-bold text-primary small" id="helper-mode-badge" style="font-size: 0.72rem;">ស្កេន QR</span>
+                            <span class="badge bg-secondary-subtle text-secondary px-1 py-0 rounded-pill" style="font-size: 0.62rem;">Host</span>
+                        </div>
                         <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill d-inline-flex align-items-center gap-1" id="btn-fullscreen-toggle" onclick="toggleFullscreen()" style="font-size: 0.74rem; height: 26px;">
                             <i class="bi bi-arrows-fullscreen"></i> ពេញអេក្រង់
                         </button>
@@ -331,6 +338,49 @@
                         </span>
                     </div>
                 </div>
+
+                <?php 
+                $helperDailyScans = (int)($workshop['daily_scans_required'] ?? 1);
+                if ($helperDailyScans >= 2): 
+                    if ($helperDailyScans == 2) {
+                        $hSlotsList = [
+                            1 => ['label' => 'ពេលព្រឹក', 'en' => 'Morning', 'icon' => 'bi-sun-fill text-warning'],
+                            2 => ['label' => 'ពេលរសៀល', 'en' => 'Afternoon', 'icon' => 'bi-cloud-sun-fill text-primary']
+                        ];
+                    } elseif ($helperDailyScans == 3) {
+                        $hSlotsList = [
+                            1 => ['label' => 'ពេលព្រឹក', 'en' => 'Morning', 'icon' => 'bi-sun-fill text-warning'],
+                            2 => ['label' => 'ពេលរសៀល', 'en' => 'Afternoon', 'icon' => 'bi-cloud-sun-fill text-primary'],
+                            3 => ['label' => 'ពេលល្ងាច', 'en' => 'Closing', 'icon' => 'bi-moon-stars-fill text-indigo']
+                        ];
+                    } else {
+                        $hSlotsList = [
+                            1 => ['label' => 'ព្រឹកចូល', 'en' => 'In', 'icon' => 'bi-box-arrow-in-right text-success'],
+                            2 => ['label' => 'ព្រឹកចេញ', 'en' => 'Out', 'icon' => 'bi-box-arrow-right text-warning'],
+                            3 => ['label' => 'រសៀលចូល', 'en' => 'In', 'icon' => 'bi-box-arrow-in-right text-info'],
+                            4 => ['label' => 'រសៀលចេញ', 'en' => 'Out', 'icon' => 'bi-box-arrow-right text-danger']
+                        ];
+                    }
+                ?>
+                <!-- Slot Selector for Helper Pass -->
+                <div class="px-3 py-2 bg-light border-bottom">
+                    <div class="d-flex align-items-center justify-content-between mb-1.5 px-0.5">
+                        <span class="small fw-bold text-dark" style="font-size: 0.74rem;">
+                            <i class="bi bi-calendar2-range text-primary me-1"></i> វេនស្កេន (<?= $helperDailyScans ?> វេន/ថ្ងៃ)
+                        </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size: 0.63rem;" id="helper-slot-auto-hint">
+                            <i class="bi bi-clock me-1"></i>ស្វ័យប្រវត្តិតាមម៉ោង
+                        </span>
+                    </div>
+                    <div class="btn-group w-100 p-0.5 rounded-pill bg-white border shadow-2xs" role="group" id="helper-slot-pills">
+                        <?php foreach ($hSlotsList as $sNum => $sInfo): ?>
+                            <button type="button" class="btn btn-sm rounded-pill py-1 px-2 fw-semibold helper-slot-pill btn-light text-muted" data-slot="<?= $sNum ?>" onclick="setHelperSlot(<?= $sNum ?>)" style="font-size: 0.73rem; transition: all 0.2s;">
+                                <i class="bi <?= $sInfo['icon'] ?> me-1"></i><?= $sInfo['label'] ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <!-- ── Scanner viewport (html5-qrcode renders INSIDE #qr-reader) ── -->
                 <div class="scanner-wrap" id="scanner-wrap">
@@ -357,6 +407,14 @@
 
                     <!-- html5-qrcode renders its video HERE — native UI hidden by CSS above -->
                     <div id="qr-reader"></div>
+
+                    <!-- Helper Face HUD Canvas & Pill (shown when Host sets mode to Face) -->
+                    <canvas id="helper-face-canvas" class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 12; pointer-events: none; display: none;"></canvas>
+                    <div id="helper-face-pill" class="position-absolute top-0 start-50 translate-middle-x mt-2 z-3 px-3 py-1 bg-dark bg-opacity-75 text-white rounded-pill small shadow-sm d-none align-items-center gap-2" style="font-size: 0.72rem;">
+                        <span class="spinner-grow spinner-grow-sm text-info"></span>
+                        <span id="helper-face-pill-text">AI ស្កេនមុខ (Host)</span>
+                        <span class="badge bg-primary rounded-pill" id="helper-face-pill-count">0 មុខ</span>
+                    </div>
 
                     <!-- Laser reticle overlay (on top of video) -->
                     <div class="laser-reticle" id="laser-reticle">
@@ -521,11 +579,57 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- html5-qrcode library — renders into #qr-reader but we hide its native UI via CSS -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
 const PASS_TOKEN   = '<?= $pass['token'] ?>';
 const EXPIRES_AT   = new Date('<?= date('c', strtotime($pass['expires_at'])) ?>').getTime();
 const APP_URL      = '<?= APP_URL ?>';
 const DEVICE_TOKEN = '<?= htmlspecialchars($devToken ?? '') ?>';
+const HELPER_DAILY_SCANS = <?= (int)($workshop['daily_scans_required'] ?? 1) ?>;
+
+// ── Multi-Scan Slot Management for Helper Station ──
+function getHelperAutoSlot(dailyScans) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const timeStr = `${hh}:${mm}`;
+
+    if (dailyScans <= 1) return 1;
+    if (dailyScans === 2) {
+        return (timeStr < '12:30') ? 1 : 2;
+    }
+    if (dailyScans === 3) {
+        return (timeStr < '12:00') ? 1 : ((timeStr < '15:30') ? 2 : 3);
+    }
+    return (timeStr < '10:30') ? 1 : ((timeStr < '13:00') ? 2 : ((timeStr < '15:30') ? 3 : 4));
+}
+
+let currentHelperSlot = getHelperAutoSlot(HELPER_DAILY_SCANS);
+
+function setHelperSlot(slot) {
+    currentHelperSlot = parseInt(slot);
+    document.querySelectorAll('.helper-slot-pill').forEach(btn => {
+        const s = parseInt(btn.dataset.slot);
+        if (s === currentHelperSlot) {
+            btn.classList.remove('btn-light', 'text-muted');
+            btn.classList.add('btn-primary', 'text-white', 'shadow-sm');
+        } else {
+            btn.classList.remove('btn-primary', 'text-white', 'shadow-sm');
+            btn.classList.add('btn-light', 'text-muted');
+        }
+    });
+    const hint = document.getElementById('helper-slot-auto-hint');
+    if (hint) {
+        hint.innerHTML = '<i class="bi bi-hand-index me-1"></i>ជ្រើសដោយដៃ';
+        hint.className = 'badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('.helper-slot-pill')) {
+        setHelperSlot(currentHelperSlot);
+    }
+});
 
 // ── State ──────────────────────────────────────────────
 let html5QrCode  = null;   // Html5Qrcode instance (NOT Scanner)
@@ -817,13 +921,25 @@ function onScanSuccess(decoded) {
     submitScan(decoded);
 }
 
-function submitScan(token) {
+function submitScan(token, scanType = 'qr') {
     const fd = new FormData();
     fd.append('pass_token', PASS_TOKEN);
     fd.append('qr_token', token);
     fd.append('device_token', DEVICE_TOKEN);
+    fd.append('scan_type', scanType);
+    if (typeof currentHelperSlot !== 'undefined' && currentHelperSlot) {
+        fd.append('slot_number', currentHelperSlot);
+    }
     fetch(APP_URL + '/api/checkin/helper-scan', { method:'POST', body:fd })
-        .then(r => r.json())
+        .then(async r => {
+            const text = await r.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Non-JSON response:', text);
+                return { success: false, message: 'កំហុសម៉ាស៊ីនបម្រើ (HTTP ' + r.status + ')' };
+            }
+        })
         .then(data => {
             if (data.revoked) { alert(data.message); location.reload(); return; }
             showOverlay(data);
@@ -840,7 +956,7 @@ function showOverlay(data) {
     if (data.success && !data.already_in) {
         beep('ok'); vibrate(45);
         ov.classList.add('success');
-        ico.className = 'bi bi-check-circle-fill display-1 mb-2';
+        ico.className = 'bi bi-check-circle-fill display-1 mb-2 text-white';
         const st = document.getElementById('stats-checked-in');
         if (st) {
             const p = st.innerText.split('/');
@@ -851,17 +967,87 @@ function showOverlay(data) {
                 if (fsSt) fsSt.innerText = updated;
             }
         }
+
+        let timeStr = data.checkin_time || '';
+        if (!timeStr) {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            timeStr = `${hh}:${mm}:${ss}`;
+        }
+
+        let slotStr = data.slot_display || data.slot_name || '';
+        if (slotStr) {
+            slotStr = slotStr.replace(/^ពេល/, 'វេន');
+        }
+
+        const isFace = (data.scan_type === 'face' || data.method === 'face' || (data.message && data.message.includes('ស្គេនមុខ')));
+        const titleLine = isFace ? 'ស្គេនមុខបានជោគជ័យ' : 'ស្កេនកូដ QR ជោគជ័យ';
+        const secondLine = (slotStr && slotStr !== 'ទូទៅ') ? `${slotStr} ${timeStr}` : timeStr;
+
+        // Exactly 3 lines as requested:
+        // ជួរទី១: ស្គេនមុខបានជោគជ័យ
+        // ជួរទី២: វេនព្រឹក 09:44:18
+        // ជួរទី៣: Sasa
+        document.getElementById('scan-message').innerHTML = `
+            <div class="fw-bold text-white mb-1" style="font-size: 1.25rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">${titleLine}</div>
+            <div class="fw-bold text-white" style="font-size: 1.15rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif; opacity: 0.95;">${secondLine}</div>
+        `;
+        let pName = data.participant ? data.participant.name : '';
+        const nameEl = document.getElementById('scan-name');
+        nameEl.className = 'fs-3 fw-bold mt-2 text-white text-center px-2';
+        nameEl.style.fontFamily = "'Kantumruy Pro', system-ui, sans-serif";
+        nameEl.innerText = pName;
     } else if (data.success && data.already_in) {
         beep('warn'); vibrate([50,40,50]);
         ov.classList.add('warning');
-        ico.className = 'bi bi-exclamation-triangle-fill display-1 mb-2';
+        ico.className = 'bi bi-exclamation-triangle-fill display-2 mb-2 text-dark';
+
+        let timeStr = data.checked_in_at || '';
+        if (!timeStr && data.participant && data.participant.checked_in) {
+            const dt = new Date(data.participant.checked_in);
+            if (!isNaN(dt.getTime())) {
+                const hh = String(dt.getHours()).padStart(2, '0');
+                const mm = String(dt.getMinutes()).padStart(2, '0');
+                const ss = String(dt.getSeconds()).padStart(2, '0');
+                const dd = String(dt.getDate()).padStart(2, '0');
+                const mo = String(dt.getMonth() + 1).padStart(2, '0');
+                const yyyy = dt.getFullYear();
+                timeStr = `${hh}:${mm}:${ss}, ${dd}/${mo}/${yyyy}`;
+            }
+        }
+        if (!timeStr && data.message) {
+            const m = data.message.match(/(\d{2}:\d{2}(?::\d{2})?,\s*\d{2}\/\d{2}\/\d{4})/);
+            if (m) timeStr = m[1];
+        }
+
+        // Exactly 3 lines as requested:
+        // ជួរទី១: បានកត់ត្រាវត្តមានរួចនៅម៉ោង
+        // ជួរទី២: 09:44:18, 23/10/2026
+        // ជួរទី៣: Sasa • ពេលព្រឹក
+        document.getElementById('scan-message').innerHTML = `
+            <div class="fw-bold text-dark mb-1" style="font-size: 1.12rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">បានកត់ត្រាវត្តមានរួចនៅម៉ោង</div>
+            <div class="fw-bold text-dark" style="font-size: 1.12rem; line-height: 1.35; font-family: 'Kantumruy Pro', system-ui, sans-serif;">${timeStr}</div>
+        `;
+        let pName = data.participant ? data.participant.name : '';
+        if (data.slot_name) {
+            pName += (pName ? ' • ' : '') + data.slot_name;
+        }
+        const nameEl = document.getElementById('scan-name');
+        nameEl.className = 'fs-5 fw-bold mt-2 text-dark text-center px-2';
+        nameEl.style.fontFamily = "'Kantumruy Pro', system-ui, sans-serif";
+        nameEl.innerText = pName;
     } else {
         beep('err'); vibrate(120);
         ov.classList.add('error');
         ico.className = 'bi bi-x-circle-fill display-1 mb-2';
+        document.getElementById('scan-message').innerText = data.message || 'កំហុស';
+        let pName = data.participant ? data.participant.name : '';
+        const nameEl = document.getElementById('scan-name');
+        nameEl.className = 'fs-4 fw-bold mt-2';
+        nameEl.innerText = pName;
     }
-    document.getElementById('scan-message').innerText = data.message || 'កំហុស';
-    document.getElementById('scan-name').innerText = data.participant ? data.participant.name : '';
     ov.style.display = 'flex';
 
     if (scanTimeout) clearTimeout(scanTimeout);
@@ -871,10 +1057,266 @@ function showOverlay(data) {
 
 function resumeAfterScan() {
     document.getElementById('scan-overlay').style.display = 'none';
-    paused = false;
-    if (scanning) document.getElementById('laser-reticle').style.display = 'flex';
+    if (helperActiveMode === 'qr') {
+        paused = false;
+        if (scanning) document.getElementById('laser-reticle').style.display = 'flex';
+    } else {
+        paused = true; // In face mode, QR decoding stays paused
+    }
     applyFocus();
 }
+
+// ── Host-Follower Scan Mode Engine (Assistants follow Host) ──
+let helperActiveMode = 'qr';
+let helperFaceModelsLoaded = false;
+let helperFaceDescriptorsLoaded = false;
+let helperEnrolledAttendees = [];
+let helperFaceMatcher = null;
+let helperFaceInterval = null;
+let helperLastFaceCode = null;
+let helperLastFaceTime = 0;
+let helperIsFaceBusy = false;
+let helperFaceStreak = { code: null, count: 0 };
+const HELPER_MODEL_CDN = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+async function ensureHelperFaceModels() {
+    if (helperFaceModelsLoaded) return true;
+    const pillText = document.getElementById('helper-face-pill-text');
+    if (pillText) pillText.textContent = 'កំពុងទាញ AI Models...';
+
+    try {
+        if (typeof faceapi === 'undefined') return false;
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(HELPER_MODEL_CDN),
+            faceapi.nets.faceLandmark68Net.loadFromUri(HELPER_MODEL_CDN),
+            faceapi.nets.faceRecognitionNet.loadFromUri(HELPER_MODEL_CDN)
+        ]);
+        helperFaceModelsLoaded = true;
+        return true;
+    } catch(e) {
+        console.error('Failed to load faceapi models on helper:', e);
+        if (pillText) pillText.textContent = 'បរាជ័យទាញ AI Models';
+        return false;
+    }
+}
+
+async function loadHelperFaceDescriptors() {
+    const pillText = document.getElementById('helper-face-pill-text');
+    const pillCount = document.getElementById('helper-face-pill-count');
+
+    try {
+        const r = await fetch(APP_URL + '/api/face/descriptors?pass_token=' + encodeURIComponent(PASS_TOKEN));
+        const res = await r.json();
+
+        if (!res.success || !Array.isArray(res.attendees) || res.attendees.length === 0) {
+            if (pillText) pillText.textContent = 'ពុំទាន់មានទិន្នន័យមុខ';
+            if (pillCount) pillCount.textContent = '0 មុខ';
+            helperFaceMatcher = null;
+            return false;
+        }
+
+        helperEnrolledAttendees = res.attendees;
+        const labeled = [];
+        res.attendees.forEach(att => {
+            if (att.descriptor && att.descriptor.length === 128) {
+                labeled.push(new faceapi.LabeledFaceDescriptors(att.registration_code, [new Float32Array(att.descriptor)]));
+            }
+        });
+
+        if (labeled.length > 0) {
+            // Strict threshold: 0.38 (requires >= 62% match to prevent false positives)
+            helperFaceMatcher = new faceapi.FaceMatcher(labeled, 0.38);
+            helperFaceDescriptorsLoaded = true;
+            if (pillText) pillText.textContent = 'AI ស្កេនមុខ (Host)';
+            if (pillCount) pillCount.textContent = labeled.length + ' មុខ';
+            return true;
+        }
+        return false;
+    } catch(e) {
+        console.error('Failed to load helper descriptors:', e);
+        return false;
+    }
+}
+
+function startHelperFaceLoop() {
+    if (helperFaceInterval) clearInterval(helperFaceInterval);
+
+    const canvas = document.getElementById('helper-face-canvas');
+    if (!canvas) return;
+    canvas.style.display = 'block';
+
+    helperFaceInterval = setInterval(async () => {
+        if (helperActiveMode !== 'face') return;
+        if (helperIsFaceBusy) return;
+
+        const video = document.querySelector('#qr-reader video');
+        if (!video || video.paused || video.ended || !video.videoWidth) return;
+
+        if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+            canvas.width = video.clientWidth;
+            canvas.height = video.clientHeight;
+        }
+
+        const ctx = canvas.getContext('2d');
+        const displaySize = { width: canvas.width, height: canvas.height };
+
+        try {
+            const detections = await faceapi.detectAllFaces(
+                video,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 })
+            ).withFaceLandmarks().withFaceDescriptors();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!detections || detections.length === 0) return;
+
+            const resized = faceapi.resizeResults(detections, displaySize);
+
+            for (let i = 0; i < resized.length; i++) {
+                const det = resized[i];
+                const box = det.detection.box;
+
+                let label = 'មិនស្គាល់';
+                let color = '#f59e0b';
+                let isMatch = false;
+                let matchedCode = null;
+
+                if (helperFaceMatcher) {
+                    const match = helperFaceMatcher.findBestMatch(det.descriptor);
+                    // Strict biometric check: distance < 0.38 (conf >= 62%)
+                    if (match.label !== 'unknown' && match.distance < 0.38) {
+                        matchedCode = match.label;
+                        const att = helperEnrolledAttendees.find(a => a.registration_code === matchedCode);
+                        const name = att ? att.name : matchedCode;
+                        const conf = Math.round((1 - match.distance) * 100);
+                        label = `${name} (${conf}%)`;
+                        color = '#10b981';
+                        isMatch = true;
+                    }
+                }
+
+                // Draw bounding box
+                ctx.save();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+                ctx.font = 'bold 12px "Kantumruy Pro", sans-serif';
+                const tw = ctx.measureText(label).width;
+                const th = 22;
+                const ty = Math.max(0, box.y - th - 3);
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.roundRect(box.x, ty, tw + 14, th, [4]);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(label, box.x + 7, ty + 15);
+                ctx.restore();
+
+                // Multi-frame verification: must stably match for at least 3 consecutive frames (~540ms)
+                if (isMatch && matchedCode) {
+                    if (helperFaceStreak.code === matchedCode) {
+                        helperFaceStreak.count++;
+                    } else {
+                        helperFaceStreak.code = matchedCode;
+                        helperFaceStreak.count = 1;
+                    }
+
+                    if (helperFaceStreak.count >= 3) {
+                        const now = Date.now();
+                        const isRecent = (helperLastFaceCode === matchedCode && (now - helperLastFaceTime) < 3500);
+
+                        if (!isRecent && !helperIsFaceBusy) {
+                            helperLastFaceCode = matchedCode;
+                            helperLastFaceTime = now;
+                            helperIsFaceBusy = true;
+                            helperFaceStreak = { code: null, count: 0 };
+
+                            submitScan(matchedCode, 'face');
+
+                            setTimeout(() => {
+                                helperIsFaceBusy = false;
+                            }, 1800);
+                        }
+                    }
+                } else {
+                    helperFaceStreak = { code: null, count: 0 };
+                }
+            }
+        } catch(e) {}
+    }, 180);
+}
+
+function stopHelperFaceLoop() {
+    if (helperFaceInterval) {
+        clearInterval(helperFaceInterval);
+        helperFaceInterval = null;
+    }
+    const canvas = document.getElementById('helper-face-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = 'none';
+    }
+    const pill = document.getElementById('helper-face-pill');
+    if (pill) {
+        pill.classList.remove('d-flex');
+        pill.classList.add('d-none');
+    }
+}
+
+async function applyHelperScanMode(targetMode) {
+    if (helperActiveMode === targetMode) return;
+    helperActiveMode = targetMode;
+
+    const badge = document.getElementById('helper-mode-badge');
+    const titleText = document.getElementById('helper-scanner-title-text');
+    const camIcon = document.getElementById('helper-cam-icon');
+    const reticle = document.getElementById('laser-reticle');
+    const facePill = document.getElementById('helper-face-pill');
+
+    if (targetMode === 'face') {
+        if (badge) badge.textContent = 'AI ស្កេនមុខ';
+        if (titleText) titleText.textContent = 'AI ស្កេនមុខ';
+        if (camIcon) camIcon.className = 'bi bi-person-bounding-box text-primary';
+        if (reticle) reticle.style.display = 'none';
+        if (facePill) {
+            facePill.classList.remove('d-none');
+            facePill.classList.add('d-flex');
+        }
+
+        paused = true; // Pause QR decoding
+        const ok = await ensureHelperFaceModels();
+        if (ok) {
+            await loadHelperFaceDescriptors();
+            startHelperFaceLoop();
+        }
+    } else {
+        if (badge) badge.textContent = 'ស្កេន QR';
+        if (titleText) titleText.textContent = 'ស្កេនកូដ QR';
+        if (camIcon) camIcon.className = 'bi bi-camera-video-fill text-primary';
+        stopHelperFaceLoop();
+        paused = false;
+        if (reticle && scanning) reticle.style.display = 'flex';
+    }
+}
+
+async function syncHostScanMode() {
+    try {
+        const r = await fetch(APP_URL + '/api/checkin/scan-mode?pass_token=' + encodeURIComponent(PASS_TOKEN));
+        const res = await r.json();
+        if (res && res.success && res.mode) {
+            if (res.mode !== helperActiveMode) {
+                applyHelperScanMode(res.mode);
+            }
+        }
+    } catch(e) {}
+}
+setInterval(syncHostScanMode, 4000);
+setTimeout(syncHostScanMode, 1200);
 
 // ── Participant Card ───────────────────────────────────
 function updateParticipantCard(data) {

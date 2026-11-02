@@ -67,6 +67,8 @@ class PublicRegisterController {
             'require_company'  => 0,
             'show_position'    => 1,
             'require_position' => 0,
+            'show_face_enroll'    => 0,
+            'require_face_enroll' => 0,
         ];
         if (!empty($workshop['form_fields'])) {
             $saved = is_string($workshop['form_fields']) ? json_decode($workshop['form_fields'], true) : $workshop['form_fields'];
@@ -112,6 +114,8 @@ class PublicRegisterController {
             'require_company'  => 0,
             'show_position'    => 1,
             'require_position' => 0,
+            'show_face_enroll'    => 0,
+            'require_face_enroll' => 0,
         ];
         if (!empty($workshop['form_fields'])) {
             $saved = is_string($workshop['form_fields']) ? json_decode($workshop['form_fields'], true) : $workshop['form_fields'];
@@ -247,13 +251,13 @@ class PublicRegisterController {
 
             // Check if already registered
             $existing = $db->queryOne(
-                "SELECT id FROM registrations WHERE workshop_id = ? AND participant_id = ? AND status NOT IN ('cancelled','rejected') AND deleted_at IS NULL",
+                "SELECT id, registration_code FROM registrations WHERE workshop_id = ? AND participant_id = ? AND status NOT IN ('cancelled','rejected') AND deleted_at IS NULL",
                 [$workshop['id'], $participantId]
             );
             if ($existing) {
                 $db->rollback();
-                Session::flash('error', 'You are already registered for this workshop.');
-                redirect(APP_URL . '/event/' . $slug . '/register');
+                Session::flash('info', 'លោកអ្នកបានចុះឈ្មោះសម្រាប់សិក្ខាសាលានេះរួចរាល់ហើយ! នេះជាសំបុត្រ និង QR Code របស់អ្នក។');
+                redirect(APP_URL . '/ticket/' . urlencode($existing['registration_code']) . '?already_registered=1');
             }
 
             // Calculate price
@@ -340,6 +344,37 @@ class PublicRegisterController {
             );
             $registrationId = (int)$db->lastInsertId();
 
+            // Save face descriptor if submitted (face pre-registration)
+            if (!empty($_POST['face_descriptor'])) {
+                $faceDesc = json_decode($_POST['face_descriptor'], true);
+                if (is_array($faceDesc) && count($faceDesc) === 128) {
+                    // Save photo if provided (base64 → file)
+                    $facePhotoPath = null;
+                    if (!empty($_POST['face_photo']) && str_starts_with($_POST['face_photo'], 'data:image/')) {
+                        $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $_POST['face_photo']);
+                        $imageData  = base64_decode($base64Data);
+                        if ($imageData !== false) {
+                            $uploadDir = rtrim(dirname(VIEWS_PATH), '/views') . '/uploads/faces/';
+                            if (!is_dir($uploadDir)) { @mkdir($uploadDir, 0775, true); }
+                            $photoFile = 'face_' . $registrationId . '_' . time() . '.jpg';
+                            if (file_put_contents($uploadDir . $photoFile, $imageData)) {
+                                $facePhotoPath = 'uploads/faces/' . $photoFile;
+                            }
+                        }
+                    }
+                    try {
+                        $db->execute(
+                            "INSERT INTO participant_faces (business_id, workshop_id, participant_id, registration_id, face_descriptor, photo_path, enrolled_at)
+                             VALUES (?, ?, ?, ?, ?, ?, NOW())
+                             ON DUPLICATE KEY UPDATE face_descriptor=VALUES(face_descriptor), photo_path=COALESCE(VALUES(photo_path), photo_path), enrolled_at=NOW()",
+                            [$workshop['business_id'], $workshop['id'], $participantId, $registrationId, $_POST['face_descriptor'], $facePhotoPath]
+                        );
+                    } catch (Exception $fe) {
+                        error_log('Face enroll failed (non-fatal): ' . $fe->getMessage());
+                    }
+                }
+            }
+
             // Save custom field answers
             $fields = $db->query("SELECT * FROM registration_fields WHERE workshop_id = ? AND status = 'active' AND is_internal = 0", [$workshop['id']]);
             foreach ($fields as $field) {
@@ -383,6 +418,27 @@ class PublicRegisterController {
 
             auditLog('registration_created', 'registration', $registrationId, null, ['workshop_id' => $workshop['id'], 'status' => $status]);
 
+            // Auto-notify Telegram Group if configured
+            try {
+                if (file_exists(ROOT_PATH . '/helpers/telegram_helper.php')) {
+                    require_once ROOT_PATH . '/helpers/telegram_helper.php';
+                    if (function_exists('telegram_notify_new_registration')) {
+                        telegram_notify_new_registration($workshop['id'], [
+                            'name'              => $name,
+                            'phone'             => $phone,
+                            'company'           => $company,
+                            'position'          => $position,
+                            'ticket_name'       => $ticket ? $ticket['name'] : 'ស្តង់ដារ',
+                            'amount'            => $finalAmount,
+                            'payment_status'    => $paymentStatus,
+                            'registration_code' => $regCode
+                        ]);
+                    }
+                }
+            } catch (Throwable $tge) {
+                error_log('Telegram new registration notify error: ' . $tge->getMessage());
+            }
+
             // Store registration info in session for confirmation page
             Session::set('last_registration', [
                 'id'            => $registrationId,
@@ -417,6 +473,112 @@ class PublicRegisterController {
         require VIEWS_PATH . '/public/confirmation.php';
         $content = ob_get_clean();
         require VIEWS_PATH . '/layouts/public.php';
+    }
+
+    public static function showTicketByCode(string $code): void {
+        $db = Database::getInstance();
+        $code = trim($code);
+        if (empty($code)) {
+            redirect(APP_URL . '/');
+        }
+
+        $reg = $db->queryOne(
+            "SELECT r.*, pq.token as qr_token, 
+                    p.name as participant_name, p.phone as participant_phone, p.email as participant_email,
+                    w.name as workshop_name, w.slug as workshop_slug, w.start_date, w.end_date, w.start_time, w.end_time, w.venue, w.address,
+                    t.name as ticket_name, t.price as ticket_price, t.currency as ticket_currency
+             FROM registrations r 
+             JOIN workshops w ON w.id = r.workshop_id
+             JOIN participants p ON p.id = r.participant_id
+             LEFT JOIN participant_qr pq ON pq.registration_id = r.id AND pq.is_active = 1
+             LEFT JOIN tickets t ON t.id = r.ticket_id
+             WHERE (r.registration_code = ? OR pq.token = ?) AND r.deleted_at IS NULL", 
+            [$code, $code]
+        );
+
+        if (!$reg) {
+            Session::flash('error', 'រកមិនឃើញសំបុត្រ ឬកូដចុះឈ្មោះនេះទេ។');
+            redirect(APP_URL . '/');
+        }
+
+        // If confirmed or attended and no active QR token, generate one automatically
+        if (empty($reg['qr_token']) && in_array($reg['status'], ['confirmed', 'attended', 'completed'])) {
+            $reg['qr_token'] = self::generateParticipantQR($db, (int)$reg['id'], (int)$reg['participant_id'], (int)$reg['business_id'], (int)$reg['workshop_id']);
+        }
+
+        $status = $reg['status'];
+        $qrToken = $reg['qr_token'] ?: $reg['registration_code'];
+        $regCode = $reg['registration_code'];
+        $registration = $reg;
+        $title = 'សំបុត្រចូលរួម - ' . ($reg['workshop_name'] ?? APP_NAME);
+
+        ob_start();
+        require VIEWS_PATH . '/public/confirmation.php';
+        $content = ob_get_clean();
+        require VIEWS_PATH . '/layouts/public.php';
+    }
+
+    public static function findTicketByPhone(): void {
+        header('Content-Type: application/json');
+        
+        $input = $_POST;
+        if (empty($input)) {
+            $raw = json_decode(file_get_contents('php://input'), true);
+            if (is_array($raw)) {
+                $input = $raw;
+            }
+        }
+
+        $phone = trim($input['phone'] ?? '');
+        $workshopId = (int)($input['workshop_id'] ?? 0);
+        $workshopSlug = trim($input['workshop_slug'] ?? '');
+
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (strlen($cleanPhone) < 7) {
+            echo json_encode(['success' => false, 'message' => 'សូមបញ្ចូលលេខទូរស័ព្ទឱ្យបានត្រឹមត្រូវ។']);
+            exit;
+        }
+
+        $db = Database::getInstance();
+        $tail8 = substr($cleanPhone, -8);
+        $params = [$phone, $cleanPhone, $cleanPhone, $tail8];
+
+        $sql = "SELECT r.registration_code, r.status, p.name as participant_name, w.slug as workshop_slug, w.name as workshop_name
+                FROM registrations r
+                JOIN participants p ON p.id = r.participant_id
+                JOIN workshops w ON w.id = r.workshop_id
+                WHERE (p.phone = ? OR REPLACE(p.phone, ' ', '') = ? OR REPLACE(p.phone, '-', '') = ? OR RIGHT(REPLACE(p.phone, ' ', ''), 8) = ?)
+                  AND r.status NOT IN ('cancelled', 'rejected')
+                  AND r.deleted_at IS NULL";
+
+        if ($workshopId > 0) {
+            $sql .= " AND r.workshop_id = ?";
+            $params[] = $workshopId;
+        } elseif (!empty($workshopSlug)) {
+            $sql .= " AND w.slug = ?";
+            $params[] = $workshopSlug;
+        }
+
+        $sql .= " ORDER BY r.id DESC LIMIT 1";
+
+        $found = $db->queryOne($sql, $params);
+        if (!$found) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'រកមិនឃើញការចុះឈ្មោះជាមួយលេខទូរស័ព្ទ ' . htmlspecialchars($phone) . ' នៅក្នុងសិក្ខាសាលានេះទេ។ សូមពិនិត្យឡើងវិញ ឬចុះឈ្មោះថ្មី។'
+            ]);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'រកឃើញសំបុត្រជោគជ័យ!',
+            'registration_code' => $found['registration_code'],
+            'participant_name' => $found['participant_name'],
+            'redirect_url' => APP_URL . '/ticket/' . urlencode($found['registration_code']),
+            'ticket_url' => APP_URL . '/ticket/' . urlencode($found['registration_code'])
+        ]);
+        exit;
     }
 
     private static function generateParticipantQR(object $db, int $registrationId, int $participantId, int $businessId, int $workshopId): string {

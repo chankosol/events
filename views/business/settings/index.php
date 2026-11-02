@@ -227,7 +227,7 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <h5 class="fw-bold mb-0">
-                            <i class="bi bi-person-circle text-primary me-2"></i> ព័ត៌មានផ្ទាល់ខ្លួន & រូបថត (Profile)
+                            <i class="bi bi-person-circle text-primary me-2"></i> ព័ត៌មានផ្ទាល់ខ្លួន
                         </h5>
                         <a href="<?php echo APP_URL; ?>/profile" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-box-arrow-up-right me-1"></i> ទំព័រពេញលេញ
@@ -243,7 +243,7 @@
                                     <?php echo userAvatarHtml($user, 76, 'border shadow-sm'); ?>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <label class="form-label fw-bold mb-1">ប្តូររូបថតគណនី (Profile Photo)</label>
+                                    <label class="form-label fw-bold mb-1">ប្តូររូបថតគណនី</label>
                                     <input type="file" name="profile_photo" id="settingsProfilePhotoInput" class="form-control form-control-sm" accept="image/png, image/jpeg, image/jpg, image/webp">
                                     <div class="form-text small">គាំទ្រ PNG, JPG, WEBP (ទំហំអតិបរមា 2MB)</div>
                                 </div>

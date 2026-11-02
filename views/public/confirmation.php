@@ -1,6 +1,9 @@
 <?php 
-$reg = $registration ?? $lastReg ?? Session::get('last_registration') ?? []; 
-if (!empty($reg['id'])) {
+// Resolve registration data from available context variables
+$reg = !empty($reg) ? $reg : ($registration ?? $lastReg ?? Session::get('last_registration') ?? []); 
+
+// If the record only contains partial info (like after public registration redirect), hydrate it from DB
+if (!empty($reg['id']) && (empty($reg['participant_name']) || empty($reg['workshop_name']))) {
     $db = Database::getInstance();
     $currentReg = $db->queryOne(
         "SELECT r.*, pq.token as qr_token, 
@@ -8,7 +11,7 @@ if (!empty($reg['id'])) {
                 w.name as workshop_name, w.start_date, w.end_date, w.start_time, w.end_time, w.venue, w.address,
                 t.name as ticket_name, t.price as ticket_price, t.currency as ticket_currency
          FROM registrations r 
-         LEFT JOIN participant_qr pq ON pq.registration_id = r.id 
+         LEFT JOIN participant_qr pq ON pq.registration_id = r.id AND pq.is_active = 1
          LEFT JOIN participants p ON p.id = r.participant_id
          LEFT JOIN workshops w ON w.id = r.workshop_id
          LEFT JOIN tickets t ON t.id = r.ticket_id
@@ -20,89 +23,345 @@ if (!empty($reg['id'])) {
         $status = $currentReg['status'];
     }
 }
-$status = $reg['status'] ?? 'confirmed';
-$qrToken = $reg['qr_token'] ?? $reg['token'] ?? '';
-$regCode = $reg['registration_code'] ?? $reg['code'] ?? 'REG-000';
+$status = $status ?? $reg['status'] ?? 'confirmed';
+$regCode = !empty($regCode) ? $regCode : ($reg['registration_code'] ?? $reg['code'] ?? 'REG-000');
+$qrToken = !empty($qrToken) ? $qrToken : ($reg['qr_token'] ?? $reg['token'] ?? $regCode);
+if (empty($qrToken)) {
+    $qrToken = $regCode;
+}
+$currentTicketUrl = APP_URL . '/ticket/' . urlencode($regCode);
+$tgShareText = "សំបុត្រ និង QR Code សម្រាប់ចូលរួម " . ($reg['workshop_name'] ?? 'សិក្ខាសាលា') . ":\n" . $currentTicketUrl;
+
+// Check if Official Telegram Bot is enabled in Platform Settings
+$isTgBotActive = function_exists('telegram_is_bot_active') && telegram_is_bot_active();
+if ($isTgBotActive) {
+    $tgTargetUrl = telegram_get_ticket_bot_url($regCode);
+} else {
+    $tgTargetUrl = "https://t.me/share/url?url=" . urlencode($currentTicketUrl) . "&text=" . urlencode($tgShareText);
+}
+
+// Check if face is enrolled in participant_faces table
+$hasEnrolledFace = false;
+if (!empty($reg['id'])) {
+    $db = Database::getInstance();
+    $faceRecord = $db->queryOne("SELECT id, enrolled_at FROM participant_faces WHERE registration_id = ? AND is_active = 1", [$reg['id']]);
+    if ($faceRecord) {
+        $hasEnrolledFace = true;
+    }
+}
 ?>
 
 <style>
-.ticket-wrapper {
-    max-width: 410px;
+/* Page container & background */
+body {
+    background-color: #f8fafc;
+}
+.ticket-page-wrapper {
+    max-width: 400px;
     margin: 0 auto;
 }
-.ticket-card {
+
+/* Premium E-Ticket Pass Card */
+.ticket-card-premium {
     background: #ffffff;
-    border-radius: 18px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.05);
     overflow: hidden;
     position: relative;
 }
-.ticket-header {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+
+/* Ticket Header */
+.ticket-header-premium {
+    background: linear-gradient(145deg, #1e3a8a 0%, #1e40af 55%, #2563eb 100%);
     color: #ffffff;
-    padding: 16px 18px 14px;
-}
-.ticket-stub-divider {
+    padding: 20px 20px 16px;
     position: relative;
-    height: 20px;
+}
+.ticket-glass-pill {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 30px;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+}
+.ticket-status-pill {
+    background: #10b981;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 30px;
+    display: inline-flex;
+    align-items: center;
+}
+.ticket-workshop-name {
+    font-weight: 800;
+    font-size: 1.15rem;
+    line-height: 1.45;
+    color: #ffffff;
+    margin: 10px 0 10px;
+    word-break: break-word;
+}
+.ticket-meta-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.ticket-meta-chip {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.74rem;
+    padding: 3px 9px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Perforated Stub Tear Divider */
+.ticket-tear-divider {
+    position: relative;
+    height: 22px;
     background-color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.ticket-stub-divider .notch {
-    width: 22px;
-    height: 22px;
+.tear-notch {
+    width: 24px;
+    height: 24px;
     background-color: #f8fafc;
     border-radius: 50%;
     position: absolute;
     top: -1px;
 }
-.ticket-stub-divider .notch-left {
+.tear-notch-left {
     left: -12px;
-    box-shadow: inset -2px 0 3px rgba(0,0,0,0.06);
-    border: 1px solid #e2e8f0;
+    box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.05);
 }
-.ticket-stub-divider .notch-right {
+.tear-notch-right {
     right: -12px;
-    box-shadow: inset 2px 0 3px rgba(0,0,0,0.06);
-    border: 1px solid #e2e8f0;
+    box-shadow: inset 2px 0 3px rgba(0, 0, 0, 0.05);
 }
-.ticket-stub-divider .dashed-line {
-    width: calc(100% - 36px);
+.tear-dashed-line {
+    width: calc(100% - 40px);
     border-bottom: 2px dashed #cbd5e1;
 }
-.ticket-body {
-    padding: 12px 18px 16px;
+
+/* Ticket Body & QR */
+.ticket-body-premium {
+    padding: 16px 20px 16px;
     background: #ffffff;
+    text-align: center;
 }
-.qr-frame {
-    background: #ffffff;
-    padding: 8px;
-    border-radius: 12px;
+.ticket-attendee-card {
+    background: #f8fafc;
     border: 1px solid #e2e8f0;
-    display: inline-block;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    text-align: left;
 }
-.btn-save-gallery {
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-    border: none;
-    color: #ffffff;
+.ticket-micro-label {
+    font-size: 0.65rem;
     font-weight: 700;
-    padding: 12px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.ticket-attendee-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+}
+.ticket-code-badge {
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #2563eb;
+    letter-spacing: 0.5px;
+}
+
+/* QR Container */
+.qr-premium-frame {
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1.5px solid #e2e8f0;
+    display: inline-block;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+.qr-instruction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-top: 10px;
+}
+
+/* Decorative barcode strip at bottom */
+.ticket-barcode-wrap {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+}
+.ticket-barcode-bars {
+    height: 20px;
+    width: 140px;
+    margin: 4px auto 3px;
+    background: repeating-linear-gradient(
+        90deg,
+        #1e293b 0px,
+        #1e293b 2px,
+        transparent 2px,
+        transparent 4px,
+        #1e293b 4px,
+        #1e293b 6px,
+        transparent 6px,
+        transparent 8px,
+        #1e293b 8px,
+        #1e293b 11px,
+        transparent 11px,
+        transparent 13px,
+        #1e293b 13px,
+        #1e293b 15px,
+        transparent 15px,
+        transparent 18px
+    );
+    opacity: 0.55;
+}
+.ticket-barcode-text {
+    font-family: monospace;
+    font-size: 0.65rem;
+    color: #94a3b8;
+    letter-spacing: 1.5px;
+}
+
+/* ======================================================== */
+/* ACTION BUTTONS (Modeled after Fintech Circular Bar)      */
+/* ======================================================== */
+.action-card-panel {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 16px 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+    margin-top: 14px;
+}
+.action-buttons-flex {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-around;
+    gap: 6px;
+}
+.action-btn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    min-width: 64px;
+    transition: transform 0.15s ease;
+    outline: none;
+    color: inherit;
+}
+.action-btn-item:hover {
+    transform: translateY(-2px);
+    color: inherit;
+}
+.action-btn-item:active {
+    transform: scale(0.94);
+}
+.action-circle-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
     transition: all 0.2s ease;
+    background-color: #f1f5f9;
+    color: #1e293b;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
-.btn-save-gallery:hover {
-    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+.action-btn-text {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.2px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Telegram Button (PRIORITY) - Eye-catching Telegram Brand Blue */
+.circle-telegram {
+    background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
     color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.38);
+    box-shadow: 0 6px 16px rgba(34, 158, 217, 0.35);
 }
-.btn-save-gallery:active {
-    transform: translateY(0);
+.action-priority:hover .circle-telegram {
+    box-shadow: 0 8px 22px rgba(34, 158, 217, 0.48);
+}
+.text-telegram {
+    color: #0284c7;
+    font-weight: 700;
+}
+
+/* Hover effects for soft circles */
+.action-btn-item:hover .circle-save {
+    background: #e2e8f0;
+    color: #059669;
+}
+.action-btn-item:hover .circle-share {
+    background: #e2e8f0;
+    color: #2563eb;
+}
+.action-btn-item:hover .circle-home {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Toast alert popup */
+.toast-popup {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    animation: fadeInToast 0.25s ease;
+}
+@keyframes fadeInToast {
+    from { opacity: 0; transform: translate(-50%, 15px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>
 
@@ -110,10 +369,17 @@ $regCode = $reg['registration_code'] ?? $reg['code'] ?? 'REG-000';
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
 
-            <?php if ($status === 'confirmed'): ?>
-                <!-- Short Form E-Ticket Pass (Fits on mobile screen) -->
-                <div class="ticket-wrapper">
+            <?php if (Session::has('info') || isset($_GET['already_registered'])): ?>
+                <div class="alert alert-info py-2 px-3 small rounded-3 mb-3 d-flex align-items-center shadow-xs">
+                    <i class="bi bi-info-circle-fill text-primary me-2 fs-5"></i>
+                    <div><?= htmlspecialchars(Session::flash('info') ?: 'លោកអ្នកបានចុះឈ្មោះសម្រាប់សិក្ខាសាលានេះរួចរាល់ហើយ! នេះជាសំបុត្រ និង QR Code របស់អ្នក។') ?></div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($status === 'confirmed' || $status === 'attended' || $status === 'completed'): ?>
+                <div class="ticket-page-wrapper">
                     
+                    <!-- Top Status Bar -->
                     <div class="d-flex align-items-center justify-content-between mb-2 px-1">
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
                             <i class="bi bi-check-circle-fill me-1"></i> ចុះឈ្មោះជោគជ័យ
@@ -123,85 +389,172 @@ $regCode = $reg['registration_code'] ?? $reg['code'] ?? 'REG-000';
                         </small>
                     </div>
 
-                    <!-- CAPTURE AREA FOR SAVING TO GALLERY -->
-                    <div id="ticketCaptureArea" class="ticket-card mb-3" data-code="<?= htmlspecialchars($regCode) ?>">
-                        <!-- Top Header -->
-                        <div class="ticket-header">
+                    <!-- TICKET CARD CAPTURE AREA -->
+                    <div id="ticketCaptureArea" class="ticket-card-premium" data-code="<?= htmlspecialchars($regCode) ?>">
+                        
+                        <!-- Header -->
+                        <div class="ticket-header-premium">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-white text-primary fw-bold px-2 py-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-                                    សំបុត្រចូលរួម
+                                <span class="ticket-glass-pill">
+                                    <i class="bi bi-ticket-perforated-fill me-1"></i> សំបុត្រផ្លូវការ
                                 </span>
-                                <span class="badge bg-success text-white" style="font-size: 0.7rem;">
+                                <span class="ticket-status-pill">
                                     <i class="bi bi-patch-check-fill me-1"></i> រួចរាល់
                                 </span>
                             </div>
-                            <h5 class="fw-bold mb-1 text-white text-truncate" title="<?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?>">
+
+                            <h4 class="ticket-workshop-name">
                                 <?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?>
-                            </h5>
-                            <div class="small text-white-50 d-flex flex-wrap gap-2 mt-1" style="font-size: 0.78rem;">
-                                <span><i class="bi bi-calendar-event me-1"></i> <?= formatDate($reg['start_date'] ?? date('Y-m-d')) ?></span>
+                            </h4>
+
+                            <div class="ticket-meta-badges">
+                                <span class="ticket-meta-chip">
+                                    <i class="bi bi-calendar3 me-1"></i> <?= formatDate($reg['start_date'] ?? date('Y-m-d')) ?>
+                                </span>
                                 <?php if (!empty($reg['start_time'])): ?>
-                                    <span><i class="bi bi-clock me-1"></i> <?= substr($reg['start_time'], 0, 5) ?></span>
+                                    <span class="ticket-meta-chip">
+                                        <i class="bi bi-clock me-1"></i> <?= substr($reg['start_time'], 0, 5) ?>
+                                    </span>
                                 <?php endif; ?>
                                 <?php if (!empty($reg['venue'])): ?>
-                                    <span><i class="bi bi-geo-alt me-1"></i> <?= htmlspecialchars($reg['venue']) ?></span>
+                                    <span class="ticket-meta-chip">
+                                        <i class="bi bi-geo-alt-fill me-1"></i> <?= htmlspecialchars($reg['venue']) ?>
+                                    </span>
                                 <?php endif; ?>
                             </div>
                         </div>
 
-                        <!-- Ticket Perforated Divider -->
-                        <div class="ticket-stub-divider">
-                            <div class="notch notch-left"></div>
-                            <div class="dashed-line"></div>
-                            <div class="notch notch-right"></div>
+                        <!-- Perforated Tear Divider -->
+                        <div class="ticket-tear-divider">
+                            <div class="tear-notch tear-notch-left"></div>
+                            <div class="tear-dashed-line"></div>
+                            <div class="tear-notch tear-notch-right"></div>
                         </div>
 
-                        <!-- Ticket Body & QR Code -->
-                        <div class="ticket-body text-center">
-                            <!-- Info Grid -->
-                            <div class="row g-2 text-start mb-2 pb-2 border-bottom">
-                                <div class="col-7">
-                                    <span class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">ឈ្មោះ</span>
-                                    <strong class="text-dark d-block text-truncate" style="font-size: 0.95rem;">
-                                        <?= htmlspecialchars($reg['participant_name'] ?? 'សិក្ខាកាម') ?>
-                                    </strong>
+                        <!-- Ticket Body -->
+                        <div class="ticket-body-premium">
+                            
+                            <!-- Attendee Info Card -->
+                            <div class="ticket-attendee-card">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <div class="ticket-micro-label">ឈ្មោះសិក្ខាកាម</div>
+                                        <div class="ticket-attendee-name"><?= htmlspecialchars($reg['participant_name'] ?? 'សិក្ខាកាម') ?></div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="ticket-micro-label">កូដសំបុត្រ</div>
+                                        <div class="ticket-code-badge"><?= htmlspecialchars($regCode) ?></div>
+                                    </div>
                                 </div>
-                                <div class="col-5 text-end">
-                                    <span class="text-muted d-block text-uppercase" style="font-size: 0.68rem; letter-spacing: 0.5px;">កូដ</span>
-                                    <span class="font-monospace fw-bold text-primary" style="font-size: 0.88rem;">
-                                        <?= htmlspecialchars($regCode) ?>
-                                    </span>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top border-light-subtle">
+                                    <div>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 fw-bold" style="font-size: 0.72rem;">
+                                            <?= htmlspecialchars($reg['ticket_name'] ?: 'ទូទៅ') ?>
+                                        </span>
+                                    </div>
+                                    <div class="text-success small fw-bold" style="font-size: 0.75rem;">
+                                        <i class="bi bi-shield-check me-1"></i> សុពលភាព
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Crisp QR Code -->
-                            <div class="qr-frame my-1">
+                            <!-- QR Code Holder -->
+                            <div class="qr-premium-frame">
                                 <div id="qrcode" class="d-flex justify-content-center"></div>
                                 <noscript>
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= urlencode($qrToken) ?>" alt="QR Code" width="150" height="150">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=165x165&data=<?= urlencode($qrToken) ?>" alt="QR" width="165" height="165">
                                 </noscript>
                             </div>
 
-                            <div class="mt-2">
-                                <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 0.72rem;">
-                                    <i class="bi bi-qr-code-scan text-primary me-1"></i> ស្កេនពេលចូលរួម
+                            <div>
+                                <span class="qr-instruction-chip">
+                                    <i class="bi bi-qr-code-scan"></i> ស្កេនពេលចូលរួម
                                 </span>
                             </div>
+
+                            <!-- Decorative barcode & serial -->
+                            <div class="ticket-barcode-wrap">
+                                <div class="ticket-barcode-bars"></div>
+                                <div class="ticket-barcode-text"><?= htmlspecialchars($regCode) ?> &bull; PASS-<?= strtoupper(substr(md5($regCode), 0, 6)) ?></div>
+                            </div>
+
                         </div>
                     </div>
 
-                    <!-- ACTION BUTTONS: One Tap Save to Gallery -->
-                    <button type="button" id="btnSaveGallery" class="btn btn-save-gallery btn-lg w-100 d-flex align-items-center justify-content-center mb-2">
-                        <i class="bi bi-download me-2 fs-5"></i> រក្សាទុកក្នុងទូរស័ព្ទ
-                    </button>
+                    <!-- ACTION BUTTONS PANEL (Fintech Style with Priority Telegram) -->
+                    <div class="action-card-panel">
+                        <div class="action-buttons-flex">
+                            
+                            <!-- 1. Telegram (PRIORITY) -->
+                            <a href="<?= htmlspecialchars($tgTargetUrl) ?>" 
+                               target="_blank" 
+                               class="action-btn-item action-priority" 
+                               title="Telegram">
+                                <div class="action-circle-icon circle-telegram">
+                                    <i class="bi bi-telegram"></i>
+                                </div>
+                                <span class="action-btn-text text-telegram">Telegram</span>
+                            </a>
 
-                    <div class="d-flex gap-2">
-                        <a href="<?= APP_URL ?>/participant/login" class="btn btn-outline-primary w-50 py-2 small fw-bold">
-                            <i class="bi bi-person-circle me-1"></i> គណនី
-                        </a>
-                        <a href="<?= APP_URL ?>" class="btn btn-outline-secondary w-50 py-2 small">
-                            <i class="bi bi-house me-1"></i> ទំព័រដើម
-                        </a>
+                            <!-- 2. Save Image -->
+                            <button type="button" 
+                                    id="btnSaveGallery" 
+                                    class="action-btn-item" 
+                                    title="រក្សាទុក">
+                                <div class="action-circle-icon circle-save">
+                                    <i class="bi bi-download"></i>
+                                </div>
+                                <span class="action-btn-text">រក្សាទុក</span>
+                            </button>
+
+                            <!-- 3. Share -->
+                            <button type="button" 
+                                    id="btnShareTicket" 
+                                    onclick="shareTicketUrl()" 
+                                    class="action-btn-item" 
+                                    title="ចែករំលែក">
+                                <div class="action-circle-icon circle-share">
+                                    <i class="bi bi-box-arrow-up"></i>
+                                </div>
+                                <span class="action-btn-text">ចែករំលែក</span>
+                            </button>
+
+                            <!-- 4. Home -->
+                            <a href="<?= APP_URL ?>" 
+                               class="action-btn-item" 
+                               title="ទំព័រដើម">
+                                <div class="action-circle-icon circle-home">
+                                    <i class="bi bi-house-door"></i>
+                                </div>
+                                <span class="action-btn-text">ទំព័រដើម</span>
+                            </a>
+
+                        </div>
+                    </div>
+
+                    <!-- Express Face Check-in (Opt-In) Card -->
+                    <div class="card border-0 rounded-4 shadow-sm p-3 mt-3 bg-white text-center">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="d-flex align-items-center gap-2 text-start">
+                                <span class="badge bg-primary-subtle text-primary p-2 rounded-circle">
+                                    <i class="bi bi-person-bounding-box fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong class="d-block text-dark" style="font-size: 0.92rem;">Express Face Check-in</strong>
+                                    <small class="text-muted" style="font-size: 0.76rem;">ស្កេនផ្ទៃមុខទុកមុន សម្រាប់ដើរចូលកម្មវិធីលឿន</small>
+                                </div>
+                            </div>
+                            <?php if ($hasEnrolledFace): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;" id="ticketFaceStatusBadge">
+                                    <i class="bi bi-check-circle-fill me-1"></i> បានចុះឈ្មោះរួច
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;" id="ticketFaceStatusBadge">ស្រេចចិត្ត</span>
+                            <?php endif; ?>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill fw-bold py-2 w-100 mt-1" onclick="openPublicFaceEnrollModal()" title="ស្កេនមុខសម្រាប់ Check-in ដោយមិនបាច់ប្រើសំបុត្រ QR">
+                            <i class="bi bi-camera me-1"></i> <?= $hasEnrolledFace ? 'ស្កេនមុខឡើងវិញ' : 'ស្កេនមុខ' ?>
+                        </button>
                     </div>
 
                 </div>
@@ -255,6 +608,12 @@ $regCode = $reg['registration_code'] ?? $reg['code'] ?? 'REG-000';
     </div>
 </div>
 
+<!-- Toast Popup Notification -->
+<div id="toastNotification" class="toast-popup d-none">
+    <i class="bi bi-check-circle-fill me-2 text-success"></i>
+    <span id="toastMessage">បានចម្លងលីងសំបុត្រ!</span>
+</div>
+
 <!-- Modal: Saved Image Preview (Helpful for iOS Safari tap & hold save) -->
 <div class="modal fade" id="imageSavedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
@@ -289,8 +648,48 @@ $regCode = $reg['registration_code'] ?? $reg['code'] ?? 'REG-000';
 </script>
 
 <script>
+// Toast function
+function showToast(msg) {
+    const toast = document.getElementById('toastNotification');
+    const msgEl = document.getElementById('toastMessage');
+    if (toast && msgEl) {
+        msgEl.textContent = msg;
+        toast.classList.remove('d-none');
+        setTimeout(() => {
+            toast.classList.add('d-none');
+        }, 2400);
+    }
+}
+
+// Share function
+async function shareTicketUrl() {
+    const url = <?= json_encode($currentTicketUrl) ?>;
+    const title = <?= json_encode($reg['workshop_name'] ?? 'សំបុត្រចូលរួម') ?>;
+    const text = 'សំបុត្រ និង QR Code សម្រាប់ចូលរួម ' + title;
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: title,
+                text: text,
+                url: url
+            });
+            return;
+        } catch (err) {
+            // Cancelled or fallback to copy
+        }
+    }
+
+    try {
+        await navigator.clipboard.writeText(url);
+        showToast('បានចម្លងលីងសំបុត្ររួចរាល់!');
+    } catch (e) {
+        prompt('ចម្លងលីងសំបុត្រនេះ៖', url);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Generate QR Code on local Canvas/Img (prevents tainted canvas in html2canvas)
+    // 1. Generate QR Code
     const qrContainer = document.getElementById('qrcode');
     const qrToken = <?= json_encode($qrToken ?: $regCode) ?>;
     
@@ -298,15 +697,15 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             new QRCode(qrContainer, {
                 text: qrToken,
-                width: 150,
-                height: 150,
+                width: 165,
+                height: 165,
                 colorDark: "#0f172a",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.M
             });
         } catch (e) {
             console.error('QR code generation error:', e);
-            qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(qrToken) + '" width="150" height="150" alt="QR">';
+            qrContainer.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=165x165&data=' + encodeURIComponent(qrToken) + '" width="165" height="165" alt="QR">';
         }
     }
 
@@ -317,13 +716,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const btn = this;
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> កំពុងទាញយករូបភាព...';
+            btn.innerHTML = '<div class="action-circle-icon circle-save"><span class="spinner-border spinner-border-sm text-primary" role="status"></span></div><span class="action-btn-text">កំពុងរក្សា...</span>';
 
             try {
                 const ticketEl = document.getElementById('ticketCaptureArea');
                 if (!ticketEl) return;
 
-                // Render ticket card to high-res canvas (scale 2.5)
                 const canvas = await html2canvas(ticketEl, {
                     scale: 2.5,
                     useCORS: true,
@@ -335,7 +733,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fileName = 'Ticket-' + regCodeStr + '.png';
                 const dataUrl = canvas.toDataURL('image/png');
 
-                // Try Web Share API (native iOS / Android save to photos / gallery)
                 let sharedViaNative = false;
                 if (navigator.canShare) {
                     try {
@@ -352,7 +749,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     } catch (shareErr) {
-                        // User cancelled share or not supported; proceed to fallback
                         console.log('Native share skipped or cancelled:', shareErr);
                     }
                 }
@@ -365,7 +761,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
 
-                // Show modal preview if not shared natively
+                showToast('បានរក្សាទុករូបភាពសំបុត្រ!');
+
                 if (!sharedViaNative) {
                     const previewImg = document.getElementById('savedImagePreview');
                     if (previewImg) {
@@ -380,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             } catch (err) {
                 console.error('Error generating ticket image:', err);
-                alert('មានបញ្ហាក្នុងការទាញយក។ សូមថតអេក្រង់សំបុត្រនេះទុកជំនួសវិញ។');
+                showToast('មានបញ្ហាក្នុងការទាញយក។');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
@@ -388,4 +785,202 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- Modal: Public Face Enrollment (Opt-In Face ID) -->
+<div class="modal fade" id="publicFaceEnrollModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 rounded-4 shadow-lg text-center p-3">
+            <div class="modal-header border-0 pb-1">
+                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary p-1.5 rounded-circle">
+                        <i class="bi bi-person-bounding-box"></i>
+                    </span>
+                    ស្កេនមុខ
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-2 text-center">
+                <p class="text-muted small mb-2">
+                    សូមដាក់ផ្ទៃមុខឱ្យចំកណ្តាលរង្វង់ពងក្រពើ ដើម្បីថតកត់ត្រា៖
+                </p>
+
+                <!-- Camera Viewport with Oval Guide -->
+                <div class="position-relative mx-auto rounded-4 overflow-hidden mb-2 bg-black shadow-xs" style="width: 100%; max-width: 340px; aspect-ratio: 4/3;">
+                    <video id="pubFaceVideo" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                    <canvas id="pubFaceCanvas" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; transform: scaleX(-1);"></canvas>
+                    <div id="pubFaceOval" class="position-absolute" style="top:50%; left:50%; transform:translate(-50%, -50%); width: 170px; height: 215px; border: 2.5px dashed rgba(255,255,255,0.6); border-radius: 50%; pointer-events:none; transition: all 0.25s ease;"></div>
+                </div>
+
+                <div id="pubFaceStatusBadge" class="badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-3" style="font-size: 0.76rem;">
+                    កំពុងបើកកាមេរ៉ា & ផ្ទុក AI Model...
+                </div>
+
+                <button type="button" id="btnPubCaptureFace" class="btn btn-primary w-100 py-2.5 fw-bold rounded-pill shadow-xs" onclick="submitPublicFaceEnroll()" disabled>
+                    <i class="bi bi-camera-fill me-1"></i> ថត & ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+<script>
+let pubFaceModelLoaded = false;
+let pubFaceStream = null;
+let pubFaceDescriptor = null;
+let pubFacePhoto = null;
+const PUB_FACE_REG_CODE = <?= json_encode($regCode) ?>;
+
+function openPublicFaceEnrollModal() {
+    const modalEl = document.getElementById('publicFaceEnrollModal');
+    if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
+const pubModalEl = document.getElementById('publicFaceEnrollModal');
+if (pubModalEl) {
+    pubModalEl.addEventListener('shown.bs.modal', startPubFaceCamera);
+    pubModalEl.addEventListener('hidden.bs.modal', stopPubFaceCamera);
+}
+
+async function startPubFaceCamera() {
+    const video = document.getElementById('pubFaceVideo');
+    const canvas = document.getElementById('pubFaceCanvas');
+    const oval = document.getElementById('pubFaceOval');
+    const statusBadge = document.getElementById('pubFaceStatusBadge');
+    const btn = document.getElementById('btnPubCaptureFace');
+
+    if (!pubFaceModelLoaded) {
+        statusBadge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងទាញយក Face Model...';
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
+                faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
+                faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/')
+            ]);
+            pubFaceModelLoaded = true;
+        } catch (e) {
+            console.error('Model load error:', e);
+            statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-3';
+            statusBadge.innerText = 'កំហុស Model (សូម Refresh)';
+            return;
+        }
+    }
+
+    try {
+        pubFaceStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+            audio: false
+        });
+        video.srcObject = pubFaceStream;
+        await video.play();
+
+        const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        const checkInterval = setInterval(async () => {
+            if (video.paused || video.ended || !pubFaceStream) {
+                clearInterval(checkInterval);
+                return;
+            }
+
+            const detection = await faceapi.detectSingleFace(
+                video,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
+            ).withFaceLandmarks().withFaceDescriptor();
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (detection) {
+                const box = detection.detection.box;
+                const isCentered = (box.x > displaySize.width * 0.15 && (box.x + box.width) < displaySize.width * 0.85);
+
+                if (isCentered) {
+                    oval.style.borderColor = '#10b981';
+                    oval.style.borderStyle = 'solid';
+                    oval.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
+                    statusBadge.className = 'badge bg-success px-3 py-1.5 rounded-pill mb-3';
+                    statusBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i> ទីតាំងល្អ! អាចថតបាន';
+                    btn.disabled = false;
+
+                    pubFaceDescriptor = Array.from(detection.descriptor);
+
+                    const tempC = document.createElement('canvas');
+                    tempC.width = 160;
+                    tempC.height = 160;
+                    const tctx = tempC.getContext('2d');
+                    tctx.drawImage(video, 0, 0, 160, 160);
+                    pubFacePhoto = tempC.toDataURL('image/jpeg', 0.85);
+                } else {
+                    oval.style.borderColor = 'rgba(255,255,255,0.6)';
+                    oval.style.borderStyle = 'dashed';
+                    oval.style.boxShadow = 'none';
+                    statusBadge.className = 'badge bg-warning text-dark px-3 py-1.5 rounded-pill mb-3';
+                    statusBadge.innerText = 'សូមរំកិលមុខមកកណ្តាលរង្វង់';
+                    btn.disabled = true;
+                }
+            } else {
+                oval.style.borderColor = 'rgba(255,255,255,0.6)';
+                oval.style.borderStyle = 'dashed';
+                oval.style.boxShadow = 'none';
+                statusBadge.className = 'badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-3';
+                statusBadge.innerText = 'សូមបែរមុខមករកកាមេរ៉ា...';
+                btn.disabled = true;
+            }
+        }, 160);
+    } catch (err) {
+        statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-3';
+        statusBadge.innerText = 'មិនអាចបើកកាមេរ៉ា (សូមអនុញ្ញាត Permission)';
+    }
+}
+
+function stopPubFaceCamera() {
+    if (pubFaceStream) {
+        pubFaceStream.getTracks().forEach(t => t.stop());
+        pubFaceStream = null;
+    }
+}
+
+async function submitPublicFaceEnroll() {
+    const btn = document.getElementById('btnPubCaptureFace');
+    if (!pubFaceDescriptor) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងចុះឈ្មោះ...';
+
+    try {
+        const res = await fetch('<?= APP_URL ?>/api/face/enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                registration_code: PUB_FACE_REG_CODE,
+                descriptor: pubFaceDescriptor,
+                photo: pubFacePhoto
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('publicFaceEnrollModal')).hide();
+            showToast('ចុះឈ្មោះផ្ទៃមុខជោគជ័យ!');
+            
+            const badge = document.getElementById('ticketFaceStatusBadge');
+            if (badge) {
+                badge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill';
+                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> បានចុះឈ្មោះរួច';
+            }
+        } else {
+            alert(data.message || 'បរាជ័យក្នុងការចុះឈ្មោះ');
+        }
+    } catch (err) {
+        alert('កំហុសភ្ជាប់ប្រព័ន្ធ សូមព្យាយាមម្តងទៀត');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-camera-fill me-1"></i> ថត & ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ';
+    }
+}
 </script>

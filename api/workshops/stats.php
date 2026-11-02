@@ -41,8 +41,9 @@ function api_workshop_stats(int $id): void {
          WHERE r.workshop_id=? AND r.business_id=? AND r.deleted_at IS NULL",
         [$id, $businessId]
     );
-    $stats['open_questions'] = $db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id=? AND status='pending'",[$id])['c'];
-    $stats['open_requests']  = $db->queryOne("SELECT COUNT(*) as c FROM participant_requests WHERE workshop_id=? AND status IN ('new','in_progress')",[$id])['c'];
+    $stats['open_questions'] = $db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id=? AND status IN ('pending','approved','pinned')",[$id])['c'];
+    $stats['answered_questions'] = $db->queryOne("SELECT COUNT(*) as c FROM questions WHERE workshop_id=? AND status='answered'",[$id])['c'];
+    $stats['open_requests']  = $db->queryOne("SELECT COUNT(*) as c FROM participant_requests WHERE workshop_id=? AND status IN ('new','assigned','in_progress')",[$id])['c'];
     
     echo json_encode(['success'=>true,'data'=>$stats]);
 }

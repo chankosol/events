@@ -63,6 +63,17 @@
             </div>
             <?php endif; ?>
 
+            <div class="card shadow-sm border-0 mb-4 bg-primary text-white">
+                <div class="card-body p-4 text-center">
+                    <i class="bi bi-chat-dots-fill fs-1 mb-2 d-block"></i>
+                    <h5 class="fw-bold mb-1">សួរ-ឆ្លើយផ្ទាល់ (Live Q&A)</h5>
+                    <p class="small text-white-50 mb-3">សួរសំណួរទៅកាន់វាគ្មិន ឬស្នើសុំជំនួយពីក្រុមការងារ</p>
+                    <a href="<?= APP_URL ?>/live/<?= $reg['workshop_id'] ?>/interactive" class="btn btn-light fw-bold w-100 py-2">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> ចូលរួមសួរផ្ទាល់ឥឡូវនេះ
+                    </a>
+                </div>
+            </div>
+
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white py-3"><h5 class="mb-0 fw-bold">ស្ថានភាពទូទាត់</h5></div>
                 <div class="card-body p-4">

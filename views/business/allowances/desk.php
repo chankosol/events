@@ -31,7 +31,7 @@
                 <i class="bi bi-arrow-left me-1"></i> ត្រឡប់ទៅការគ្រប់គ្រងថវិកា
             </a>
             <span class="ms-3 fw-bold fs-5 text-dark">
-                <i class="bi bi-cash-coin text-success me-2"></i>តុបើកប្រាក់ឧបត្ថម្ភ (Payout Desk)
+                <i class="bi bi-cash-coin text-success me-2"></i>តុបើកប្រាក់ឧបត្ថម្ភ
             </span>
             <span class="badge bg-success ms-2">$<?= number_format((float)$allowance['default_amount'], 2) ?> / នាក់</span>
         </div>
@@ -72,7 +72,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3">
                     <h5 class="fw-bold text-primary mb-0">
-                        <i class="bi bi-building me-2"></i>បើកប្រាក់តាមប្រធានប្រតិភូខេត្ត (Group Claim)
+                        <i class="bi bi-building me-2"></i>បើកប្រាក់តាមប្រធានប្រតិភូ
                     </h5>
                 </div>
                 <div class="card-body p-4">
@@ -115,9 +115,9 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">វិធីសាស្ត្របើកផ្តល់</label>
                             <select id="delPayoutMethod" class="form-select">
-                                <option value="cash">សាច់ប្រាក់សុទ្ធ (Cash)</option>
+                                <option value="cash">សាច់ប្រាក់</option>
                                 <option value="bakong">Bakong / KHQR</option>
-                                <option value="bank_transfer">ផ្ទេរតាមធនាគារ (Bank Transfer)</option>
+                                <option value="bank_transfer">ផ្ទេរតាមធនាគារ</option>
                             </select>
                         </div>
 

@@ -27,6 +27,8 @@ if (!hash_equals(Session::get('_csrf_token', ''), $csrfToken)) {
 
 $regId      = (int)($_POST['registration_id'] ?? 0);
 $workshopId = (int)($_POST['workshop_id'] ?? 0);
+$slotId     = (int)($_POST['slot_id'] ?? 0);
+$slotNumber = (int)($_POST['slot_number'] ?? 0);
 $businessId = Tenant::id();
 
 if (!$regId || !$workshopId || !$businessId) {
@@ -42,15 +44,72 @@ if (!$workshop) {
     exit;
 }
 
-// Remove attendance
-$db->execute("DELETE FROM attendance WHERE registration_id = ? AND workshop_id = ?", [$regId, $workshopId]);
+// 1. Delete slot from attendance_slots if slot_id or slot_number is specified
+if ($slotId > 0) {
+    try {
+        $db->execute("DELETE FROM attendance_slots WHERE id = ? AND registration_id = ? AND workshop_id = ?", [$slotId, $regId, $workshopId]);
+    } catch (Throwable $e) {}
+} elseif ($slotNumber > 0) {
+    try {
+        $db->execute("DELETE FROM attendance_slots WHERE registration_id = ? AND workshop_id = ? AND slot_number = ?", [$regId, $workshopId, $slotNumber]);
+    } catch (Throwable $e) {}
+} else {
+    // No specific slot requested: full reset of all slots
+    try {
+        $db->execute("DELETE FROM attendance_slots WHERE registration_id = ? AND workshop_id = ?", [$regId, $workshopId]);
+    } catch (Throwable $e) {}
+}
 
-// Reset status back to confirmed
-$db->execute("UPDATE registrations SET status = 'confirmed' WHERE id = ? AND workshop_id = ? AND status = 'attended'", [$regId, $workshopId]);
+// 2. Check if participant still has any remaining slots in attendance_slots
+$remaining = null;
+try {
+    $remaining = $db->queryOne(
+        "SELECT COUNT(*) as cnt, MIN(checked_in_at) as first_in, MAX(checked_in_at) as last_in
+         FROM attendance_slots
+         WHERE registration_id = ? AND workshop_id = ?",
+        [$regId, $workshopId]
+    );
+} catch (Throwable $e) {}
 
-echo json_encode([
-    'success' => true,
-    'message' => 'បានកំណត់វត្តមានឡើងវិញដោយជោគជ័យ (Reset Check-in)',
-    'registration_id' => $regId
-]);
-exit;
+$totalRemaining = (int)($remaining['cnt'] ?? 0);
+
+if ($totalRemaining > 0) {
+    // Participant STILL has attendance records in other slots!
+    try {
+        if ($totalRemaining == 1) {
+            $db->execute(
+                "UPDATE attendance SET checked_in_at = ?, checked_out_at = NULL WHERE registration_id = ? AND workshop_id = ?",
+                [$remaining['first_in'], $regId, $workshopId]
+            );
+        } else {
+            $db->execute(
+                "UPDATE attendance SET checked_in_at = ?, checked_out_at = ? WHERE registration_id = ? AND workshop_id = ?",
+                [$remaining['first_in'], $remaining['last_in'], $regId, $workshopId]
+            );
+        }
+    } catch (Throwable $e) {}
+
+    $db->execute("UPDATE registrations SET status = 'attended' WHERE id = ? AND workshop_id = ?", [$regId, $workshopId]);
+
+    echo json_encode([
+        'success'         => true,
+        'all_cleared'     => false,
+        'remaining_slots' => $totalRemaining,
+        'message'         => 'បានលុបវេនវត្តមាននេះរួចរាល់ (នៅសល់ ' . $totalRemaining . ' វេនទៀត)',
+        'registration_id' => $regId
+    ]);
+    exit;
+} else {
+    // 0 slots remaining (or single check-in mode): full reset
+    $db->execute("DELETE FROM attendance WHERE registration_id = ? AND workshop_id = ?", [$regId, $workshopId]);
+    $db->execute("UPDATE registrations SET status = 'confirmed' WHERE id = ? AND workshop_id = ? AND status = 'attended'", [$regId, $workshopId]);
+
+    echo json_encode([
+        'success'         => true,
+        'all_cleared'     => true,
+        'remaining_slots' => 0,
+        'message'         => 'បានកំណត់វត្តមានឡើងវិញដោយជោគជ័យ (Reset Check-in)',
+        'registration_id' => $regId
+    ]);
+    exit;
+}

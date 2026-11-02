@@ -3,7 +3,7 @@
 ?>
 <?php if (!empty($isPreview)): ?>
     <div class="alert alert-warning border-0 rounded-0 text-center py-2 mb-0 shadow-sm sticky-top">
-        <i class="bi bi-eye-fill me-1"></i> <strong>របៀបមើលសាកល្បង (Preview Mode)</strong>៖ សិក្ខាសាលានេះមិនទាន់បើកទទួលការចុះឈ្មោះជាផ្លូវការនៅឡើយទេ។ អ្នកកំពុងមើលជាអ្នកគ្រប់គ្រង។
+        <i class="bi bi-eye-fill me-1"></i> <strong>របៀបមើលសាកល្បង</strong>៖ សិក្ខាសាលានេះមិនទាន់បើកទទួលការចុះឈ្មោះជាផ្លូវការនៅឡើយទេ។ អ្នកកំពុងមើលជាអ្នកគ្រប់គ្រង។
     </div>
 <?php endif; ?>
 <div class="workshop-public-page">
@@ -48,7 +48,7 @@
                                 ?>
                                 <div class="text-muted small"><?= $isFreeEvent ? 'តម្លៃចូលរួម' : 'តម្លៃចាប់ផ្តើមពី' ?></div>
                                 <div class="fs-3 fw-bold <?= $isFreeEvent ? 'text-success' : 'text-primary' ?>">
-                                    <?= $isFreeEvent ? '<i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ (Free)' : '$' . number_format($minPrice, 2) ?>
+                                    <?= $isFreeEvent ? '<i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ' : '$' . number_format($minPrice, 2) ?>
                                 </div>
                             </div>
                             <?php if ($workshop['status'] === 'registration_open'): ?>

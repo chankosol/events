@@ -89,7 +89,7 @@
             <form action="<?= APP_URL ?>/scan/helper/<?= htmlspecialchars($pass['token']) ?>" method="POST" id="joinForm">
                 <div class="mb-3">
                     <label for="helper_name" class="form-label fw-bold text-dark small">
-                        <i class="bi bi-person me-1 text-primary"></i> ឈ្មោះរបស់អ្នក (Full Name) <span class="text-danger">*</span>
+                        <i class="bi bi-person me-1 text-primary"></i> ឈ្មោះរបស់អ្នក <span class="text-danger">*</span>
                     </label>
                     <input type="text"
                            class="form-control form-control-lg rounded-3 fs-6"

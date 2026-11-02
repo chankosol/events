@@ -80,6 +80,8 @@ class DelegationController {
             'require_bank_account' => 0,
             'show_email'           => 0,
             'require_email'        => 0,
+            'show_face_enroll'     => 0,
+            'require_face_enroll'  => 0,
         ];
 
         $delegationFormFields = $defaultDelegationConfig;
@@ -134,9 +136,11 @@ class DelegationController {
             'require_bank_account' => isset($_POST['require_bank_account']) ? 1 : 0,
             'show_email'           => isset($_POST['show_email']) ? 1 : 0,
             'require_email'        => isset($_POST['require_email']) ? 1 : 0,
+            'show_face_enroll'     => isset($_POST['show_face_enroll']) ? 1 : 0,
+            'require_face_enroll'  => isset($_POST['require_face_enroll']) ? 1 : 0,
         ];
 
-        foreach (['phone', 'gender', 'position', 'organization', 'id_card', 'bank_name', 'bank_account', 'email'] as $f) {
+        foreach (['phone', 'gender', 'position', 'organization', 'id_card', 'bank_name', 'bank_account', 'email', 'face_enroll'] as $f) {
             if (empty($config['show_' . $f])) {
                 $config['require_' . $f] = 0;
             }
@@ -407,6 +411,8 @@ class DelegationController {
             'require_bank_account' => 0,
             'show_email'           => 0,
             'require_email'        => 0,
+            'show_face_enroll'     => 0,
+            'require_face_enroll'  => 0,
         ];
 
         $delegationFormFields = $defaultDelegationConfig;
@@ -481,6 +487,10 @@ class DelegationController {
                 Session::flash('error', "សូមបញ្ចូលលេខគណនីធនាគារ!");
                 redirect(shareableUrl("/delegation/{$token}"));
                 return;
+            } elseif (!empty($delegationFormFields['show_face_enroll']) && !empty($delegationFormFields['require_face_enroll']) && empty($_POST['face_descriptor'])) {
+                Session::flash('error', "សូមស្កេនមុខសមាជិកមុននឹងចុះឈ្មោះ!");
+                redirect(shareableUrl("/delegation/{$token}"));
+                return;
             } else {
                 // Find or create participant profile
                 $participant = null;
@@ -548,6 +558,36 @@ class DelegationController {
                     [$regCode, $delegation['business_id'], $delegation['workshop_id'], $pId, $delegation['id'], $paymentStatus, $idCard, $bankName, $bankAcc]
                 );
                 $newRegId = $db->lastInsertId();
+
+                // Save face descriptor if submitted (Face Pre-registration)
+                if (!empty($_POST['face_descriptor'])) {
+                    $faceDesc = json_decode($_POST['face_descriptor'], true);
+                    if (is_array($faceDesc) && count($faceDesc) === 128) {
+                        $facePhotoPath = null;
+                        if (!empty($_POST['face_photo']) && str_starts_with($_POST['face_photo'], 'data:image/')) {
+                            $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $_POST['face_photo']);
+                            $imageData  = base64_decode($base64Data);
+                            if ($imageData !== false) {
+                                $uploadDir = ROOT_PATH . '/uploads/faces/';
+                                if (!is_dir($uploadDir)) { @mkdir($uploadDir, 0775, true); }
+                                $photoFile = 'face_' . $newRegId . '_' . time() . '.jpg';
+                                if (file_put_contents($uploadDir . $photoFile, $imageData)) {
+                                    $facePhotoPath = 'uploads/faces/' . $photoFile;
+                                }
+                            }
+                        }
+                        try {
+                            $db->execute(
+                                "INSERT INTO participant_faces (business_id, workshop_id, participant_id, registration_id, face_descriptor, photo_path, enrolled_at)
+                                 VALUES (?, ?, ?, ?, ?, ?, NOW())
+                                 ON DUPLICATE KEY UPDATE face_descriptor=VALUES(face_descriptor), photo_path=COALESCE(VALUES(photo_path), photo_path), enrolled_at=NOW()",
+                                [$delegation['business_id'], $delegation['workshop_id'], $pId, $newRegId, $_POST['face_descriptor'], $facePhotoPath]
+                            );
+                        } catch (Exception $fe) {
+                            error_log('Delegation portal face enroll failed (non-fatal): ' . $fe->getMessage());
+                        }
+                    }
+                }
 
                 $qrToken = bin2hex(random_bytes(24));
                 $db->execute(

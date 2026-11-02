@@ -99,6 +99,8 @@ class HelperCheckinController {
             [$pass['workshop_id']]
         );
 
+        $workshop = $db->queryOne("SELECT * FROM workshops WHERE id = ?", [$pass['workshop_id']]);
+
         require VIEWS_PATH . '/public/helper_checkin.php';
     }
 
@@ -187,154 +189,321 @@ class HelperCheckinController {
     }
 
     public static function scan(): void {
-        header('Content-Type: application/json');
-        $db = Database::getInstance();
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $db = Database::getInstance();
 
-        $passToken = trim($_POST['pass_token'] ?? '');
-        $qrToken   = trim($_POST['qr_token'] ?? '');
-        $devToken  = trim($_POST['device_token'] ?? '');
+            $passToken = trim($_POST['pass_token'] ?? '');
+            $qrToken   = trim($_POST['qr_token'] ?? '');
+            $devToken  = trim($_POST['device_token'] ?? '');
+            $scanType  = trim($_POST['scan_type'] ?? 'qr');
 
-        if (empty($passToken) || empty($qrToken)) {
-            echo json_encode(['success' => false, 'message' => 'ទិន្នន័យស្កេនមិនត្រឹមត្រូវ។']);
-            exit;
-        }
-
-        $pass = $db->queryOne("SELECT * FROM checkin_helper_passes WHERE token = ? AND is_active = 1", [$passToken]);
-        if (!$pass) {
-            echo json_encode(['success' => false, 'message' => 'លីងជំនួយការត្រូវបានបិទ ឬមិនត្រឹមត្រូវ។']);
-            exit;
-        }
-
-        if (strtotime($pass['expires_at']) <= time()) {
-            echo json_encode(['success' => false, 'message' => 'លីងជំនួយការបានផុតសុពលភាពហើយ។']);
-            exit;
-        }
-
-        // Validate device token if provided
-        $device = null;
-        if (!empty($devToken)) {
-            $device = $db->queryOne("SELECT id, helper_name, is_active FROM checkin_helper_devices WHERE pass_id = ? AND device_token = ?", [$pass['id'], $devToken]);
-            if ($device) {
-                if (isset($device['is_active']) && (int)$device['is_active'] === 0) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'ការអនុញ្ញាតរបស់អ្នកត្រូវបានបិទដោយអ្នកគ្រប់គ្រង។',
-                        'revoked' => true
-                    ]);
-                    exit;
-                }
-                $db->execute("UPDATE checkin_helper_devices SET last_active_at = NOW() WHERE id = ?", [$device['id']]);
+            if (empty($passToken) || empty($qrToken)) {
+                echo json_encode(['success' => false, 'message' => 'ទិន្នន័យស្កេនមិនត្រឹមត្រូវ។']);
+                exit;
             }
-        }
 
-        $workshopId = (int)$pass['workshop_id'];
-        $businessId = (int)$pass['business_id'];
+            $pass = $db->queryOne("SELECT * FROM checkin_helper_passes WHERE token = ? AND is_active = 1", [$passToken]);
+            if (!$pass) {
+                echo json_encode(['success' => false, 'message' => 'លីងជំនួយការត្រូវបានបិទ ឬមិនត្រឹមត្រូវ។']);
+                exit;
+            }
 
-        // Find participant by QR token or Registration Code
-        $qr = $db->queryOne(
-            "SELECT pq.*, r.id as registration_id, r.status as reg_status, r.payment_status, r.is_vip, r.registration_code, r.id_card_number,
-                    p.name, p.email, p.phone, p.company, p.position, p.photo, p.gender, p.province as participant_province,
-                    d.province as delegation_province, d.organization as delegation_org,
-                    t.name as ticket_name, t.ticket_type
-             FROM participant_qr pq
-             JOIN registrations r ON r.id = pq.registration_id
-             JOIN participants p ON p.id = pq.participant_id
-             LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
-             LEFT JOIN tickets t ON t.id = r.ticket_id
-             WHERE (pq.token = ? OR r.registration_code = ?) AND pq.workshop_id = ? AND pq.is_active = 1",
-            [$qrToken, $qrToken, $workshopId]
-        );
+            if (strtotime($pass['expires_at']) <= time()) {
+                echo json_encode(['success' => false, 'message' => 'លីងជំនួយការបានផុតសុពលភាពហើយ។']);
+                exit;
+            }
 
-        if (!$qr) {
-            $db->execute(
-                "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,'invalid')",
-                [$businessId, $workshopId, $qrToken, 'checkin', $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
+            // Validate device token if provided
+            $device = null;
+            if (!empty($devToken)) {
+                $device = $db->queryOne("SELECT id, helper_name, is_active FROM checkin_helper_devices WHERE pass_id = ? AND device_token = ?", [$pass['id'], $devToken]);
+                if ($device) {
+                    if (isset($device['is_active']) && (int)$device['is_active'] === 0) {
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'ការអនុញ្ញាតរបស់អ្នកត្រូវបានបិទដោយអ្នកគ្រប់គ្រង។',
+                            'revoked' => true
+                        ]);
+                        exit;
+                    }
+                    $db->execute("UPDATE checkin_helper_devices SET last_active_at = NOW() WHERE id = ?", [$device['id']]);
+                }
+            }
+
+            $workshopId = (int)$pass['workshop_id'];
+            $businessId = (int)$pass['business_id'];
+
+            $workshop = $db->queryOne("SELECT id, name, daily_scans_required FROM workshops WHERE id = ?", [$workshopId]);
+            $dailyScansRequired = (int)($workshop['daily_scans_required'] ?? 1);
+            $todayDate = date('Y-m-d');
+            $currentTime = date('H:i');
+
+            // Determine current slot number
+            if (isset($_POST['slot_number']) && (int)$_POST['slot_number'] >= 1) {
+                $slotNumber = min(4, max(1, (int)$_POST['slot_number']));
+            } else {
+                // Auto-detect slot based on current time
+                if ($dailyScansRequired <= 1) {
+                    $slotNumber = 1;
+                } elseif ($dailyScansRequired == 2) {
+                    $slotNumber = ($currentTime < '12:30') ? 1 : 2;
+                } elseif ($dailyScansRequired == 3) {
+                    $slotNumber = ($currentTime < '12:00') ? 1 : (($currentTime < '15:30') ? 2 : 3);
+                } else {
+                    $slotNumber = ($currentTime < '10:30') ? 1 : (($currentTime < '13:00') ? 2 : (($currentTime < '15:30') ? 3 : 4));
+                }
+            }
+
+            // Determine human-readable slot name in Khmer
+            if ($dailyScansRequired <= 1) {
+                $slotName = 'ទូទៅ';
+            } elseif ($dailyScansRequired == 2) {
+                $slotName = ($slotNumber == 1) ? 'ពេលព្រឹក' : 'ពេលរសៀល';
+            } elseif ($dailyScansRequired == 3) {
+                $slotName = ($slotNumber == 1) ? 'ពេលព្រឹក' : (($slotNumber == 2) ? 'ពេលរសៀល' : 'ពេលល្ងាច');
+            } else {
+                $slotNames = [
+                    1 => 'ព្រឹកចូល',
+                    2 => 'ព្រឹកចេញ',
+                    3 => 'រសៀលចូល',
+                    4 => 'រសៀលចេញ'
+                ];
+                $slotName = $slotNames[$slotNumber] ?? "វេនទី {$slotNumber}";
+            }
+
+            // Find participant by QR token or Registration Code
+            $qr = $db->queryOne(
+                "SELECT COALESCE(pq.token, '') as token, r.id as registration_id, r.participant_id, r.status as reg_status, r.payment_status, r.is_vip, r.registration_code, r.id_card_number,
+                        p.name, p.email, p.phone, p.company, p.position, p.photo, p.gender, p.province as participant_province,
+                        d.province as delegation_province, d.organization as delegation_org,
+                        t.name as ticket_name, t.ticket_type
+                 FROM registrations r
+                 JOIN participants p ON p.id = r.participant_id
+                 LEFT JOIN participant_qr pq ON pq.registration_id = r.id AND pq.is_active = 1
+                 LEFT JOIN workshop_delegations d ON d.id = r.delegation_id
+                 LEFT JOIN tickets t ON t.id = r.ticket_id
+                 WHERE (pq.token = ? OR r.registration_code = ?) AND r.workshop_id = ? AND r.deleted_at IS NULL
+                 LIMIT 1",
+                [$qrToken, $qrToken, $workshopId]
             );
-            echo json_encode(['success' => false, 'message' => 'មិនមានកូដ QR នេះក្នុងបញ្ជីសិក្ខាកាមឡើយ។']);
-            exit;
-        }
 
-        if (!in_array($qr['reg_status'], ['confirmed', 'attended', 'completed'])) {
+            if (!$qr) {
+                try {
+                    $db->execute(
+                        "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,'invalid')",
+                        [$businessId, $workshopId, $qrToken, 'checkin', $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
+                    );
+                } catch (Throwable $e) {}
+                echo json_encode(['success' => false, 'message' => 'មិនមានកូដ QR នេះក្នុងបញ្ជីសិក្ខាកាមឡើយ។']);
+                exit;
+            }
+
+            if (!in_array($qr['reg_status'], ['confirmed', 'attended', 'completed'])) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'ការចុះឈ្មោះមិនទាន់ត្រូវបានបញ្ជាក់ (Confirmed) នៅឡើយទេ។',
+                    'participant' => ['name' => $qr['name'], 'phone' => $qr['phone']]
+                ]);
+                exit;
+            }
+
+            $photoUrl = '';
+            if (!empty($qr['photo'])) {
+                $photoUrl = (function_exists('getUploadUrl')) ? getUploadUrl($qr['photo']) : APP_URL . '/' . ltrim($qr['photo'], '/\\');
+            }
+
+            $participantPayload = [
+                'reg_id'       => $qr['registration_id'],
+                'name'         => $qr['name'],
+                'email'        => $qr['email'],
+                'phone'        => $qr['phone'],
+                'gender'       => $qr['gender'],
+                'company'      => $qr['company'] ?: ($qr['delegation_org'] ?? 'មិនបានបញ្ជាក់ស្ថាប័ន'),
+                'province'     => $qr['delegation_province'] ?: ($qr['participant_province'] ?? 'ទូទៅ'),
+                'position'     => $qr['position'] ?: '-',
+                'photo_url'    => $photoUrl,
+                'id_card'      => $qr['id_card_number'],
+                'ticket'       => $qr['ticket_name'] ?? 'ស្តង់ដារ',
+                'reg_code'     => $qr['registration_code'],
+                'is_vip'       => (bool)$qr['is_vip'],
+                'payment_status' => $qr['payment_status'],
+                'slot_number'  => $slotNumber,
+                'slot_name'    => $slotName
+            ];
+
+            // If main attendance was deleted (e.g. by Reset Attendance) or status is confirmed, purge any orphaned slots
+            $mainAtt = $db->queryOne("SELECT id FROM attendance WHERE registration_id = ? AND workshop_id = ?", [$qr['registration_id'], $workshopId]);
+            if (!$mainAtt && $qr['reg_status'] === 'confirmed') {
+                try {
+                    $db->execute("DELETE FROM attendance_slots WHERE registration_id = ? AND workshop_id = ?", [$qr['registration_id'], $workshopId]);
+                } catch (Throwable $pe) {}
+            }
+
+            // Check if already checked in FOR THIS SPECIFIC SLOT TODAY
+            $existingSlot = null;
+            try {
+                $existingSlot = $db->queryOne(
+                    "SELECT * FROM attendance_slots WHERE registration_id = ? AND checkin_date = ? AND slot_number = ?",
+                    [$qr['registration_id'], $todayDate, $slotNumber]
+                );
+            } catch (Throwable $se) {
+                // Auto-heal table if missing on live server
+                try {
+                    $db->execute("CREATE TABLE IF NOT EXISTS attendance_slots (
+                      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                      business_id INT UNSIGNED NOT NULL,
+                      workshop_id INT UNSIGNED NOT NULL,
+                      registration_id INT UNSIGNED NOT NULL,
+                      participant_id INT UNSIGNED NOT NULL,
+                      checkin_date DATE NOT NULL,
+                      slot_number TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                      slot_name VARCHAR(50) NULL,
+                      checked_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      check_in_method ENUM('qr','manual','offline','face','helper_station') DEFAULT 'qr',
+                      check_in_staff_id INT UNSIGNED NULL,
+                      notes VARCHAR(255) NULL,
+                      UNIQUE KEY unique_reg_date_slot (registration_id, checkin_date, slot_number),
+                      INDEX idx_workshop_date_slot (workshop_id, checkin_date, slot_number)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                } catch (Throwable $te) {}
+            }
+
+            if ($existingSlot && $existingSlot['checked_in_at']) {
+                try {
+                    $db->execute(
+                        "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, registration_id, participant_id, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,?,?,'already_scanned')",
+                        [$businessId, $workshopId, $qrToken, 'checkin', $qr['registration_id'], $qr['participant_id'], $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
+                    );
+                } catch (Throwable $e) {}
+                $formattedTime = date('H:i:s, d/m/Y', strtotime($existingSlot['checked_in_at']));
+                $participantPayload['checked_in'] = $existingSlot['checked_in_at'];
+                echo json_encode([
+                    'success'        => true,
+                    'already_in'     => true,
+                    'slot_number'    => $slotNumber,
+                    'slot_name'      => $slotName,
+                    'checked_in_at'  => $formattedTime,
+                    'message'        => "បានកត់ត្រាវត្តមានរួចនៅម៉ោង\n{$formattedTime}",
+                    'participant'    => $participantPayload
+                ]);
+                exit;
+            }
+
+            // Save Attendance
+            $helperNote = !empty($device['helper_name']) ? ('ជំនួយការ៖ ' . $device['helper_name']) : ('Helper Pass: ' . $pass['label']);
+            $method = ($scanType === 'face') ? 'face' : 'helper_station';
+
+            // 1. Record into attendance_slots
+            $insertedSlotId = 0;
+            try {
+                $db->execute(
+                    "INSERT INTO attendance_slots 
+                     (business_id, workshop_id, registration_id, participant_id, checkin_date, slot_number, slot_name, checked_in_at, check_in_method, check_in_staff_id, notes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)",
+                    [$businessId, $workshopId, $qr['registration_id'], $qr['participant_id'], $todayDate, $slotNumber, $slotName, $method, $pass['created_by'], $helperNote]
+                );
+                $insertedSlotId = (int)$db->lastInsertId();
+            } catch (Throwable $se) {
+                error_log('attendance_slots helper insert non-fatal: ' . $se->getMessage());
+            }
+
+            // 2. Maintain backward compatibility with main attendance table
+            $existing = $db->queryOne("SELECT * FROM attendance WHERE registration_id = ? AND workshop_id = ?", [$qr['registration_id'], $workshopId]);
+            try {
+                if ($existing) {
+                    if ($slotNumber >= 2) {
+                        $db->execute(
+                            "UPDATE attendance SET checked_out_at = NOW(), check_in_staff_id = ?, notes = ? WHERE registration_id = ?",
+                            [$pass['created_by'], $helperNote, $qr['registration_id']]
+                        );
+                    } else {
+                        $db->execute(
+                            "UPDATE attendance SET checked_in_at = COALESCE(checked_in_at, NOW()), check_in_method = ?, check_in_staff_id = ?, notes = ? WHERE registration_id = ?",
+                            [$method, $pass['created_by'], $helperNote, $qr['registration_id']]
+                        );
+                    }
+                } else {
+                    $db->execute(
+                        "INSERT INTO attendance (business_id, workshop_id, registration_id, participant_id, checked_in_at, check_in_method, check_in_staff_id, notes, is_synced)
+                         VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, 1)",
+                        [$businessId, $workshopId, $qr['registration_id'], $qr['participant_id'], $method, $pass['created_by'], $helperNote]
+                    );
+                }
+            } catch (Throwable $ae) {
+                $fallbackMethod = 'qr';
+                if ($existing) {
+                    $db->execute(
+                        "UPDATE attendance SET checked_in_at = COALESCE(checked_in_at, NOW()), check_in_method = ?, check_in_staff_id = ?, notes = ? WHERE registration_id = ?",
+                        [$fallbackMethod, $pass['created_by'], $helperNote, $qr['registration_id']]
+                    );
+                } else {
+                    $db->execute(
+                        "INSERT INTO attendance (business_id, workshop_id, registration_id, participant_id, checked_in_at, check_in_method, check_in_staff_id, notes, is_synced)
+                         VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, 1)",
+                        [$businessId, $workshopId, $qr['registration_id'], $qr['participant_id'], $fallbackMethod, $pass['created_by'], $helperNote]
+                    );
+                }
+            }
+
+            $db->execute("UPDATE registrations SET status = 'attended' WHERE id = ? AND status = 'confirmed'", [$qr['registration_id']]);
+
+            try {
+                $db->execute(
+                    "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, registration_id, participant_id, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,?,?,'success')",
+                    [$businessId, $workshopId, $qrToken, 'checkin', $qr['registration_id'], $qr['participant_id'], $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
+                );
+            } catch (Throwable $e) {}
+
+            $participantPayload['checked_in'] = date('Y-m-d H:i:s');
+
+            // Auto-notify Telegram Group about Check-in with Slot Name
+            try {
+                if (file_exists(ROOT_PATH . '/helpers/telegram_helper.php')) {
+                    require_once ROOT_PATH . '/helpers/telegram_helper.php';
+                    if (function_exists('telegram_notify_checkin')) {
+                        telegram_notify_checkin($workshopId, $participantPayload, $method, $slotName);
+                    }
+                }
+            } catch (Throwable $tge) {
+                error_log('Telegram helper checkin notification error: ' . $tge->getMessage());
+            }
+
+            $successMsg = ($scanType === 'face')
+                ? "ស្គេនមុខបានជោគជ័យ! [{$slotName}]"
+                : "កត់ត្រាវត្តមាន [{$slotName}] ជោគជ័យ!";
+
+            $cleanSlot = preg_replace('/^ពេល/', 'វេន', $slotName);
+            $checkinTime = date('H:i:s');
+            $participantPayload['checked_in'] = date('Y-m-d H:i:s');
+            $participantPayload['slot_id'] = $insertedSlotId;
+            $participantPayload['slot_display'] = $cleanSlot;
+
+            echo json_encode([
+                'success'      => true,
+                'already_in'   => false,
+                'slot_id'      => $insertedSlotId,
+                'slot_number'  => $slotNumber,
+                'slot_name'    => $slotName,
+                'slot_display' => $cleanSlot,
+                'checkin_time' => $checkinTime,
+                'checked_in_at'=> date('H:i:s, d/m/Y'),
+                'scan_type'    => $scanType,
+                'method'       => $method,
+                'message'      => $successMsg,
+                'participant'  => $participantPayload
+            ]);
+            exit;
+
+
+        } catch (Throwable $e) {
+            error_log('Helper scan exception: ' . $e->getMessage());
             echo json_encode([
                 'success' => false,
-                'message' => 'ការចុះឈ្មោះមិនទាន់ត្រូវបានបញ្ជាក់ (Confirmed) នៅឡើយទេ។',
-                'participant' => ['name' => $qr['name'], 'phone' => $qr['phone']]
+                'message' => 'កំហុសប្រព័ន្ធម៉ាស៊ីនបម្រើ៖ ' . $e->getMessage()
             ]);
             exit;
         }
-
-        // Check if already checked in
-        $existing = $db->queryOne("SELECT * FROM attendance WHERE registration_id = ? AND workshop_id = ?", [$qr['registration_id'], $workshopId]);
-
-        $photoUrl = '';
-        if (!empty($qr['photo'])) {
-            $photoUrl = (function_exists('getUploadUrl')) ? getUploadUrl($qr['photo']) : APP_URL . '/' . ltrim($qr['photo'], '/\\');
-        }
-
-        $participantPayload = [
-            'reg_id'       => $qr['registration_id'],
-            'name'         => $qr['name'],
-            'email'        => $qr['email'],
-            'phone'        => $qr['phone'],
-            'gender'       => $qr['gender'],
-            'company'      => $qr['company'] ?: ($qr['delegation_org'] ?? 'មិនបានបញ្ជាក់ស្ថាប័ន'),
-            'province'     => $qr['delegation_province'] ?: ($qr['participant_province'] ?? 'ទូទៅ'),
-            'position'     => $qr['position'] ?: '-',
-            'photo_url'    => $photoUrl,
-            'id_card'      => $qr['id_card_number'],
-            'ticket'       => $qr['ticket_name'] ?? 'ស្តង់ដារ',
-            'reg_code'     => $qr['registration_code'],
-            'is_vip'       => (bool)$qr['is_vip'],
-            'payment_status' => $qr['payment_status']
-        ];
-
-        if ($existing && $existing['checked_in_at']) {
-            $db->execute(
-                "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, registration_id, participant_id, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,?,?,'already_scanned')",
-                [$businessId, $workshopId, $qrToken, 'checkin', $qr['registration_id'], $qr['participant_id'], $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
-            );
-            $participantPayload['checked_in'] = $existing['checked_in_at'];
-            echo json_encode([
-                'success'     => true,
-                'already_in'  => true,
-                'message'     => 'បានកត់ត្រាវត្តមានរួចហើយកាលពីម៉ោង ' . date('H:i:s, d/m/Y', strtotime($existing['checked_in_at'])),
-                'participant' => $participantPayload
-            ]);
-            exit;
-        }
-
-        // Save Attendance
-        $helperNote = !empty($device['helper_name']) ? ('ជំនួយការ៖ ' . $device['helper_name']) : ('Helper Pass: ' . $pass['label']);
-
-        if ($existing) {
-            $db->execute(
-                "UPDATE attendance SET checked_in_at = NOW(), check_in_method = 'helper_station', check_in_staff_id = ?, notes = ? WHERE registration_id = ?",
-                [$pass['created_by'], $helperNote, $qr['registration_id']]
-            );
-        } else {
-            $db->execute(
-                "INSERT INTO attendance (business_id, workshop_id, registration_id, participant_id, checked_in_at, check_in_method, check_in_staff_id, notes, is_synced)
-                 VALUES (?, ?, ?, ?, NOW(), 'helper_station', ?, ?, 1)",
-                [$businessId, $workshopId, $qr['registration_id'], $qr['participant_id'], $pass['created_by'], $helperNote]
-            );
-        }
-
-        $db->execute("UPDATE registrations SET status = 'attended' WHERE id = ? AND status = 'confirmed'", [$qr['registration_id']]);
-
-        $db->execute(
-            "INSERT INTO qr_scan_logs (business_id, workshop_id, token, scan_type, registration_id, participant_id, scanned_by, ip_address, result) VALUES (?,?,?,?,?,?,?,?,'success')",
-            [$businessId, $workshopId, $qrToken, 'checkin', $qr['registration_id'], $qr['participant_id'], $pass['created_by'], $_SERVER['REMOTE_ADDR'] ?? '']
-        );
-
-        $participantPayload['checked_in'] = date('Y-m-d H:i:s');
-
-        echo json_encode([
-            'success'     => true,
-            'already_in'  => false,
-            'message'     => 'កត់ត្រាវត្តមានជោគជ័យ!',
-            'participant' => $participantPayload
-        ]);
-        exit;
     }
 
     public static function search(): void {

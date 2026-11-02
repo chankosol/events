@@ -2,9 +2,21 @@
 
 // Initialize tooltips and popovers
 document.addEventListener('DOMContentLoaded', function() {
-  // Bootstrap tooltips
-  const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-  tooltips.forEach(el => new bootstrap.Tooltip(el));
+  // Bootstrap tooltips for data-bs-toggle="tooltip" and title elements
+  function initTooltips(context) {
+    (context || document).querySelectorAll('[data-bs-toggle="tooltip"], [title]:not([data-bs-toggle])').forEach(el => {
+      if (el.getAttribute('title') && !el._tooltipInit) {
+        el._tooltipInit = true;
+        try { new bootstrap.Tooltip(el, { trigger: 'hover' }); } catch(e){}
+      }
+    });
+  }
+  initTooltips();
+
+  // Re-init inside modals when opened
+  document.addEventListener('shown.bs.modal', function(e) {
+    initTooltips(e.target);
+  });
 
   // Bootstrap popovers
   const popovers = document.querySelectorAll('[data-bs-toggle="popover"]');

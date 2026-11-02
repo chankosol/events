@@ -31,12 +31,17 @@ class PlatformSettingsController {
             'support_email', 'maintenance_mode', 'registration_enabled', 'invoice_prefix',
             // Bakong Gateway Settings
             'bakong_api_base_url', 'bakong_api_token', 'bakong_account_id',
-            'bakong_merchant_name', 'bakong_merchant_city', 'bakong_mcc', 'bakong_static_qr_text'
+            'bakong_merchant_name', 'bakong_merchant_city', 'bakong_mcc', 'bakong_static_qr_text',
+            // Official Telegram Bot Settings
+            'telegram_bot_enabled', 'telegram_bot_username', 'telegram_bot_token'
         ];
 
         foreach ($fields as $key) {
             if (isset($_POST[$key])) {
                 $val = trim($_POST[$key]);
+                if ($key === 'telegram_bot_username') {
+                    $val = ltrim($val, '@');
+                }
                 $exists = $db->queryOne("SELECT id FROM platform_settings WHERE setting_key = ?", [$key]);
                 if ($exists) {
                     $db->execute("UPDATE platform_settings SET setting_value = ?, updated_at = NOW() WHERE setting_key = ?", [$val, $key]);
@@ -47,7 +52,7 @@ class PlatformSettingsController {
         }
 
         auditLog('platform_settings_updated', 'platform_settings', 1);
-        Session::flash('success', 'Platform settings and Bakong gateway updated successfully.');
+        Session::flash('success', 'ការកំណត់ប្រព័ន្ធរួមមាន Telegram Bot និង Bakong Gateway ត្រូវបានរក្សាទុកដោយជោគជ័យ។');
         redirect(APP_URL . '/platform/settings');
     }
 
@@ -120,5 +125,65 @@ class PlatformSettingsController {
         }
 
         jsonResponse(true, 'បានធ្វើតេស្តរួចរាល់', ['tokens_count' => count($tokens), 'results' => $results]);
+    }
+
+    public static function testTelegram(): void {
+        requireAuth();
+        requirePlatformAdmin();
+        requireCsrf();
+
+        $token = trim($_POST['telegram_bot_token'] ?? '');
+        if (empty($token)) {
+            $token = telegram_get_setting('telegram_bot_token', '');
+        }
+
+        if (empty($token)) {
+            jsonResponse(false, 'សូមបញ្ចូល Telegram Bot Token មុនពេលធ្វើតេស្ត។');
+        }
+
+        $res = telegram_api_request('getMe', [], $token);
+        if (!empty($res['ok']) && !empty($res['result'])) {
+            $bot = $res['result'];
+            $botName = $bot['first_name'] ?? 'Bot';
+            $botUser = '@' . ($bot['username'] ?? '');
+            $canJoin = !empty($bot['can_join_groups']) ? 'បាទ/ចាស' : 'ទេ';
+            jsonResponse(true, "✓ ភ្ជាប់បានជោគជ័យ! Bot ឈ្មោះ: {$botName} ({$botUser}) ដំណើរការធម្មតា។", [
+                'bot_id' => $bot['id'] ?? '',
+                'bot_name' => $botName,
+                'bot_username' => $botUser,
+                'can_join_groups' => $canJoin
+            ]);
+        } else {
+            $err = $res['description'] ?? 'មិនអាចភ្ជាប់ទៅកាន់ Telegram API បានឡើយ។';
+            jsonResponse(false, "❌ កំហុស Telegram៖ {$err} (សូមពិនិត្យមើល Bot Token ឡើងវិញ)");
+        }
+    }
+
+    public static function setTelegramWebhook(): void {
+        requireAuth();
+        requirePlatformAdmin();
+        requireCsrf();
+
+        $token = trim($_POST['telegram_bot_token'] ?? '');
+        if (empty($token)) {
+            $token = telegram_get_setting('telegram_bot_token', '');
+        }
+
+        if (empty($token)) {
+            jsonResponse(false, 'សូមបញ្ចូល Telegram Bot Token មុនពេលភ្ជាប់ Webhook។');
+        }
+
+        $webhookUrl = APP_URL . '/api/telegram/webhook';
+        $res = telegram_api_request('setWebhook', [
+            'url' => $webhookUrl,
+            'drop_pending_updates' => false
+        ], $token);
+
+        if (!empty($res['ok'])) {
+            jsonResponse(true, "✓ បានភ្ជាប់ Webhook ទៅកាន់ Telegram ដោយជោគជ័យ!\nWebhook URL: {$webhookUrl}");
+        } else {
+            $err = $res['description'] ?? 'បរាជ័យក្នុងការភ្ជាប់ Webhook។';
+            jsonResponse(false, "❌ កំហុស Webhook៖ {$err}");
+        }
     }
 }

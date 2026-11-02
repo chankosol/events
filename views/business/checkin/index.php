@@ -83,6 +83,141 @@
     #reader button:hover { background-color: #0b5ed7; }
     #reader a { color: #0d6efd; text-decoration: none; font-size: 0.85rem; }
 
+    /* Hide html5-qrcode pause/info messages completely */
+    #reader__header_message,
+    #reader__status_span,
+    #reader > div > span[style*="background"],
+    #reader > div > div[style*="background"],
+    #reader div[style*="background-color: rgba(0, 0, 0"],
+    #reader div[style*="background: rgba(9, 9, 9"],
+    #reader div[style*="rgba(9, 9, 9"],
+    #reader div[style*="rgba(9,9,9"],
+    #reader div[style*="top: 0px"][style*="position: absolute"] {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
+    /* Modern Segmented Control for QR ⇄ Face Switcher */
+    .scan-segmented-control {
+        display: inline-flex;
+        background: #f1f5f9;
+        padding: 3px;
+        border-radius: 999px;
+        border: 1px solid #e2e8f0;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .scan-seg-btn {
+        border: none;
+        background: transparent;
+        padding: 4px 13px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #64748b;
+        border-radius: 999px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        line-height: 1.3;
+        white-space: nowrap;
+    }
+    .scan-seg-btn:hover {
+        color: #1e293b;
+    }
+    .scan-seg-btn.active {
+        background: #ffffff;
+        color: #0d6efd;
+        box-shadow: 0 2px 6px rgba(13, 110, 253, 0.15), 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .scan-seg-btn.active.btn-face-active {
+        background: #0d6efd;
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35);
+    }
+
+    /* Face AI Mode Overrides: Clean full camera view with sleek Face ID frame */
+    .scanner-container.mode-face #reader__scan_region svg,
+    .scanner-container.mode-face #reader__scan_region div[style*="border"],
+    .scanner-container.mode-face #reader__scan_region div[style*="box-shadow"],
+    .scanner-container.mode-face #camera-focus-reticle,
+    .scanner-container.mode-face #html5-qrcode-button-camera-stop {
+        display: none !important;
+        opacity: 0 !important;
+    }
+
+    /* Face AI Guide Frame (Apple Face ID style sleek corners) */
+    .face-ai-guide {
+        position: absolute;
+        inset: 12% 16%;
+        pointer-events: none;
+        z-index: 5;
+        border-radius: 24px;
+        display: none;
+        box-sizing: border-box;
+    }
+    .scanner-container.mode-face .face-ai-guide {
+        display: block;
+    }
+    .face-ai-guide::before,
+    .face-ai-guide::after,
+    .face-ai-guide-inner::before,
+    .face-ai-guide-inner::after {
+        content: '';
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border-color: #10b981;
+        border-style: solid;
+        filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.7));
+    }
+    .face-ai-guide::before       { top: 0; left: 0; border-width: 3.5px 0 0 3.5px; border-top-left-radius: 18px; }
+    .face-ai-guide::after        { top: 0; right: 0; border-width: 3.5px 3.5px 0 0; border-top-right-radius: 18px; }
+    .face-ai-guide-inner::before { bottom: 0; left: 0; border-width: 0 0 3.5px 3.5px; border-bottom-left-radius: 18px; }
+    .face-ai-guide-inner::after  { bottom: 0; right: 0; border-width: 0 3.5px 3.5px 0; border-bottom-right-radius: 18px; }
+
+    /* Face Scanning Beam */
+    .face-ai-scan-line {
+        position: absolute;
+        left: 6px;
+        right: 6px;
+        top: 6px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #10b981, transparent);
+        box-shadow: 0 0 10px #10b981;
+        animation: faceScanSweep 2.2s ease-in-out infinite alternate;
+        opacity: 0.85;
+    }
+    @keyframes faceScanSweep {
+        to { top: calc(100% - 8px); }
+    }
+
+    /* Floating subtle hint at bottom of camera */
+    .face-bottom-hint {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 7;
+        background: rgba(15, 23, 42, 0.75);
+        color: #ffffff;
+        backdrop-filter: blur(6px);
+        padding: 3px 13px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: none;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+    .scanner-container.mode-face .face-bottom-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
     /* Floating Zoom & Focus Sidebar on the left of scanning container */
     .zoom-sidebar {
         position: absolute;
@@ -308,8 +443,8 @@
 </style>
 
 <!-- Top Navigation & Stats Bar -->
-<div class="stats-bar px-3 py-2 d-flex justify-content-between align-items-center mb-3">
-    <div class="d-flex align-items-center gap-2">
+<div class="stats-bar px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
         <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> ត្រឡប់
         </a>
@@ -329,7 +464,7 @@
     <div class="d-flex align-items-center gap-3">
         <!-- Live Counter in Top Bar with clear container & spacing -->
         <div class="d-none d-md-flex align-items-center gap-2 px-3 py-1.5 bg-light rounded-pill border shadow-2xs">
-            <span class="small text-muted mb-0" style="font-size: 0.75rem;">វត្តមានជាក់ស្តែង៖</span>
+            <span class="small text-muted mb-0" style="font-size: 0.75rem;">វត្តមាន៖</span>
             <span class="fw-bold text-success" id="stats-checked-in" style="font-size: 0.98rem;">
                 <?= $totalCheckedIn ?> / <?= $totalConfirmed ?>
             </span>
@@ -583,28 +718,86 @@
             <div class="card shadow-sm border-0 mb-3">
                 <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-dark small">
-                            <i class="bi bi-camera-video-fill text-primary me-1"></i>ស្កេនកូដ QR តាមកាមេរ៉ា
+                        <span class="fw-bold text-dark small d-flex align-items-center gap-1.5" id="scanner-title-label">
+                            <i class="bi <?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'face' ? 'bi-person-bounding-box' : 'bi-camera-video-fill' ?> text-primary" id="scanner-title-icon" style="font-size: 0.95rem;"></i>
+                            <span id="scanner-title-text"><?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'face' ? 'AI ស្កេនមុខ' : 'ស្កេន QR' ?></span>
                         </span>
-                        <span class="badge bg-success-subtle text-success small">ដំណើរការ</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small" id="scanner-status-badge" style="font-size: 0.68rem; padding: 2.5px 8px;">ដំណើរការ</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small <?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'face' ? '' : 'd-none' ?>" id="face-count-header-badge" style="font-size: 0.68rem; padding: 2.5px 8px;">
+                            <i class="bi bi-person-check-fill me-1"></i><span id="face-count-text">0 មុខបានចុះ</span>
+                        </span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Modern Apple-style Segmented Switcher (QR vs Face AI) -->
+                        <div class="scan-segmented-control" id="hostScanModeGroup" title="ប្តូរម៉ូដស្កេនសម្រាប់គ្រប់ស្ថានីយ">
+                            <button type="button" class="scan-seg-btn <?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'qr' ? 'active' : '' ?>" id="btn-mode-qr" onclick="switchScanMode('qr')">
+                                <i class="bi bi-qr-code"></i>
+                                <span>ស្កេន QR</span>
+                            </button>
+                            <button type="button" class="scan-seg-btn <?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'face' ? 'active btn-face-active' : '' ?>" id="btn-mode-face" onclick="switchScanMode('face')">
+                                <i class="bi bi-person-bounding-box"></i>
+                                <span>AI ស្កេនមុខ</span>
+                            </button>
+                        </div>
                         <!-- Camera Switcher (Auto-selects Logi 1080P if found) -->
                         <div id="camera-select-wrapper" style="display: none;">
-                            <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.75rem; height: 26px; max-width: 175px;">
+                            <select id="camera-select" class="form-select form-select-sm py-0 px-2" style="font-size: 0.72rem; height: 28px; max-width: 155px; border-radius: 8px;">
                             </select>
                         </div>
                         <!-- Helper Pass Button (Create temporary scan link for helpers) -->
-                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem; padding: 2px 9px; height: 26px;" data-bs-toggle="modal" data-bs-target="#helperPassModal" id="btn-open-helper-modal" title="បង្កើតលីងជំនួយការស្កេនបណ្តោះអាសន្ន">
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 0.74rem; padding: 3px 10px; height: 28px;" data-bs-toggle="modal" data-bs-target="#helperPassModal" id="btn-open-helper-modal" title="បង្កើតលីងជំនួយការស្កេនបណ្តោះអាសន្ន">
                             <i class="bi bi-qr-code"></i>
-                            <span class="d-none d-sm-inline">បង្កើតលីងជំនួយការ</span>
+                            <span class="d-none d-sm-inline">លីងជំនួយការ</span>
                             <span class="d-inline d-sm-none">ជំនួយការ</span>
                             <span class="badge bg-primary text-white rounded-pill ms-1" id="active-helper-count-badge" style="display: none; font-size: 0.65rem;">0</span>
                         </button>
                     </div>
                 </div>
                 <div class="card-body p-3">
-                    <div class="scanner-container">
+                    <?php 
+                    $dailyScans = (int)($workshop['daily_scans_required'] ?? 1);
+                    if ($dailyScans >= 2): 
+                        if ($dailyScans == 2) {
+                            $slotsList = [
+                                1 => ['label' => 'ពេលព្រឹក', 'en' => 'Morning', 'icon' => 'bi-sun-fill text-warning'],
+                                2 => ['label' => 'ពេលរសៀល', 'en' => 'Afternoon', 'icon' => 'bi-cloud-sun-fill text-primary']
+                            ];
+                        } elseif ($dailyScans == 3) {
+                            $slotsList = [
+                                1 => ['label' => 'ពេលព្រឹក', 'en' => 'Morning', 'icon' => 'bi-sun-fill text-warning'],
+                                2 => ['label' => 'ពេលរសៀល', 'en' => 'Afternoon', 'icon' => 'bi-cloud-sun-fill text-primary'],
+                                3 => ['label' => 'ពេលល្ងាច', 'en' => 'Closing', 'icon' => 'bi-moon-stars-fill text-indigo']
+                            ];
+                        } else {
+                            $slotsList = [
+                                1 => ['label' => 'ព្រឹកចូល', 'en' => 'In', 'icon' => 'bi-box-arrow-in-right text-success'],
+                                2 => ['label' => 'ព្រឹកចេញ', 'en' => 'Out', 'icon' => 'bi-box-arrow-right text-warning'],
+                                3 => ['label' => 'រសៀលចូល', 'en' => 'In', 'icon' => 'bi-box-arrow-in-right text-info'],
+                                4 => ['label' => 'រសៀលចេញ', 'en' => 'Out', 'icon' => 'bi-box-arrow-right text-danger']
+                            ];
+                        }
+                    ?>
+                    <!-- Daily Scan Slot Selector Pills -->
+                    <div class="mb-3 bg-light p-2 rounded-3 border">
+                        <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                            <span class="small fw-bold text-dark" style="font-size: 0.76rem;">
+                                <i class="bi bi-calendar2-range text-primary me-1"></i> ជ្រើសរើសវេនស្កេន (<?= $dailyScans ?> វេន/ថ្ងៃ)
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size: 0.65rem;" id="slot-auto-hint">
+                                <i class="bi bi-clock me-1"></i>ស្វ័យប្រវត្តិតាមម៉ោង
+                            </span>
+                        </div>
+                        <div class="btn-group w-100 p-0.5 rounded-pill bg-white border shadow-2xs" role="group" id="scan-slot-pills">
+                            <?php foreach ($slotsList as $sNum => $sInfo): ?>
+                                <button type="button" class="btn btn-sm rounded-pill py-1 px-2 fw-semibold slot-pill-btn btn-light text-muted" data-slot="<?= $sNum ?>" onclick="setScanSlot(<?= $sNum ?>)" style="font-size: 0.75rem; transition: all 0.2s;">
+                                    <i class="bi <?= $sInfo['icon'] ?> me-1"></i><?= $sInfo['label'] ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="scanner-container position-relative <?= ($workshop['checkin_scan_mode'] ?? 'qr') === 'face' ? 'mode-face' : '' ?>" id="scanner-main-wrap">
                         <!-- Floating Zoom & Focus Buttons on Left: 1x, 2x, 3x, 5x, AF -->
                         <div class="zoom-sidebar" id="zoom-sidebar" title="Zoom & Auto Focus">
                             <button type="button" class="btn-zoom active" data-zoom="1" title="ធម្មតា (1x)">1x</button>
@@ -614,13 +807,37 @@
                             <button type="button" class="btn-zoom btn-autofocus" id="btn-autofocus" title="Auto Focus (ផ្តោតច្បាស់ស្វ័យប្រវត្តិ)">AF</button>
                         </div>
 
+                        <!-- Face AI Guide Frame (Apple Face ID style sleek corners) -->
+                        <div class="face-ai-guide" id="face-ai-guide">
+                            <div class="face-ai-guide-inner"></div>
+                            <div class="face-ai-scan-line"></div>
+                        </div>
+
+                        <!-- Floating subtle hint at bottom of camera in Face Mode -->
+                        <div class="face-bottom-hint" id="face-bottom-hint">
+                            <i class="bi bi-person-bounding-box text-success"></i>
+                            <span>សូមដាក់មុខឱ្យចំកណ្តាលកាមេរ៉ា</span>
+                        </div>
+
                         <div id="camera-focus-reticle" class="focus-reticle"></div>
                         <div id="reader"></div>
+                        <canvas id="face-hud-canvas" class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 6; pointer-events: none; display: none;"></canvas>
                         <div id="scan-result" class="scan-result-overlay">
                             <i id="scan-icon" class="bi display-1 mb-2"></i>
                             <h3 id="scan-message" class="text-center px-3"></h3>
                             <div id="scan-participant-name" class="fs-4 fw-bold mt-2"></div>
                         </div>
+                    </div>
+
+                    <!-- Clean alert if no faces enrolled yet -->
+                    <div id="no-face-alert" class="alert alert-warning border border-warning-subtle py-2 px-3 mt-2 rounded-3 small d-none align-items-center justify-content-between mb-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+                            <span>មិនទាន់មានទិន្នន័យផ្ទៃមុខសម្រាប់ស្កេននៅឡើយទេ។</span>
+                        </div>
+                        <a href="<?= APP_URL ?>/workshops/<?= $workshopId ?>/registrations" class="btn btn-sm btn-warning text-dark fw-bold py-1 px-3 rounded-pill text-nowrap" style="font-size: 0.75rem;">
+                            <i class="bi bi-person-plus-fill me-1"></i> បញ្ជីសិក្ខាកាម
+                        </a>
                     </div>
                 </div>
             </div>
@@ -749,14 +966,19 @@
                             <tbody id="recent-attendance-tbody">
                                 <?php if (!empty($recentAttendance)): ?>
                                     <?php foreach ($recentAttendance as $ra): ?>
-                                        <tr data-reg-id="<?= $ra['registration_id'] ?>" data-reg-code="<?= htmlspecialchars($ra['registration_code']) ?>">
+                                        <tr data-reg-id="<?= $ra['registration_id'] ?>" data-reg-code="<?= htmlspecialchars($ra['registration_code']) ?>" data-slot-number="<?= $ra['slot_number'] ?? '' ?>" data-slot-id="<?= $ra['slot_id'] ?? '' ?>">
                                             <td class="ps-3 fw-bold text-dark text-nowrap"><?= htmlspecialchars($ra['name']) ?></td>
                                             <td><span class="badge bg-primary-subtle text-primary border"><?= htmlspecialchars($ra['province']) ?></span></td>
                                             <td class="text-muted small text-truncate" style="max-width: 130px;" title="<?= htmlspecialchars($ra['company']) ?>"><?= htmlspecialchars($ra['company']) ?></td>
                                             <td class="text-muted small text-truncate" style="max-width: 100px;" title="<?= htmlspecialchars($ra['position']) ?>"><?= htmlspecialchars($ra['position']) ?></td>
-                                            <td class="text-success fw-bold text-nowrap"><?= date('H:i:s', strtotime($ra['checked_in_at'])) ?></td>
+                                            <td class="text-success fw-bold text-nowrap">
+                                                <?php if (!empty($ra['slot_name'])): ?>
+                                                    <span class="badge bg-light text-secondary border me-1 fw-normal" style="font-size: 0.72rem;"><?= htmlspecialchars(preg_replace('/^ពេល/', 'វេន', $ra['slot_name'])) ?></span>
+                                                <?php endif; ?>
+                                                <?= date('H:i:s', strtotime($ra['checked_in_at'])) ?>
+                                            </td>
                                             <td class="text-end pe-3 text-nowrap">
-                                                <button type="button" class="btn btn-sm btn-outline-danger fw-normal" style="font-size: 0.75rem; padding: 3px 7px; line-height: 1.2;" title="លុបវត្តមាន (Reset)" onclick="resetAttendance(<?= $ra['registration_id'] ?>)"><i class="bi bi-arrow-counterclockwise" style="margin-right: 2px;"></i>លុបវត្តមាន</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger fw-normal" style="font-size: 0.75rem; padding: 3px 7px; line-height: 1.2;" title="លុបវត្តមានដើម្បីស្កេនឡើងវិញ" onclick="resetAttendance(<?= $ra['registration_id'] ?>, <?= (int)($ra['slot_number'] ?? 0) ?>, <?= (int)($ra['slot_id'] ?? 0) ?>, this)"><i class="bi bi-arrow-counterclockwise" style="margin-right: 2px;"></i>លុបវត្តមាន</button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -808,7 +1030,7 @@
                         <i class="bi bi-printer-fill fs-4"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-1">៣. បោះពុម្ពប័ណ្ណសម្គាល់ខ្លួន (Badge)</h6>
+                        <h6 class="fw-bold mb-1">៣. បោះពុម្ពកាតសម្គាល់ខ្លួន</h6>
                         <p class="text-muted small mb-0">ពេលស្កេនជោគជ័យ ព័ត៌មានសិក្ខាកាមនឹងបង្ហាញនៅខាងស្តាំ លោកអ្នកអាចចុចប៊ូតុង <strong>«បោះពុម្ពប័ណ្ណ»</strong> ដើម្បីព្រីនប័ណ្ណភ្លាមៗ។</p>
                     </div>
                 </div>
@@ -900,7 +1122,7 @@
                                     <div class="form-text small">ដាក់ឈ្មោះដើម្បីងាយស្រួលចំណាំថាតើនរណា ឬតុណាជាអ្នកស្កេន។</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold text-dark small">កំណត់ចំនួនឧបករណ៍ (Max Devices)</label>
+                                    <label class="form-label fw-bold text-dark small" title="កំណត់ចំនួនឧបករណ៍ដែលអាចចូលប្រើបាន">ចំនួនឧបករណ៍</label>
                                     <select class="form-select" id="hp-max-devices" name="max_devices">
                                         <option value="1" selected>១ គ្រឿង (ណែនាំ - សម្រាប់ ១ ទូរស័ព្ទ)</option>
                                         <option value="2">២ គ្រឿង</option>
@@ -944,7 +1166,7 @@
                                     </div>
                                 </div>
                                 <div class="col-sm-7">
-                                    <label class="small fw-bold text-dark mb-1">តំណភ្ជាប់ស្កេនផ្ទាល់ (Direct Link)</label>
+                                    <label class="small fw-bold text-dark mb-1" title="តំណភ្ជាប់សម្រាប់ជំនួយការស្កេនផ្ទាល់">តំណភ្ជាប់ស្កេន</label>
                                     <div class="input-group mb-2">
                                         <input type="text" class="form-control form-control-sm font-monospace" id="np-url-input" readonly>
                                         <button class="btn btn-outline-primary btn-sm fw-bold" type="button" id="btn-copy-np-url">
@@ -1010,10 +1232,13 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="<?= APP_URL ?>/assets/js/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 <script>
     const WORKSHOP_ID = <?= $workshopId ?>;
     const CSRF_TOKEN = '<?= Session::get('_csrf_token') ?>';
     const APP_URL = '<?= APP_URL ?>';
+    const INITIAL_SCAN_MODE = '<?= $workshop['checkin_scan_mode'] ?? 'qr' ?>';
+    const DAILY_SCANS_REQUIRED = <?= (int)($workshop['daily_scans_required'] ?? 1) ?>;
 </script>
 <script src="<?= APP_URL ?>/assets/js/sweetalert2.all.min.js"></script>
 <script src="<?= APP_URL ?>/assets/js/checkin.js?v=<?= filemtime(ROOT_PATH . '/assets/js/checkin.js') ?>"></script>
