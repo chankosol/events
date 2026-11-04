@@ -861,25 +861,27 @@ $breadcrumbs = [
 
 <!-- Modal: Ticket Specific QR Code -->
 <div class="modal fade" id="ticketQrModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 350px;">
         <div class="modal-content border-0 shadow-lg rounded-4 text-center p-3">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title fw-bold text-dark w-100" id="ticketQrTitle">QR កូដសំបុត្រ</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 pb-1 position-relative d-flex align-items-center justify-content-center">
+                <div class="d-flex align-items-center justify-content-center gap-2 flex-nowrap pe-4" style="white-space: nowrap;">
+                    <h6 class="modal-title fw-bold text-dark mb-0 text-nowrap" id="ticketQrTitle">QR កូដសំបុត្រ</h6>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-nowrap" id="ticketQrPrice"></span>
+                </div>
+                <button type="button" class="btn-close position-absolute end-0 top-50 translate-middle-y me-3" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body py-2">
-                <div class="badge bg-primary-subtle text-primary border border-primary-subtle mb-2" id="ticketQrPrice"></div>
                 <div class="bg-white p-2 rounded-3 border d-inline-block shadow-xs mb-2">
-                    <img id="ticketQrImg" src="" class="img-fluid" alt="Ticket QR" style="width: 180px; height: 180px;">
+                    <img id="ticketQrImg" src="" class="img-fluid" alt="Ticket QR" style="width: 190px; height: 190px;">
                 </div>
-                <div class="input-group input-group-sm mb-2">
-                    <input type="text" id="ticketQrUrlInput" class="form-control form-control-sm font-monospace text-center small" readonly>
+                <div class="input-group input-group-sm mb-3">
+                    <input type="text" id="ticketQrUrlInput" class="form-control form-control-sm font-monospace text-center small text-muted" readonly onclick="this.select()">
                 </div>
-                <div class="d-flex gap-2 justify-content-center">
-                    <button type="button" class="btn btn-sm btn-primary px-3" onclick="copyTicketQrInput(this)">
-                        <i class="bi bi-clipboard me-1"></i> ចម្លង Link
+                <div class="d-flex gap-2 justify-content-center flex-nowrap">
+                    <button type="button" class="btn btn-sm btn-primary px-3 text-nowrap flex-fill" style="white-space: nowrap;" onclick="copyTicketQrInput(this)">
+                        <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
                     </button>
-                    <a id="ticketQrDownloadBtn" href="" download="ticket_qr.png" target="_blank" class="btn btn-sm btn-outline-secondary px-3">
+                    <a id="ticketQrDownloadBtn" href="" download="ticket_qr.png" target="_blank" class="btn btn-sm btn-outline-secondary px-3 text-nowrap flex-fill" style="white-space: nowrap;">
                         <i class="bi bi-download me-1"></i> ទាញយក
                     </a>
                 </div>
@@ -1421,7 +1423,7 @@ function copyDirectLink(url, btn) {
     if (button) {
         const origHtml = button.innerHTML;
         const origClass = button.className;
-        button.className = 'btn btn-sm btn-success text-white fw-bold';
+        button.className = 'btn btn-sm btn-success text-white fw-bold text-nowrap';
         button.innerHTML = '<i class="bi bi-check2 me-1"></i> បានចម្លង!';
         setTimeout(() => {
             button.className = origClass;
@@ -1439,7 +1441,10 @@ function showTicketQrModal(name, price, url) {
     const dlEl = document.getElementById('ticketQrDownloadBtn');
 
     if (titleEl) titleEl.textContent = name;
-    if (priceEl) priceEl.textContent = price;
+    if (priceEl) {
+        priceEl.textContent = price || '';
+        priceEl.style.display = price ? 'inline-block' : 'none';
+    }
     if (inputEl) inputEl.value = url;
     const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url);
     if (imgEl) imgEl.src = qrSrc;
