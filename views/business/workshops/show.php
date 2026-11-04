@@ -59,18 +59,13 @@ $breadcrumbs = [
                     </a>
                 <?php endif; ?>
 
-                <!-- 1. Public Event Link & QR Modal Trigger -->
-                <button type="button" class="btn btn-sm btn-outline-light px-2.5 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#qrPublicModal" title="តំណភ្ជាប់សាធារណៈ & QR">
-                    <i class="bi bi-qr-code"></i> <span>QR & តំណភ្ជាប់</span>
-                </button>
-
-                <!-- 2. Daily Scans Configuration Modal Trigger -->
+                <!-- 1. Daily Scans Configuration Modal Trigger -->
                 <button type="button" class="btn btn-sm btn-outline-light px-2.5 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#dailyScansModal" title="កំណត់ចំនួនដងស្កេនវត្តមាន">
                     <i class="bi bi-clock-history"></i> <span id="headerDailyScansBadge">ស្កេន <?php echo (int)($workshop['daily_scans_required'] ?? 1); ?>ដង</span>
                 </button>
 
-                <!-- 3. Ticket Types Modal Trigger -->
-                <button type="button" class="btn btn-sm btn-outline-light px-2.5 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#ticketsModal" title="ប្រភេទសំបុត្រ">
+                <!-- 2. Ticket Types & QR Modal Trigger -->
+                <button type="button" class="btn btn-sm btn-outline-light px-2.5 d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#ticketsModal" title="គ្រប់គ្រងសំបុត្រ & តំណភ្ជាប់ QR">
                     <i class="bi bi-ticket-perforated"></i> <span>សំបុត្រ (<?php echo count($tickets); ?>)</span>
                 </button>
 
@@ -689,26 +684,100 @@ $breadcrumbs = [
     </div>
 </div>
 
-<!-- 3. Modal: Ticket Types (Pure Khmer, No (Tickets)) -->
-<!-- 3. Modal: Ticket Types & Direct Links -->
+<!-- 2. Modal: Ticket Types & QR Links -->
 <div class="modal fade" id="ticketsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                    <i class="bi bi-ticket-perforated-fill text-primary"></i> ប្រភេទសំបុត្រ និងតំណភ្ជាប់ផ្ទាល់ (Direct Link)
+                    <i class="bi bi-ticket-perforated-fill text-primary"></i> គ្រប់គ្រងសំបុត្រ & តំណភ្ជាប់ QR (<?php echo count($tickets); ?>)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
-                    <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
-                    <div>
-                        <strong>ការគ្រប់គ្រងសំបុត្រ ៖</strong> សំបុត្រដែល <strong>«លាក់ (ឯកជន)»</strong> នឹងមិនបង្ហាញលើទំព័រសាធារណៈឡើយ។ លោកអ្នកអាចចម្លងតំណភ្ជាប់ផ្ទាល់ (Direct Link) ឬ QR កូដនៃសំបុត្រនោះ ផ្ញើជូនតែបុគ្គល ឬភ្ញៀវពិសេសដែលត្រូវទទួលបានប៉ុណ្ណោះ។
+                <!-- 1. Public Event Landing Page Link Card -->
+                <?php $publicEventUrl = qrCodeUrl('/event/' . $workshop['slug']); ?>
+                <div class="card border-primary-subtle bg-primary bg-opacity-10 rounded-3 mb-4 p-3 shadow-xs">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                <i class="bi bi-globe fs-5"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold text-dark d-block">ទំព័រដើមសិក្ខាសាលា (Public Event Page)</span>
+                                <small class="text-muted">តំណភ្ជាប់ទូទៅសម្រាប់សាធារណជនចូលមើលព័ត៌មាន និងចុះឈ្មោះសំបុត្រសាធារណៈ</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-primary px-3 fw-bold" onclick="copyDirectLink('<?php echo e($publicEventUrl); ?>', this)">
+                                <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
+                            </button>
+                            <button type="button" class="btn btn-sm btn-dark px-2.5" onclick="showTicketQrModal('ទំព័រដើមសិក្ខាសាលា', 'សាធារណៈ', '<?php echo e($publicEventUrl); ?>')" title="មើល QR Code">
+                                <i class="bi bi-qr-code me-1"></i> QR
+                            </button>
+                            <a href="<?php echo e($publicEventUrl); ?>" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="បើកមើលទំព័រសាធារណៈ">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
-                <div class="table-responsive">
+                <!-- 2. Tickets Table Header & Add Ticket Button -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-ticket-detailed text-primary"></i> បញ្ជីប្រភេទសំបុត្រនីមួយៗ (<?php echo count($tickets); ?>)
+                        </h6>
+                        <small class="text-muted">ចម្លងតំណភ្ជាប់ ឬ QR នៃសំបុត្រជាក់លាក់ណាមួយដើម្បីប្រើប្រាស់</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" data-bs-toggle="collapse" data-bs-target="#quickAddTicketCollapse">
+                        <i class="bi bi-plus-lg me-1"></i> បន្ថែមសំបុត្រ
+                    </button>
+                </div>
+
+                <!-- Quick Add Ticket Collapse Form -->
+                <div class="collapse mb-3" id="quickAddTicketCollapse">
+                    <div class="card card-body bg-light border rounded-3 p-3">
+                        <form id="quickAddTicketForm" onsubmit="submitQuickAddTicket(event, <?php echo $workshop['id']; ?>)">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold mb-1">ឈ្មោះសំបុត្រ <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control form-control-sm" placeholder="ឧ. សំបុត្រ VIP / សំបុត្រគិតថ្លៃ" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">ប្រភេទ</label>
+                                    <select name="ticket_type" class="form-select form-select-sm">
+                                        <option value="standard">ទូទៅ (Standard)</option>
+                                        <option value="vip">ពិសេស (VIP)</option>
+                                        <option value="early_bird">ចុះឈ្មោះមុន (Early Bird)</option>
+                                        <option value="student">សិស្ស/និស្សិត (Student)</option>
+                                        <option value="complimentary">អញ្ជើញពិសេស (Complimentary)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold mb-1">តម្លៃ ($)</label>
+                                    <input type="number" step="0.01" name="price" class="form-control form-control-sm" value="0.00" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">ការបង្ហាញ</label>
+                                    <select name="is_visible" class="form-select form-select-sm">
+                                        <option value="1">👁️ សាធារណៈ</option>
+                                        <option value="0">🔒 លាក់ (ឯកជន/Free)</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 text-end pt-2">
+                                    <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-toggle="collapse" data-bs-target="#quickAddTicketCollapse">បោះបង់</button>
+                                    <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitAddTicket">
+                                        <i class="bi bi-check-lg me-1"></i> រក្សាទុកសំបុត្រ
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tickets List Table -->
+                <div class="table-responsive rounded-3 border">
                     <table class="table align-middle table-hover mb-0">
                         <thead class="table-light small">
                             <tr>
@@ -1243,6 +1312,34 @@ async function confirmCapacityUpgrade(id) {
     } else {
         alert(data.message || 'ការដំឡើងចំណុះមិនបានជោគជ័យ។');
     }
+// Submit quick add ticket
+async function submitQuickAddTicket(e, workshopId) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btnSubmitAddTicket');
+    if (btn) btn.disabled = true;
+
+    try {
+        const fd = new FormData(form);
+        fd.append('_csrf_token', '<?php echo generateCsrfToken(); ?>');
+
+        const res = await fetch(`<?php echo APP_URL; ?>/workshops/${workshopId}/tickets/quick-store`, {
+            method: 'POST',
+            body: fd
+        });
+        const data = await res.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'មិនអាចបង្កើតសំបុត្របានទេ');
+        }
+    } catch (err) {
+        alert('បញ្ហាបណ្តាញ៖ ' + err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
 // Toggle ticket visibility
 async function toggleTicketVisibility(workshopId, ticketId) {
     const btn = document.getElementById(`vis-btn-${ticketId}`);

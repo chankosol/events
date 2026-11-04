@@ -1369,6 +1369,47 @@ class WorkshopController {
             'ticket_id' => $ticketId
         ]);
     }
+
+    /**
+     * Quick add ticket from dashboard modal
+     */
+    public static function quickStoreTicket(int $workshopId): void {
+        requireAuth();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT id, business_id, payment_mode FROM workshops WHERE id = ? AND (business_id = ? OR ?)", [$workshopId, $businessId, Auth::isPlatformAdmin()]);
+        if (!$workshop) {
+            jsonResponse(false, 'រកមិនឃើញសិក្ខាសាលា');
+        }
+
+        $name = trim($_POST['name'] ?? '');
+        if (empty($name)) {
+            jsonResponse(false, 'សូមបញ្ចូលឈ្មោះសំបុត្រ');
+        }
+        $price = max(0, (float)($_POST['price'] ?? 0));
+        $type = in_array($_POST['ticket_type'] ?? '', ['standard','vip','early_bird','student','group','complimentary','custom']) ? $_POST['ticket_type'] : 'standard';
+        $isVisible = isset($_POST['is_visible']) ? (int)$_POST['is_visible'] : 1;
+        $capacity = !empty($_POST['capacity']) ? (int)$_POST['capacity'] : null;
+
+        $maxSort = (int)($db->queryOne("SELECT MAX(sort_order) as m FROM tickets WHERE workshop_id = ?", [$workshopId])['m'] ?? 0);
+
+        $db->execute(
+            "INSERT INTO tickets (workshop_id, business_id, name, ticket_type, price, currency, capacity, is_visible, status, sort_order)
+             VALUES (?, ?, ?, ?, ?, 'USD', ?, ?, 'active', ?)",
+            [$workshopId, $workshop['business_id'], $name, $type, $price, $capacity, $isVisible, $maxSort + 1]
+        );
+        $newTicketId = (int)$db->lastInsertId();
+
+        // If ticket has price > 0 and workshop payment_mode is free, update workshop to paid mode
+        if ($price > 0 && $workshop['payment_mode'] === 'free') {
+            $db->execute("UPDATE workshops SET payment_mode = 'paid' WHERE id = ?", [$workshopId]);
+        }
+
+        auditLog('ticket_created', 'tickets', $newTicketId, ['workshop_id' => $workshopId]);
+
+        jsonResponse(true, 'បានបន្ថែមសំបុត្រថ្មីដោយជោគជ័យ!', ['ticket_id' => $newTicketId]);
+    }
 }
 
 

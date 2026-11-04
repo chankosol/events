@@ -357,6 +357,12 @@ $router->post('/workshops/{id}/tickets/{ticketId}/toggle-visibility', function($
     WorkshopController::toggleTicketVisibility((int)$id, (int)$ticketId);
 });
 
+$router->post('/workshops/{id}/tickets/quick-store', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::quickStoreTicket((int)$id);
+});
+
+
 
 // Registrations
 $router->get('/workshops/{id}/registrations', function($id) {
