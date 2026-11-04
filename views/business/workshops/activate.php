@@ -134,75 +134,184 @@ $breadcrumbs = [
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: Compact Official Bakong KHQR Card -->
+            <!-- RIGHT COLUMN: Payment Gateway Selection (Bakong KHQR & ABA PayWay) -->
             <div class="col-lg-6 d-flex flex-column">
-                <div class="card shadow border-0 rounded-4 overflow-hidden flex-fill d-flex flex-column h-100">
-                    <!-- Authentic Bakong KHQR Red Header -->
-                    <div class="px-3 py-2 text-white" style="background: linear-gradient(135deg, #e11924 0%, #b80010 100%);">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-white text-danger fw-bold fs-6 px-3 py-1 shadow-sm" style="letter-spacing: 1.5px;">KHQR</span>
-                            <span class="small fw-semibold text-white">
-                                <i class="bi bi-shield-check text-white me-1"></i> Bakong NBC Cambodia
-                            </span>
-                        </div>
-                    </div>
+                <?php 
+                $gatewayProvider = aba_get_platform_setting('payment_gateway_provider', 'both');
+                $abaData = aba_create_transaction(
+                    $billing['invoice_number'],
+                    (float)$billing['platform_fee'],
+                    $billing['currency']
+                );
+                $abaEnabled = ($abaData['ok'] && in_array($gatewayProvider, ['both', 'aba'], true));
+                $bakongEnabled = in_array($gatewayProvider, ['both', 'bakong'], true);
+                if (!$bakongEnabled && !$abaEnabled) { $bakongEnabled = true; }
+                $activeTab = ($gatewayProvider === 'aba' && $abaEnabled) ? 'aba' : 'bakong';
+                $platAbaMerchant = aba_get_platform_setting('aba_merchant_name', 'Chan Kosol');
+                $platBakongMerchant = bakong_get_platform_setting('bakong_merchant_name', 'Chan Kosol');
+                $platBakongAccount  = bakong_get_platform_setting('bakong_account_id', 'kosol@abaa');
+                $qrPayload = !empty($billing['bakong_qr_text']) ? $billing['bakong_qr_text'] : ('https://bakong.nbc.gov.kh/pay?merchant=' . urlencode($platBakongMerchant) . '&amount=' . $billing['platform_fee'] . '&currency=USD&bill=' . $billing['invoice_number']);
+                ?>
 
-                    <!-- KHQR Body -->
-                    <div class="card-body p-3 text-center bg-white d-flex flex-column justify-content-between">
-                        <div>
-                            <?php 
-                            $platMerchant = bakong_get_platform_setting('bakong_merchant_name', 'Chan Kosol');
-                            $platAccount  = bakong_get_platform_setting('bakong_account_id', 'kosol@abaa');
-                            $qrPayload = !empty($billing['bakong_qr_text']) ? $billing['bakong_qr_text'] : ('https://bakong.nbc.gov.kh/pay?merchant=' . urlencode($platMerchant) . '&amount=' . $billing['platform_fee'] . '&currency=USD&bill=' . $billing['invoice_number']);
-                            ?>
-                            <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.75rem;">គណនីរតនាគារប្រព័ន្ធ / Merchant</div>
-                            <h6 class="fw-bold text-dark mb-0"><?= e($platMerchant); ?></h6>
-                            <div class="small font-monospace text-muted mb-2">(<?= e($platAccount); ?>)</div>
+                <?php if ($bakongEnabled && $abaEnabled): ?>
+                <!-- Gateway Provider Switcher Tabs -->
+                <ul class="nav nav-pills nav-fill mb-2 p-1 bg-light rounded-pill border" id="gatewayTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link <?= $activeTab === 'bakong' ? 'active bg-danger text-white' : 'text-dark' ?> rounded-pill py-1.5 fw-bold small" id="bakong-tab-btn" data-bs-toggle="pill" data-bs-target="#bakongTabPane" type="button" role="tab">
+                            <i class="bi bi-qr-code me-1"></i> Bakong KHQR
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link <?= $activeTab === 'aba' ? 'active bg-primary text-white' : 'text-dark' ?> rounded-pill py-1.5 fw-bold small" id="aba-tab-btn" data-bs-toggle="pill" data-bs-target="#abaTabPane" type="button" role="tab" style="<?= $activeTab === 'aba' ? 'background-color:#003366 !important; border-color:#003366 !important;' : '' ?>">
+                            <i class="bi bi-credit-card-2-front me-1"></i> ABA PayWay
+                        </button>
+                    </li>
+                </ul>
+                <?php endif; ?>
 
-                            <!-- Mini Amount strip -->
-                            <div class="d-inline-flex align-items-center gap-2 bg-light px-3 py-1 rounded-pill border mb-2">
-                                <span class="small text-muted">ទឹកប្រាក់៖</span>
-                                <span class="fw-bold text-danger fs-5">$<?= number_format($billing['platform_fee'], 2); ?> USD</span>
-                                <span class="text-muted small">|</span>
-                                <span class="font-monospace small text-muted"><?= htmlspecialchars($billing['invoice_number']); ?></span>
-                            </div>
-
-                            <!-- QR Code Box (Optimized size: 175px for perfect zero-scroll fit) -->
-                            <div class="d-flex justify-content-center my-2">
-                                <div class="position-relative p-2 bg-white border border-2 border-danger rounded-3 shadow-sm d-inline-block">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=<?= urlencode($qrPayload); ?>" 
-                                         alt="Bakong KHQR" style="width: 175px; height: 175px; display: block;" class="img-fluid">
-                                    
-                                    <!-- Center Bakong Badge -->
-                                    <div class="position-absolute top-50 start-50 translate-middle bg-white p-1 rounded-circle shadow-sm border border-danger">
-                                        <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 15px;">
-                                            $
-                                        </div>
-                                    </div>
+                <div class="tab-content flex-fill d-flex flex-column h-100" id="gatewayTabContent">
+                    <?php if ($bakongEnabled): ?>
+                    <!-- Tab 1: Bakong KHQR Card -->
+                    <div class="tab-pane fade <?= $activeTab === 'bakong' ? 'show active' : '' ?> flex-fill d-flex flex-column h-100" id="bakongTabPane" role="tabpanel">
+                        <div class="card shadow border-0 rounded-4 overflow-hidden flex-fill d-flex flex-column h-100">
+                            <!-- Authentic Bakong KHQR Red Header -->
+                            <div class="px-3 py-2 text-white" style="background: linear-gradient(135deg, #e11924 0%, #b80010 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-white text-danger fw-bold fs-6 px-3 py-1 shadow-sm" style="letter-spacing: 1.5px;">KHQR</span>
+                                    <span class="small fw-semibold text-white">
+                                        <i class="bi bi-shield-check text-white me-1"></i> Bakong NBC Cambodia
+                                    </span>
                                 </div>
                             </div>
 
-                            <p class="text-muted small mb-2" style="font-size: 0.82rem;">
-                                បើកកម្មវិធី <strong>Bakong</strong> ឬ <strong>ABA / ACLEDA</strong> រួចស្កេនដើម្បីទូទាត់
-                            </p>
+                            <!-- KHQR Body -->
+                            <div class="card-body p-3 text-center bg-white d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.75rem;">គណនីរតនាគារប្រព័ន្ធ / Merchant</div>
+                                    <h6 class="fw-bold text-dark mb-0"><?= e($platBakongMerchant); ?></h6>
+                                    <div class="small font-monospace text-muted mb-2">(<?= e($platBakongAccount); ?>)</div>
 
-                            <!-- Live Polling Listening Indicator -->
-                            <div class="alert alert-light border py-1 px-2 mb-2 d-flex align-items-center justify-content-center text-muted mx-auto" style="max-width: 420px;" id="pollingStatus">
-                                <div class="spinner-grow spinner-grow-sm text-danger me-2" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
-                                <span class="small" style="font-size: 0.8rem;">កំពុងរង់ចាំការស្កេនទូទាត់ប្រាក់ពី Bakong... (Auto Listening)</span>
-                            </div>
-                        </div>
+                                    <!-- Mini Amount strip -->
+                                    <div class="d-inline-flex align-items-center gap-2 bg-light px-3 py-1 rounded-pill border mb-2">
+                                        <span class="small text-muted">ទឹកប្រាក់៖</span>
+                                        <span class="fw-bold text-danger fs-5">$<?= number_format($billing['platform_fee'], 2); ?> USD</span>
+                                        <span class="text-muted small">|</span>
+                                        <span class="font-monospace small text-muted"><?= htmlspecialchars($billing['invoice_number']); ?></span>
+                                    </div>
 
-                        <!-- One-Click Instant Confirm Button -->
-                        <div class="mt-1">
-                            <button type="button" class="btn btn-danger btn-lg w-100 fw-bold py-2 shadow-sm rounded-3" id="btnAutoConfirm" onclick="confirmBakongPayment()">
-                                <i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)
-                            </button>
-                            <div class="text-muted text-center mt-1" style="font-size: 0.72rem;">
-                                ប្រព័ន្ធនឹងដំណើរការសិក្ខាសាលាភ្លាមៗដោយស្វ័យប្រវត្តិ
+                                    <!-- QR Code Box (Optimized size: 175px for perfect zero-scroll fit) -->
+                                    <div class="d-flex justify-content-center my-2">
+                                        <div class="position-relative p-2 bg-white border border-2 border-danger rounded-3 shadow-sm d-inline-block">
+                                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=<?= urlencode($qrPayload); ?>" 
+                                                 alt="Bakong KHQR" style="width: 175px; height: 175px; display: block;" class="img-fluid">
+                                            
+                                            <!-- Center Bakong Badge -->
+                                            <div class="position-absolute top-50 start-50 translate-middle bg-white p-1 rounded-circle shadow-sm border border-danger">
+                                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 15px;">
+                                                    $
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-muted small mb-2" style="font-size: 0.82rem;">
+                                        បើកកម្មវិធី <strong>Bakong</strong> ឬ <strong>ABA / ACLEDA</strong> រួចស្កេនដើម្បីទូទាត់
+                                    </p>
+
+                                    <!-- Live Polling Listening Indicator -->
+                                    <div class="alert alert-light border py-1 px-2 mb-2 d-flex align-items-center justify-content-center text-muted mx-auto" style="max-width: 420px;" id="pollingStatus">
+                                        <div class="spinner-grow spinner-grow-sm text-danger me-2" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
+                                        <span class="small" style="font-size: 0.8rem;">កំពុងរង់ចាំការស្កេនទូទាត់ប្រាក់ពី Bakong... (Auto Listening)</span>
+                                    </div>
+                                </div>
+
+                                <!-- One-Click Instant Confirm Button -->
+                                <div class="mt-1">
+                                    <button type="button" class="btn btn-danger btn-lg w-100 fw-bold py-2 shadow-sm rounded-3" id="btnAutoConfirm" onclick="confirmBakongPayment()">
+                                        <i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)
+                                    </button>
+                                    <div class="text-muted text-center mt-1" style="font-size: 0.72rem;">
+                                        ប្រព័ន្ធនឹងដំណើរការសិក្ខាសាលាភ្លាមៗដោយស្វ័យប្រវត្តិ
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
+
+                    <?php if ($abaEnabled): ?>
+                    <!-- Tab 2: ABA PayWay Card -->
+                    <div class="tab-pane fade <?= $activeTab === 'aba' ? 'show active' : '' ?> flex-fill d-flex flex-column h-100" id="abaTabPane" role="tabpanel">
+                        <div class="card shadow border-0 rounded-4 overflow-hidden flex-fill d-flex flex-column h-100">
+                            <!-- Official ABA Navy Header -->
+                            <div class="px-3 py-2 text-white" style="background: linear-gradient(135deg, #003366 0%, #001f3f 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-white text-primary fw-bold fs-6 px-3 py-1 shadow-sm" style="color: #003366 !important; letter-spacing: 1px;">
+                                        <i class="bi bi-credit-card-2-front me-1"></i> ABA PayWay
+                                    </span>
+                                    <span class="small fw-semibold text-white">
+                                        <i class="bi bi-shield-check text-info me-1"></i> ABA Bank Official Gateway
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- ABA Body -->
+                            <div class="card-body p-3 text-center bg-white d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="text-muted small text-uppercase fw-bold" style="font-size: 0.75rem;">គណនីរតនាគារប្រព័ន្ធ / Merchant</div>
+                                    <h6 class="fw-bold text-dark mb-0"><?= e($platAbaMerchant); ?></h6>
+                                    <div class="small font-monospace text-muted mb-2">(Merchant ID: <?= e($abaData['merchant_id']); ?>)</div>
+
+                                    <!-- Mini Amount strip -->
+                                    <div class="d-inline-flex align-items-center gap-2 bg-light px-3 py-1 rounded-pill border mb-3">
+                                        <span class="small text-muted">ទឹកប្រាក់៖</span>
+                                        <span class="fw-bold text-primary fs-5" style="color: #003366 !important;">$<?= number_format($billing['platform_fee'], 2); ?> USD</span>
+                                        <span class="text-muted small">|</span>
+                                        <span class="font-monospace small text-muted"><?= htmlspecialchars($billing['invoice_number']); ?></span>
+                                    </div>
+
+                                    <div class="p-3 bg-light rounded-3 border mb-3 text-center">
+                                        <i class="bi bi-phone fs-1 text-primary mb-2 d-block" style="color: #003366 !important;"></i>
+                                        <h6 class="fw-bold mb-1">ទូទាត់តាម ABA Mobile ឬ កាតធនាគារ</h6>
+                                        <p class="text-muted small mb-0">
+                                            ចុចប៊ូតុងខាងក្រោមដើម្បីបើកប្រព័ន្ធទូទាត់ <strong>ABA PayWay</strong> ស្កេន KHQR ឬប្រើប្រាស់ Visa/Mastercard។
+                                        </p>
+                                    </div>
+
+                                    <!-- Live Polling Listening Indicator for ABA -->
+                                    <div class="alert alert-light border py-1 px-2 mb-2 d-flex align-items-center justify-content-center text-muted mx-auto" style="max-width: 420px;" id="abaPollingStatus">
+                                        <div class="spinner-grow spinner-grow-sm text-primary me-2" role="status" style="width: 0.75rem; height: 0.75rem; color: #003366 !important;"></div>
+                                        <span class="small" style="font-size: 0.8rem;">កំពុងរង់ចាំការទូទាត់ពី ABA PayWay... (Live Verifier)</span>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons for ABA -->
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-lg w-100 fw-bold py-2 shadow-sm rounded-3 text-white mb-2" style="background-color: #003366;" id="btnOpenAbaPayway" onclick="openAbaCheckout()">
+                                        <i class="bi bi-credit-card-2-front me-1"></i> បង់ប្រាក់ជាមួយ ABA PayWay (Pay via ABA)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-semibold py-1.5 rounded-3" id="btnAutoConfirmAba" onclick="confirmAbaPayment()">
+                                        <i class="bi bi-lightning-charge me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)
+                                    </button>
+                                    <div class="text-muted text-center mt-1" style="font-size: 0.72rem;">
+                                        ផ្ទៀងផ្ទាត់ដោយផ្ទាល់ជាមួយ ABA PayWay API
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden Form for ABA PayWay Checkout Plugin -->
+                        <form id="aba_merchant_request" target="aba_webservice" action="<?= e($abaData['api_url']); ?>" method="POST" style="display:none;">
+                            <input type="hidden" name="hash" value="<?= e($abaData['hash']); ?>">
+                            <input type="hidden" name="amount" value="<?= e($abaData['amount']); ?>">
+                            <input type="hidden" name="tran_id" value="<?= e($abaData['tran_id']); ?>">
+                            <input type="hidden" name="req_time" value="<?= e($abaData['req_time']); ?>">
+                            <input type="hidden" name="merchant_id" value="<?= e($abaData['merchant_id']); ?>">
+                            <input type="hidden" name="payment_option" value="<?= e($abaData['payment_option']); ?>">
+                            <input type="hidden" name="return_url" value="<?= e($abaData['return_url']); ?>">
+                        </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -260,6 +369,7 @@ $breadcrumbs = [
             </div>
         </div>
 
+        <script src="https://checkout.payway.com.kh/plugins/checkout2-0.js"></script>
         <script>
         const WORKSHOP_ID = <?= $workshop['id']; ?>;
         const CSRF_TOKEN = '<?= Session::get('_csrf_token'); ?>';
@@ -268,8 +378,10 @@ $breadcrumbs = [
 
         function confirmBakongPayment() {
             const btn = document.getElementById('btnAutoConfirm');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> កំពុងផ្ទៀងផ្ទាត់ជាមួយ Bakong Network...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> កំពុងផ្ទៀងផ្ទាត់ជាមួយ Bakong Network...';
+            }
 
             const fd = new FormData();
             fd.append('_csrf_token', CSRF_TOKEN);
@@ -281,23 +393,89 @@ $breadcrumbs = [
             .then(r => r.json())
             .then(res => {
                 if (res.success) {
-                    btn.className = 'btn btn-success btn-lg w-100 fw-bold py-2 shadow-sm rounded-3';
-                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> បានផ្ទៀងផ្ទាត់ជោគជ័យ! កំពុងបើកដំណើរការ...';
+                    if (btn) {
+                        btn.className = 'btn btn-success btn-lg w-100 fw-bold py-2 shadow-sm rounded-3';
+                        btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> បានផ្ទៀងផ្ទាត់ជោគជ័យ! កំពុងបើកដំណើរការ...';
+                    }
                     if (pollTimer) clearInterval(pollTimer);
                     setTimeout(() => {
                         window.location.reload();
                     }, 800);
                 } else {
                     alert(res.message || 'មានបញ្ហាក្នុងការផ្ទៀងផ្ទាត់។');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                    }
                 }
             })
             .catch(err => {
                 console.error(err);
                 alert('មានបញ្ហាក្នុងការតភ្ជាប់ សូមព្យាយាមម្តងទៀត។');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                }
+            });
+        }
+
+        function openAbaCheckout() {
+            const btn = document.getElementById('btnOpenAbaPayway');
+            if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងបើក ABA...';
+            try {
+                if (typeof AbaPayway !== 'undefined') {
+                    AbaPayway.checkout();
+                } else {
+                    alert('ABA PayWay Plugin មិនទាន់ដំណើរការរួចរាល់ទេ។ សូមព្យាយាមម្តងទៀត។');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            setTimeout(() => {
+                if (btn) btn.innerHTML = '<i class="bi bi-credit-card-2-front me-1"></i> បង់ប្រាក់ជាមួយ ABA PayWay (Pay via ABA)';
+            }, 2000);
+        }
+
+        function confirmAbaPayment() {
+            const btn = document.getElementById('btnAutoConfirmAba');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> កំពុងផ្ទៀងផ្ទាត់ជាមួយ ABA PayWay...';
+            }
+
+            const fd = new FormData();
+            fd.append('_csrf_token', CSRF_TOKEN);
+
+            fetch(`${APP_URL}/workshops/${WORKSHOP_ID}/activate/confirm-aba`, {
+                method: 'POST',
+                body: fd
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    if (btn) {
+                        btn.className = 'btn btn-success btn-lg w-100 fw-bold py-2 shadow-sm rounded-3';
+                        btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> បានផ្ទៀងផ្ទាត់ជោគជ័យ! កំពុងបើកដំណើរការ...';
+                    }
+                    if (pollTimer) clearInterval(pollTimer);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                } else {
+                    alert(res.message || 'មានបញ្ហាក្នុងការផ្ទៀងផ្ទាត់។');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-lightning-charge me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('មានបញ្ហាក្នុងការតភ្ជាប់ សូមព្យាយាមម្តងទៀត។');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-lightning-charge me-1"></i> ផ្ទៀងផ្ទាត់ និងបើកដំណើរការភ្លាមៗ (Auto Confirm)';
+                }
             });
         }
 
@@ -310,9 +488,14 @@ $breadcrumbs = [
                     if (res.success && res.data && res.data.is_paid) {
                         clearInterval(pollTimer);
                         const pStatus = document.getElementById('pollingStatus');
+                        const aStatus = document.getElementById('abaPollingStatus');
                         if (pStatus) {
                             pStatus.className = 'alert alert-success py-1 px-2 mb-2 d-flex align-items-center justify-content-center text-success mx-auto';
                             pStatus.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> បានទទួលការទូទាត់ជោគជ័យ! កំពុងដំណើរការ...';
+                        }
+                        if (aStatus) {
+                            aStatus.className = 'alert alert-success py-1 px-2 mb-2 d-flex align-items-center justify-content-center text-success mx-auto';
+                            aStatus.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> បានទទួលការទូទាត់ជោគជ័យ! កំពុងដំណើរការ...';
                         }
                         setTimeout(() => {
                             window.location.reload();

@@ -367,7 +367,17 @@ $user = $user ?? Auth::user() ?? [];
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">ឈ្មោះធនាគារ</label>
-                            <input type="text" name="bank" class="form-control form-control-sm" placeholder="ABA / Bakong">
+                            <input type="text" name="bank" list="bankOptionsList" class="form-control form-control-sm" placeholder="ABA / Bakong">
+                            <datalist id="bankOptionsList">
+                                <option value="ABA Bank">
+                                <option value="Bakong KHQR">
+                                <option value="ACLEDA Bank">
+                                <option value="Canadia Bank">
+                                <option value="Wing Bank">
+                                <option value="Sathapana Bank">
+                                <option value="Prince Bank">
+                                <option value="TrueMoney">
+                            </datalist>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">រូបិយប័ណ្ណ</label>
@@ -435,7 +445,7 @@ $user = $user ?? Auth::user() ?? [];
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">ឈ្មោះធនាគារ</label>
-                            <input type="text" name="bank" id="edit_pm_bank" class="form-control form-control-sm">
+                            <input type="text" name="bank" id="edit_pm_bank" list="bankOptionsList" class="form-control form-control-sm">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">រូបិយប័ណ្ណ</label>

@@ -11,6 +11,12 @@ $actualBakongAccounts = $settingsMap['bakong_account_id'] ?? 'kosol@abaa';
 $bakongAccountsList = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $actualBakongAccounts))));
 $accountCount = count($bakongAccountsList);
 
+// ABA PayWay settings
+$actualAbaKey = $settingsMap['aba_api_key'] ?? '';
+$hasAbaKey = !empty(trim($actualAbaKey));
+$abaMerchantId = $settingsMap['aba_merchant_id'] ?? 'findinyou';
+$paymentGatewayProvider = $settingsMap['payment_gateway_provider'] ?? 'both';
+
 $isTgBotEnabled = ($settingsMap['telegram_bot_enabled'] ?? '0') === '1';
 $tgBotUsername = $settingsMap['telegram_bot_username'] ?? '';
 $tgBotToken = $settingsMap['telegram_bot_token'] ?? '';
@@ -74,11 +80,19 @@ $hasTgBot = $isTgBotEnabled && !empty($tgBotUsername) && !empty($tgBotToken);
                     <label class="form-label fw-bold">បុព្វបទលេខវិក្កយបត្រ (Invoice Prefix)</label>
                     <input type="text" name="invoice_prefix" class="form-control" value="<?php echo e($settingsMap['invoice_prefix'] ?? 'INV'); ?>">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-3">
                     <label class="form-label fw-bold">ការអនុញ្ញាតឱ្យស្ថាប័នថ្មីចុះឈ្មោះ</label>
                     <select name="registration_enabled" class="form-select">
                         <option value="1" <?php echo ($settingsMap['registration_enabled'] ?? '') === '1' ? 'selected' : ''; ?>>បើកដំណើរការ (ចុះឈ្មោះជាសាធារណៈ)</option>
                         <option value="0" <?php echo ($settingsMap['registration_enabled'] ?? '') === '0' ? 'selected' : ''; ?>>បិទ (តាមការអញ្ជើញប៉ុណ្ណោះ)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">ច្រកទូទាត់ចម្បង (Preferred Gateway)</label>
+                    <select name="payment_gateway_provider" class="form-select">
+                        <option value="both" <?php echo ($settingsMap['payment_gateway_provider'] ?? 'both') === 'both' ? 'selected' : ''; ?>>Both (Bakong & ABA PayWay)</option>
+                        <option value="bakong" <?php echo ($settingsMap['payment_gateway_provider'] ?? '') === 'bakong' ? 'selected' : ''; ?>>Bakong KHQR តែមួយ</option>
+                        <option value="aba" <?php echo ($settingsMap['payment_gateway_provider'] ?? '') === 'aba' ? 'selected' : ''; ?>>ABA PayWay តែមួយ</option>
                     </select>
                 </div>
             </div>
@@ -197,6 +211,99 @@ $hasTgBot = $isTgBotEnabled && !empty($tgBotUsername) && !empty($tgBotToken);
 
             <!-- Live Test Feedback Box -->
             <div id="bakongTestFeedback" class="mt-3 d-none"></div>
+        </div>
+    </div>
+
+    <!-- Card 3: Official ABA PayWay Gateway (System A Fee Receiver) -->
+    <div class="card shadow-sm border-0 rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="bg-primary-subtle text-primary p-2 rounded-3">
+                    <i class="bi bi-credit-card-2-front fs-5"></i>
+                </span>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        ច្រកទូទាត់ផ្លូវការ ABA PayWay Gateway (Platform System Fee Receiver)
+                    </h5>
+                    <small class="text-muted">ការកំណត់រចនាសម្ព័ន្ធ ABA Merchant ID, API Key និង API URL សម្រាប់ទទួលការទូទាត់តាម ABA KHQR ឬកាតធនាគារ</small>
+                </div>
+            </div>
+            <span class="badge <?php echo $hasAbaKey ? 'bg-success' : 'bg-warning text-dark'; ?> px-3 py-2 rounded-pill">
+                <i class="bi <?php echo $hasAbaKey ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'; ?> me-1"></i>
+                <?php echo $hasAbaKey ? 'ABA PayWay Configured' : 'API Key មិនទាន់កំណត់'; ?>
+            </span>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-3 mb-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">ABA Merchant ID</label>
+                    <input type="text" class="form-control font-monospace" name="aba_merchant_id" id="aba_merchant_id"
+                           value="<?php echo e($settingsMap['aba_merchant_id'] ?? 'findinyou'); ?>" placeholder="findinyou" required>
+                    <div class="form-text small">Merchant ID ពី ABA PayWay (ឧ. <code>findinyou</code>)</div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">ABA Merchant Name</label>
+                    <input type="text" class="form-control" name="aba_merchant_name"
+                           value="<?php echo e($settingsMap['aba_merchant_name'] ?? 'Chan Kosol'); ?>" placeholder="Chan Kosol">
+                    <div class="form-text small">ឈ្មោះអាជីវកម្មលើវិក្កយបត្រ ABA</div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">ABA API Key</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control font-monospace" id="aba_api_key" name="aba_api_key"
+                               value="<?php echo e($actualAbaKey); ?>" placeholder="Paste ABA API Key..." autocomplete="off">
+                        <?php if ($hasAbaKey): ?>
+                            <span class="input-group-text bg-white text-success border-start-0" title="ABA Key saved">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </span>
+                        <?php endif; ?>
+                        <button class="btn btn-outline-secondary bg-white text-muted" type="button" id="toggle-aba-key-visibility" title="Show / Hide Key">
+                            <i class="bi bi-eye" id="toggle-aba-key-icon"></i>
+                        </button>
+                    </div>
+                    <div class="form-text small">Secret Key សម្រាប់ HMAC-SHA512 Hash</div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Payment Option</label>
+                    <select name="aba_payment_option" class="form-select">
+                        <option value="abapay_khqr" <?php echo ($settingsMap['aba_payment_option'] ?? 'abapay_khqr') === 'abapay_khqr' ? 'selected' : ''; ?>>abapay_khqr (ABA Pay / KHQR)</option>
+                        <option value="cards" <?php echo ($settingsMap['aba_payment_option'] ?? '') === 'cards' ? 'selected' : ''; ?>>cards (Visa / MasterCard)</option>
+                        <option value="both" <?php echo ($settingsMap['aba_payment_option'] ?? '') === 'both' ? 'selected' : ''; ?>>both (All Payment Options)</option>
+                    </select>
+                    <div class="form-text small">មធ្យោបាយទូទាត់ PayWay</div>
+                </div>
+            </div>
+
+            <!-- Advanced ABA Fields -->
+            <div class="row g-3 pt-2 border-top">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted mb-1">ABA Checkout API URL</label>
+                    <input type="text" class="form-control form-control-sm font-monospace" name="aba_api_url"
+                           value="<?php echo e($settingsMap['aba_api_url'] ?? 'https://checkout.payway.com.kh/api/payment-gateway/v1/payments/purchase'); ?>">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted mb-1">ABA Verify URL (Firebase / Cloud Function)</label>
+                    <input type="text" class="form-control form-control-sm font-monospace" name="aba_verify_url" id="aba_verify_url"
+                           value="<?php echo e($settingsMap['aba_verify_url'] ?? 'https://us-central1-ppds-api.cloudfunctions.net/app/api/payments/check-transaction/find-in-you'); ?>">
+                </div>
+            </div>
+
+            <!-- Connection Test Button and Feedback Area -->
+            <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-semibold rounded-3" id="btnTestAbaConnection">
+                    <i class="bi bi-lightning-charge me-1"></i> ធ្វើតេស្តការតភ្ជាប់ ABA API (Test Connection)
+                </button>
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> ចុច Test ដើម្បីផ្ទៀងផ្ទាត់ការតភ្ជាប់ ABA Verifier
+                </div>
+            </div>
+
+            <!-- Live Test Feedback Box -->
+            <div id="abaTestFeedback" class="mt-3 d-none"></div>
         </div>
     </div>
 
@@ -523,6 +630,68 @@ document.addEventListener('DOMContentLoaded', function() {
                 testBtn.innerHTML = originalHtml;
                 testFeedback.classList.remove('d-none');
                 testFeedback.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0">មិនអាចតភ្ជាប់ទៅកាន់ម៉ាស៊ីនបម្រើបានឡើយ។</div>';
+            });
+        });
+    }
+
+    // ABA PayWay API Key Toggle Visibility
+    var abaKeyInput = document.getElementById('aba_api_key');
+    var abaToggleBtn = document.getElementById('toggle-aba-key-visibility');
+    var abaToggleIcon = document.getElementById('toggle-aba-key-icon');
+    if (abaToggleBtn && abaKeyInput) {
+        abaToggleBtn.addEventListener('click', function() {
+            if (abaKeyInput.type === 'password') {
+                abaKeyInput.type = 'text';
+                if (abaToggleIcon) abaToggleIcon.className = 'bi bi-eye-slash';
+            } else {
+                abaKeyInput.type = 'password';
+                if (abaToggleIcon) abaToggleIcon.className = 'bi bi-eye';
+            }
+        });
+    }
+
+    // ABA PayWay Test Connection
+    var btnTestAba = document.getElementById('btnTestAbaConnection');
+    var abaFeedback = document.getElementById('abaTestFeedback');
+    if (btnTestAba && abaFeedback) {
+        btnTestAba.addEventListener('click', function() {
+            var origHtml = btnTestAba.innerHTML;
+            btnTestAba.disabled = true;
+            btnTestAba.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងធ្វើតេស្តការតភ្ជាប់ ABA...';
+            abaFeedback.className = 'd-none';
+
+            var fd = new FormData();
+            fd.append('_csrf_token', '<?php echo csrfToken(); ?>');
+            fd.append('aba_merchant_id', document.getElementById('aba_merchant_id') ? document.getElementById('aba_merchant_id').value : '');
+            fd.append('aba_api_key', abaKeyInput ? abaKeyInput.value : '');
+            fd.append('aba_verify_url', document.getElementById('aba_verify_url') ? document.getElementById('aba_verify_url').value : '');
+
+            fetch('<?php echo APP_URL; ?>/platform/settings/test-aba', {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(res => {
+                btnTestAba.disabled = false;
+                btnTestAba.innerHTML = origHtml;
+                abaFeedback.classList.remove('d-none');
+
+                if (res.success) {
+                    abaFeedback.className = 'alert alert-success py-2 px-3 mb-0';
+                    abaFeedback.innerHTML = '<div class="fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ' + res.message + '</div>' +
+                                           (res.data && res.data.hash_test ? '<div class="small text-muted mt-1 font-monospace">HMAC-SHA512 Test: ' + res.data.hash_test + '</div>' : '');
+                } else {
+                    abaFeedback.className = 'alert alert-danger py-2 px-3 mb-0';
+                    abaFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + (res.message || 'មិនអាចតភ្ជាប់ទៅ ABA បានទេ');
+                }
+            })
+            .catch(err => {
+                btnTestAba.disabled = false;
+                btnTestAba.innerHTML = origHtml;
+                abaFeedback.classList.remove('d-none');
+                abaFeedback.className = 'alert alert-danger py-2 px-3 mb-0';
+                abaFeedback.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> មិនអាចតភ្ជាប់ទៅកាន់ម៉ាស៊ីនបម្រើបានឡើយ។';
             });
         });
     }

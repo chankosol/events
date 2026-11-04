@@ -708,7 +708,81 @@ class WorkshopController {
     }
 
     /**
-     * Check real-time payment status via AJAX polling & Bakong NBC Open API
+     * Auto-confirm ABA PayWay payment instantly
+     */
+    public static function confirmAba(int $id): void {
+        requireAuth();
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT * FROM workshops WHERE id = ? AND business_id = ? AND deleted_at IS NULL", [$id, $businessId]);
+        if (!$workshop) {
+            jsonResponse(false, 'រកមិនឃើញសិក្ខាសាលាទេ។');
+        }
+
+        $billing = $db->queryOne("SELECT * FROM workshop_billing WHERE workshop_id = ?", [$id]);
+        if (!$billing) {
+            jsonResponse(false, 'រកមិនឃើញវិក្កយបត្រដំណើរការប្រព័ន្ធទេ។');
+        }
+
+        if ($billing['payment_status'] === 'paid') {
+            jsonResponse(true, 'វិក្កយបត្រនេះត្រូវបានបង់រួចរាល់ហើយ!', ['already_paid' => true]);
+        }
+
+        $trxRef = 'ABA-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
+
+        $db->beginTransaction();
+        try {
+            // Update workshop billing to paid
+            $db->execute(
+                "UPDATE workshop_billing 
+                 SET payment_status = 'paid', payment_method = 'ABA PayWay', transaction_reference = ?, paid_at = NOW() 
+                 WHERE id = ?",
+                [$trxRef, $billing['id']]
+            );
+
+            // Update platform invoice to paid
+            $db->execute(
+                "UPDATE platform_invoices 
+                 SET status = 'paid', paid_date = CURDATE() 
+                 WHERE workshop_billing_id = ?",
+                [$billing['id']]
+            );
+
+            // Activate workshop
+            $db->execute("UPDATE workshops SET status = 'active' WHERE id = ?", [$id]);
+
+            // Create auto-verified payment proof record for audit trail
+            $db->execute(
+                "INSERT INTO platform_payment_proofs (
+                    workshop_billing_id, business_id, proof_file, amount_claimed, currency, 
+                    payment_method, transaction_reference, payment_date, notes, 
+                    status, reviewed_by, reviewed_at, review_notes, submitted_at
+                 ) VALUES (?, ?, 'aba_payway_auto_verified', ?, ?, 'ABA PayWay', ?, CURDATE(), 'ABA PayWay Instant Auto-Confirmed', 'approved', ?, NOW(), 'Auto confirmed via ABA PayWay', NOW())",
+                [
+                    $billing['id'], $businessId, $billing['platform_fee'], $billing['currency'],
+                    $trxRef, Auth::id()
+                ]
+            );
+
+            auditLog('aba_payway_auto_confirmed', 'workshop_billing', $billing['id'], null, ['trx' => $trxRef, 'amount' => $billing['platform_fee']], $businessId);
+
+            $db->commit();
+            jsonResponse(true, 'ការទូទាត់ ABA PayWay ទទួលបានជោគជ័យ! សិក្ខាសាលាត្រូវបានបើកដំណើរការរួចរាល់។', [
+                'transaction_reference' => $trxRef,
+                'paid_at' => date('Y-m-d H:i:s'),
+                'status' => 'paid'
+            ]);
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log($e->getMessage());
+            jsonResponse(false, 'មានបញ្ហាក្នុងការផ្ទៀងផ្ទាត់ការទូទាត់៖ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Check real-time payment status via AJAX polling (Bakong NBC Open API & ABA PayWay)
      */
     public static function checkPaymentStatus(int $id): void {
         requireAuth();
@@ -728,7 +802,7 @@ class WorkshopController {
             ]);
         }
 
-        // Live check against Bakong NBC Open API using multi-token limiter rotation
+        // 1. Live check against Bakong NBC Open API using multi-token limiter rotation
         if (!empty($billing['bakong_md5'])) {
             $bakongRes = bakong_check_payment_by_md5($billing['bakong_md5']);
             if (!empty($bakongRes['paid'])) {
@@ -758,6 +832,37 @@ class WorkshopController {
                 } catch (Exception $e) {
                     $db->rollback();
                 }
+            }
+        }
+
+        // 2. Live check against ABA PayWay Gateway Verifier
+        $abaRes = aba_check_payment($billing['invoice_number']);
+        if (!empty($abaRes['paid'])) {
+            $trxRef = 'ABA-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
+            $db->beginTransaction();
+            try {
+                $db->execute(
+                    "UPDATE workshop_billing SET payment_status = 'paid', payment_method = 'ABA PayWay', transaction_reference = ?, paid_at = NOW() WHERE id = ?",
+                    [$trxRef, $billing['id']]
+                );
+                $db->execute("UPDATE platform_invoices SET status = 'paid', paid_date = CURDATE() WHERE workshop_billing_id = ?", [$billing['id']]);
+                $db->execute("UPDATE workshops SET status = 'active' WHERE id = ?", [$id]);
+                $db->execute(
+                    "INSERT INTO platform_payment_proofs (workshop_billing_id, business_id, proof_file, amount_claimed, currency, payment_method, transaction_reference, payment_date, notes, status, reviewed_by, reviewed_at, review_notes, submitted_at)
+                     VALUES (?, ?, 'aba_payway_api_verified', ?, ?, 'ABA PayWay', ?, CURDATE(), 'Auto verified via ABA PayWay Gateway', 'approved', NULL, NOW(), 'ABA PayWay live verification', NOW())",
+                    [$billing['id'], $businessId, $billing['platform_fee'], $billing['currency'], $trxRef]
+                );
+                $db->commit();
+                auditLog('aba_payway_api_verified', 'workshop_billing', $billing['id'], null, ['trx' => $trxRef, 'amount' => $billing['platform_fee']], $businessId);
+
+                jsonResponse(true, 'Payment verified via ABA PayWay Gateway', [
+                    'payment_status' => 'paid',
+                    'is_paid' => true,
+                    'paid_at' => date('Y-m-d H:i:s'),
+                    'transaction_reference' => $trxRef
+                ]);
+            } catch (Exception $e) {
+                $db->rollback();
             }
         }
 

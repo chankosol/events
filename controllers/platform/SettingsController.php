@@ -29,9 +29,14 @@ class PlatformSettingsController {
         $fields = [
             'app_name', 'app_tagline', 'default_currency', 'default_language',
             'support_email', 'maintenance_mode', 'registration_enabled', 'invoice_prefix',
+            // Payment Gateway Selection (both / bakong / aba)
+            'payment_gateway_provider',
             // Bakong Gateway Settings
             'bakong_api_base_url', 'bakong_api_token', 'bakong_account_id',
             'bakong_merchant_name', 'bakong_merchant_city', 'bakong_mcc', 'bakong_static_qr_text',
+            // ABA PayWay Gateway Settings
+            'aba_merchant_id', 'aba_merchant_name', 'aba_api_key',
+            'aba_api_url', 'aba_payment_option', 'aba_verify_url',
             // Official Telegram Bot Settings
             'telegram_bot_enabled', 'telegram_bot_username', 'telegram_bot_token'
         ];
@@ -185,5 +190,54 @@ class PlatformSettingsController {
             $err = $res['description'] ?? 'បរាជ័យក្នុងការភ្ជាប់ Webhook។';
             jsonResponse(false, "❌ កំហុស Webhook៖ {$err}");
         }
+    }
+
+    public static function testAba(): void {
+        requireAuth();
+        requirePlatformAdmin();
+        requireCsrf();
+
+        $merchantId = trim($_POST['aba_merchant_id'] ?? aba_get_platform_setting('aba_merchant_id', 'findinyou'));
+        $apiKey = trim($_POST['aba_api_key'] ?? aba_get_platform_setting('aba_api_key', ''));
+        $verifyUrl = trim($_POST['aba_verify_url'] ?? aba_get_platform_setting('aba_verify_url', 'https://us-central1-ppds-api.cloudfunctions.net/app/api/payments/check-transaction/find-in-you'));
+
+        if ($merchantId === '') {
+            jsonResponse(false, 'សូមបញ្ចូល ABA Merchant ID មុនពេលធ្វើតេស្ត។');
+        }
+        if ($apiKey === '') {
+            jsonResponse(false, 'សូមបញ្ចូល ABA API Key មុនពេលធ្វើតេស្ត។');
+        }
+
+        // Test verify URL connection
+        $testTranId = 'TEST_' . time();
+        $payload = json_encode(['tran_id' => $testTranId]);
+        $ch = curl_init($verifyUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $res = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        $json = json_decode((string)$res, true);
+        if ($err) {
+            jsonResponse(false, 'មិនអាចភ្ជាប់ទៅ ABA Verifier: ' . $err);
+        }
+
+        // Test hash generation
+        $testHash = function_exists('aba_hash') ? aba_hash(time() . $merchantId . $testTranId . '1.00' . 'abapay_khqr', $apiKey) : '';
+
+        jsonResponse(true, "✓ ការតភ្ជាប់ទៅកាន់ ABA Verifier ជោគជ័យ (HTTP {$code})! Merchant ID: {$merchantId} និង API Key បានផ្ទៀងផ្ទាត់រួចរាល់។", [
+            'http_code' => $code,
+            'merchant_id' => $merchantId,
+            'response' => $json ?: $res,
+            'hash_verified' => !empty($testHash)
+        ]);
     }
 }

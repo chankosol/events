@@ -286,6 +286,11 @@ $router->post('/workshops/{id}/activate/confirm-bakong', function($id) {
     WorkshopController::confirmBakong((int)$id);
 });
 
+$router->post('/workshops/{id}/activate/confirm-aba', function($id) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::confirmAba((int)$id);
+});
+
 $router->get('/workshops/{id}/activate/check-status', function($id) {
     require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
     WorkshopController::checkPaymentStatus((int)$id);
@@ -782,6 +787,11 @@ $router->post('/platform/settings', function() {
 $router->post('/platform/settings/test-bakong', function() {
     require_once ROOT_PATH . '/controllers/platform/SettingsController.php';
     PlatformSettingsController::testBakong();
+});
+
+$router->post('/platform/settings/test-aba', function() {
+    require_once ROOT_PATH . '/controllers/platform/SettingsController.php';
+    PlatformSettingsController::testAba();
 });
 
 $router->post('/platform/settings/test-telegram', function() {
