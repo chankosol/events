@@ -524,35 +524,40 @@ body {
 .ticket-corner-face-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
     border: none;
     border-radius: 50px;
-    padding: 6px 13px 6px 10px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+    padding: 4px 11px 4px 8px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.35);
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     text-decoration: none;
     line-height: 1.2;
 }
 .ticket-corner-face-btn:hover {
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.6);
+    transform: translateY(-1.5px) scale(1.03);
+    box-shadow: 0 5px 14px rgba(37, 99, 235, 0.4), 0 0 0 1.5px rgba(255, 255, 255, 0.5);
     color: #ffffff;
 }
 .ticket-corner-face-btn.face-enrolled {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35), 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 .floating-face-icon-box {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
+}
+.floating-face-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1px;
 }
 .floating-pulse-ring {
     position: absolute;
@@ -658,9 +663,9 @@ if ($showSuccessPopup):
                             <!-- Organization Logo + Workshop Title + Meta badges -->
                             <div class="d-flex align-items-center gap-3 pe-5 pt-1">
                                 <?php if (!empty($orgLogo)): ?>
-                                    <img src="<?= APP_URL . '/' . htmlspecialchars(ltrim($orgLogo, '/')) ?>" alt="Logo" class="rounded-3 border border-2 border-white shadow-sm flex-shrink-0" style="width: 58px; height: 58px; object-fit: contain; background: #ffffff; padding: 3px;">
+                                    <img src="<?= APP_URL . '/' . htmlspecialchars(ltrim($orgLogo, '/')) ?>" alt="Logo" class="rounded-3 flex-shrink-0" style="width: 54px; height: 54px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
                                 <?php else: ?>
-                                    <div class="rounded-3 bg-white text-primary d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 58px; height: 58px; font-size: 26px;">
+                                    <div class="rounded-3 text-white d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 54px; height: 54px; font-size: 24px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25);">
                                         <i class="bi bi-buildings"></i>
                                     </div>
                                 <?php endif; ?>
