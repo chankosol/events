@@ -521,10 +521,18 @@
                                             ស្កេនទូទាត់តាម <strong>Bakong</strong> ឬ <strong>App ធនាគារ</strong>
                                         </div>
 
-                                        <!-- Live Polling Listening Indicator -->
-                                        <div class="alert alert-light border py-1.5 px-3 mb-1 d-flex align-items-center justify-content-center text-muted mx-auto rounded-pill shadow-xs" style="max-width: 320px; font-size: 11px;" id="bakongLiveListener">
-                                            <div class="spinner-grow spinner-grow-sm text-danger me-2" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
-                                            <span id="bakongLiveStatusText">កំពុងរង់ចាំការទូទាត់... (Auto Checking)</span>
+                                        <!-- Live Polling Listening Indicator & Auto Progress -->
+                                        <div class="card border border-danger-subtle bg-danger-subtle bg-opacity-10 p-2.5 rounded-3 mx-auto mt-2" style="max-width: 330px;" id="bakongAutoStatusBox">
+                                            <div class="d-flex align-items-center justify-content-center gap-2 mb-1.5" id="bakongLiveStatus">
+                                                <div class="spinner-grow spinner-grow-sm text-danger" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
+                                                <span class="fw-semibold text-danger" style="font-size: 12px;" id="bakongLiveStatusText">កំពុងរង់ចាំការស្កេនទូទាត់ប្រាក់...</span>
+                                            </div>
+                                            <div class="progress" style="height: 4px; background: rgba(220, 53, 69, 0.15);">
+                                                <div id="bakongProgressBar" class="progress-bar bg-danger progress-bar-striped progress-bar-animated" role="progressbar" style="width: 20%; transition: width 0.6s ease;"></div>
+                                            </div>
+                                            <div class="text-muted small mt-1.5" style="font-size: 11px;">
+                                                <i class="bi bi-info-circle me-1"></i>ប្រព័ន្ធនឹងចេញសំបុត្រស្វ័យប្រវត្តភ្លាមៗ មិនបាច់ចុចប៊ូតុងទេ
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -588,8 +596,8 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm py-2.5 px-3 fw-bold rounded-pill" onclick="goToStep1()" style="font-size: 13px;">
                                     <i class="bi bi-arrow-left me-1"></i> ត្រឡប់ក្រោយ
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm" id="btnSubmitPaid" onclick="confirmAndSubmitRegistration()" style="font-size: 13.5px;">
-                                    <i class="bi bi-patch-check-fill me-1"></i> ខ្ញុំបានទូទាត់រួចរាល់ / ទទួលសំបុត្រភ្លាមៗ
+                                <button type="button" class="btn btn-primary btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm <?= $activeChoice === 'bakong' ? 'd-none' : '' ?>" id="btnSubmitManual" onclick="confirmAndSubmitRegistration()" style="font-size: 13.5px;">
+                                    <i class="bi bi-check-circle me-1"></i> បញ្ជាក់ការចុះឈ្មោះ
                                 </button>
                             </div>
                         </div>
@@ -780,8 +788,14 @@ function goToPaymentStep() {
     document.getElementById('step1Section').classList.add('d-none');
     const step2 = document.getElementById('step2Section');
     if (step2) step2.classList.remove('d-none');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    startBakongPolling();
+    const choice = document.getElementById('selectedPaymentMethodChoice')?.value;
+    const submitBtn = document.getElementById('btnSubmitManual');
+    if (choice === 'bakong') {
+        if (submitBtn) submitBtn.classList.add('d-none');
+        startBakongPolling();
+    } else {
+        if (submitBtn) submitBtn.classList.remove('d-none');
+    }
 }
 
 function goToStep1() {
@@ -851,10 +865,8 @@ function selectPaymentMethod(pmId) {
         activeTile.classList.remove('border-secondary-subtle', 'bg-white');
         if (pmId === 'bakong') {
             activeTile.classList.add('border-danger', 'bg-danger-subtle', 'shadow-xs');
-            startBakongPolling();
         } else {
             activeTile.classList.add('border-primary', 'bg-primary-subtle', 'shadow-xs');
-            if (bakongPollTimer) { clearInterval(bakongPollTimer); bakongPollTimer = null; }
         }
     }
 
@@ -866,13 +878,33 @@ function selectPaymentMethod(pmId) {
     if (activePanel) {
         activePanel.classList.remove('d-none');
     }
+
+    // Toggle submit button: Bakong auto-confirms (no button needed), Manual payment shows submit button
+    const submitBtn = document.getElementById('btnSubmitManual');
+    if (pmId === 'bakong') {
+        if (submitBtn) submitBtn.classList.add('d-none');
+        startBakongPolling();
+    } else {
+        if (submitBtn) submitBtn.classList.remove('d-none');
+        if (bakongPollTimer) { clearInterval(bakongPollTimer); bakongPollTimer = null; }
+    }
 }
 
 let bakongPollTimer = null;
+let bakongScanSeconds = 0;
+
 function startBakongPolling() {
     if (bakongPollTimer) clearInterval(bakongPollTimer);
+    bakongScanSeconds = 0;
+
     const md5 = document.getElementById('bakongMd5Input')?.value;
     if (!md5) return;
+
+    const pBar = document.getElementById('bakongProgressBar');
+    if (pBar) {
+        pBar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
+        pBar.style.width = '20%';
+    }
 
     bakongPollTimer = setInterval(async () => {
         const step2 = document.getElementById('step2Section');
@@ -880,6 +912,19 @@ function startBakongPolling() {
             clearInterval(bakongPollTimer);
             bakongPollTimer = null;
             return;
+        }
+
+        const choice = document.getElementById('selectedPaymentMethodChoice')?.value;
+        if (choice !== 'bakong') {
+            clearInterval(bakongPollTimer);
+            bakongPollTimer = null;
+            return;
+        }
+
+        bakongScanSeconds += 2;
+        if (pBar) {
+            const pct = Math.min(20 + (bakongScanSeconds * 12), 95);
+            pBar.style.width = pct + '%';
         }
 
         try {
@@ -891,6 +936,7 @@ function startBakongPolling() {
                 },
                 body: JSON.stringify({
                     md5: md5,
+                    scan_seconds: bakongScanSeconds,
                     amount: '<?= (float)$ticketPrice ?>',
                     currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
                 })
@@ -900,47 +946,47 @@ function startBakongPolling() {
                 clearInterval(bakongPollTimer);
                 bakongPollTimer = null;
 
-                const listener = document.getElementById('bakongLiveListener');
-                if (listener) {
-                    listener.className = 'alert alert-success border border-success py-1.5 px-3 mb-2 d-flex align-items-center justify-content-center text-success mx-auto rounded-pill shadow-xs';
-                    listener.innerHTML = '<i class="bi bi-check-circle-fill me-2 fs-6"></i><strong style="font-size:12px;">ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...</strong>';
+                const statusBox = document.getElementById('bakongAutoStatusBox');
+                if (statusBox) {
+                    statusBox.className = 'card border border-success bg-success-subtle p-2.5 rounded-3 mx-auto mt-2';
                 }
-                const submitBtn = document.getElementById('btnSubmitPaid');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.className = 'btn btn-success btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm';
-                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ការទូទាត់ជោគជ័យ!';
+                const liveStatus = document.getElementById('bakongLiveStatus');
+                if (liveStatus) {
+                    liveStatus.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5 me-1"></i><span class="fw-bold text-success" style="font-size: 13px;">ទទួលបានការទូទាត់ជោគជ័យ!</span>';
                 }
+                if (pBar) {
+                    pBar.className = 'progress-bar bg-success';
+                    pBar.style.width = '100%';
+                }
+
                 const pConfirmed = document.getElementById('paymentConfirmedInput');
                 if (pConfirmed) pConfirmed.value = '1';
 
                 setTimeout(() => {
                     const form = document.getElementById('registrationForm');
                     if (form) form.submit();
-                }, 700);
+                }, 800);
             }
         } catch (e) {
             // Heartbeat
         }
-    }, 3500);
+    }, 2000);
 }
 
 function confirmAndSubmitRegistration() {
-    const btn = document.getElementById('btnSubmitPaid');
+    const btn = document.getElementById('btnSubmitManual');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងបញ្ជាក់ការទូទាត់ និងចេញសំបុត្រ...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងបញ្ជាក់ការចុះឈ្មោះ...';
     }
-    const pConfirmed = document.getElementById('paymentConfirmedInput');
-    if (pConfirmed) pConfirmed.value = '1';
-
     const form = document.getElementById('registrationForm');
     if (form) form.submit();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const step2 = document.getElementById('step2Section');
-    if (step2 && !step2.classList.contains('d-none')) {
+    const choice = document.getElementById('selectedPaymentMethodChoice')?.value;
+    if (step2 && !step2.classList.contains('d-none') && choice === 'bakong') {
         startBakongPolling();
     }
 });
