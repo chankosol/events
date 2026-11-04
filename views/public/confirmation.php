@@ -56,22 +56,28 @@ $isPaymentSuccessful = (!empty($reg['payment_status']) && $reg['payment_status']
     || isset($_GET['paid'])
     || !empty($reg['just_paid']);
 
-// Retrieve Organization / Workshop branding logo
+// Retrieve Organization / Institution branding logo (Priority: Business Branding Logo -> Workshop Branding Logo)
 $orgLogo = null;
 $workshopId = $reg['workshop_id'] ?? null;
 $businessId = $reg['business_id'] ?? null;
-if (!empty($workshopId)) {
-    $db = Database::getInstance();
-    $wb = $db->queryOne("SELECT logo FROM workshop_branding WHERE workshop_id = ?", [$workshopId]);
-    if (!empty($wb['logo'])) {
-        $orgLogo = $wb['logo'];
-    }
+$db = Database::getInstance();
+
+if (empty($businessId) && !empty($workshopId)) {
+    $businessId = $db->queryValue("SELECT business_id FROM workshops WHERE id = ?", [$workshopId]);
 }
-if (empty($orgLogo) && !empty($businessId)) {
-    $db = Database::getInstance();
+
+// 1. Primary: Business / Institution Branding Logo (set in Settings -> Branding)
+if (!empty($businessId)) {
     $bb = $db->queryOne("SELECT logo_path FROM business_branding WHERE business_id = ?", [$businessId]);
     if (!empty($bb['logo_path'])) {
         $orgLogo = $bb['logo_path'];
+    }
+}
+// 2. Fallback: Workshop-specific logo
+if (empty($orgLogo) && !empty($workshopId)) {
+    $wb = $db->queryOne("SELECT logo FROM workshop_branding WHERE workshop_id = ?", [$workshopId]);
+    if (!empty($wb['logo'])) {
+        $orgLogo = $wb['logo'];
     }
 }
 ?>
@@ -469,44 +475,84 @@ body {
     100% { width: 0%; }
 }
 
-/* Floating Action Button for Face Check-in */
-.floating-face-btn-wrapper {
-    position: fixed;
-    bottom: 24px;
-    right: 20px;
-    z-index: 9998;
+/* Refined VIP / Official Event Ticket Badge */
+.ticket-entry-badge-wrap {
+    text-align: center;
+    padding: 10px 0 6px;
+    background: #ffffff;
+    position: relative;
 }
-.floating-face-btn {
+.ticket-entry-badge {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1.5px solid #bfdbfe;
+    color: #1d4ed8;
+    padding: 5px 18px 5px 12px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
+    transition: all 0.2s ease;
+}
+.ticket-entry-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18);
+}
+.ticket-entry-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 50%;
+    font-size: 11px;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+/* Face check-in button anchored at bottom-right corner of the ticket */
+.ticket-corner-face-btn-wrap {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    z-index: 10;
+}
+.ticket-corner-face-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
     border: none;
     border-radius: 50px;
-    padding: 11px 18px 11px 14px;
-    font-size: 0.88rem;
+    padding: 6px 13px 6px 10px;
+    font-size: 0.78rem;
     font-weight: 700;
-    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35), 0 0 0 1.5px rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     text-decoration: none;
+    line-height: 1.2;
 }
-.floating-face-btn:hover {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: 0 14px 28px -4px rgba(37, 99, 235, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.3);
+.ticket-corner-face-btn:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.6);
     color: #ffffff;
 }
-.floating-face-btn.face-enrolled {
+.ticket-corner-face-btn.face-enrolled {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 10px 25px -4px rgba(16, 185, 129, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35), 0 0 0 1.5px rgba(255, 255, 255, 0.4);
 }
 .floating-face-icon-box {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1.05rem;
 }
 .floating-pulse-ring {
     position: absolute;
@@ -526,12 +572,12 @@ body {
     position: absolute;
     bottom: -3px;
     right: -5px;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     background: #ffffff;
     color: #059669;
-    font-size: 9px;
+    font-size: 8.5px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -610,17 +656,17 @@ if ($showSuccessPopup):
                             </div>
 
                             <!-- Organization Logo + Workshop Title + Meta badges -->
-                            <div class="d-flex align-items-start gap-3 pe-5 pt-1">
+                            <div class="d-flex align-items-center gap-3 pe-5 pt-1">
                                 <?php if (!empty($orgLogo)): ?>
-                                    <img src="<?= APP_URL . '/' . htmlspecialchars(ltrim($orgLogo, '/')) ?>" alt="Logo" class="rounded-3 border border-2 border-white shadow-sm flex-shrink-0" style="width: 48px; height: 48px; object-fit: cover; background: #ffffff;">
+                                    <img src="<?= APP_URL . '/' . htmlspecialchars(ltrim($orgLogo, '/')) ?>" alt="Logo" class="rounded-3 border border-2 border-white shadow-sm flex-shrink-0" style="width: 58px; height: 58px; object-fit: contain; background: #ffffff; padding: 3px;">
                                 <?php else: ?>
-                                    <div class="rounded-3 bg-white text-primary d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 48px; height: 48px; font-size: 22px;">
+                                    <div class="rounded-3 bg-white text-primary d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 58px; height: 58px; font-size: 26px;">
                                         <i class="bi bi-buildings"></i>
                                     </div>
                                 <?php endif; ?>
 
                                 <div class="flex-grow-1 overflow-hidden">
-                                    <h4 class="ticket-workshop-name m-0" style="font-size: 1.15rem; line-height: 1.35; color: #ffffff;">
+                                    <h4 class="ticket-workshop-name m-0" style="font-size: 1.18rem; line-height: 1.35; color: #ffffff;">
                                         <?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?>
                                     </h4>
 
@@ -650,15 +696,18 @@ if ($showSuccessPopup):
                             <div class="tear-notch tear-notch-right"></div>
                         </div>
 
-                        <!-- Relocated & Renamed: សំបុត្រចូលរួម centered beneath dashed line -->
-                        <div class="text-center pt-2 pb-1 bg-white">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold shadow-xs" style="font-size: 0.8rem; letter-spacing: 0.3px;">
-                                <i class="bi bi-ticket-perforated-fill me-1 text-primary"></i> សំបុត្រចូលរួម
-                            </span>
+                        <!-- Relocated & Refined: សំបុត្រចូលរួម Badge -->
+                        <div class="ticket-entry-badge-wrap">
+                            <div class="ticket-entry-badge">
+                                <span class="ticket-entry-badge-icon">
+                                    <i class="bi bi-ticket-perforated-fill"></i>
+                                </span>
+                                <span>សំបុត្រចូលរួម</span>
+                            </div>
                         </div>
 
                         <!-- Ticket Body -->
-                        <div class="ticket-body-premium">
+                        <div class="ticket-body-premium position-relative">
                             
                             <!-- Attendee Info Card -->
                             <div class="ticket-attendee-card">
@@ -699,9 +748,24 @@ if ($showSuccessPopup):
                             </div>
 
                             <!-- Decorative barcode & serial -->
-                            <div class="ticket-barcode-wrap">
+                            <div class="ticket-barcode-wrap position-relative">
                                 <div class="ticket-barcode-bars"></div>
                                 <div class="ticket-barcode-text"><?= htmlspecialchars($regCode) ?> &bull; PASS-<?= strtoupper(substr(md5($regCode), 0, 6)) ?></div>
+                            </div>
+
+                            <!-- Face check-in button anchored at bottom-right corner of the ticket -->
+                            <div class="ticket-corner-face-btn-wrap" data-html2canvas-ignore="true" id="floatingFaceScanBtn">
+                                <button type="button" class="btn ticket-corner-face-btn <?= $hasEnrolledFace ? 'face-enrolled' : '' ?>" onclick="openPublicFaceEnrollModal()" title="<?= $hasEnrolledFace ? 'បានស្កេនផ្ទៃមុខរួច (ចុចដើម្បីថតឡើងវិញ)' : 'ស្កេនផ្ទៃមុខទុកមុន សម្រាប់ចូលកម្មវិធីលឿន' ?>">
+                                    <div class="floating-face-icon-box">
+                                        <i class="bi bi-person-bounding-box"></i>
+                                        <?php if (!$hasEnrolledFace): ?>
+                                            <span class="floating-pulse-ring"></span>
+                                        <?php else: ?>
+                                            <span class="floating-check-badge"><i class="bi bi-check-lg"></i></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <span class="floating-face-label"><?= $hasEnrolledFace ? 'បានស្កេនមុខ' : 'ស្កេនមុខ' ?></span>
+                                </button>
                             </div>
 
                         </div>
@@ -817,21 +881,6 @@ if ($showSuccessPopup):
                         </div>
                     </div>
                     <?php endif; ?>
-
-                    <!-- Floating Face Check-in Action Button (Attendee quick scan ahead) -->
-                    <div class="floating-face-btn-wrapper" id="floatingFaceScanBtn">
-                        <button type="button" class="floating-face-btn <?= $hasEnrolledFace ? 'face-enrolled' : '' ?>" onclick="openPublicFaceEnrollModal()" title="<?= $hasEnrolledFace ? 'បានស្កេនផ្ទៃមុខរួច (ចុចដើម្បីថតឡើងវិញ)' : 'ស្កេនផ្ទៃមុខទុកមុន សម្រាប់ចូលកម្មវិធីលឿន' ?>">
-                            <div class="floating-face-icon-box">
-                                <i class="bi bi-person-bounding-box"></i>
-                                <?php if (!$hasEnrolledFace): ?>
-                                    <span class="floating-pulse-ring"></span>
-                                <?php else: ?>
-                                    <span class="floating-check-badge"><i class="bi bi-check-lg"></i></span>
-                                <?php endif; ?>
-                            </div>
-                            <span class="floating-face-label"><?= $hasEnrolledFace ? 'បានស្កេនមុខ' : 'ស្កេនមុខ' ?></span>
-                        </button>
-                    </div>
 
                 </div>
 
@@ -1271,7 +1320,7 @@ async function submitPublicFaceEnroll() {
 
             const fab = document.getElementById('floatingFaceScanBtn');
             if (fab) {
-                const fbtn = fab.querySelector('.floating-face-btn');
+                const fbtn = fab.querySelector('.ticket-corner-face-btn, .floating-face-btn') || fab;
                 if (fbtn) fbtn.classList.add('face-enrolled');
                 const flabel = fab.querySelector('.floating-face-label');
                 if (flabel) flabel.innerText = 'បានស្កេនមុខ';
