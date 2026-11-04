@@ -11,6 +11,8 @@ class BusinessSettingsController {
         $business = $db->queryOne("SELECT * FROM businesses WHERE id = ?", [$businessId]);
         $branding = $db->queryOne("SELECT * FROM business_branding WHERE business_id = ?", [$businessId]);
         $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY sort_order", [$businessId]);
+        $userId = Auth::id();
+        $user = $db->queryOne("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", [$userId]) ?? Auth::user();
 
         $title = 'Business Settings - ' . APP_NAME;
         ob_start();

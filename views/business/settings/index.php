@@ -1,5 +1,6 @@
 <?php
 // views/business/settings/index.php
+$user = $user ?? Auth::user() ?? [];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -8,28 +9,60 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-lg-3">
-        <div class="card shadow-sm border-0">
-            <div class="list-group list-group-flush" id="settingsTabs" role="tablist">
-                <a class="list-group-item list-group-item-action active p-3" data-bs-toggle="list" href="#generalTab">
-                    <i class="bi bi-building me-2"></i> ព័ត៌មានស្ថាប័ន
-                </a>
-                <a class="list-group-item list-group-item-action p-3" data-bs-toggle="list" href="#brandingTab">
-                    <i class="bi bi-palette me-2"></i> ស្លាកសញ្ញា & ការរចនា
-                </a>
-                <a class="list-group-item list-group-item-action p-3" data-bs-toggle="list" href="#paymentsTab">
-                    <i class="bi bi-qr-code-scan me-2"></i> កូដ QR ទទួលប្រាក់ពីសិក្ខាកាម
-                </a>
-                <a class="list-group-item list-group-item-action p-3" data-bs-toggle="list" href="#profileTab">
-                    <i class="bi bi-person-gear me-2 text-primary"></i> ព័ត៌មានផ្ទាល់ខ្លួន & រូបថត
-                </a>
-            </div>
-        </div>
-    </div>
+<style>
+#settingsTabs .nav-link {
+    color: #4b5563;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+}
+#settingsTabs .nav-link:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+#settingsTabs .nav-link.active {
+    background-color: #0d6efd;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(13, 110, 253, 0.25);
+}
+</style>
 
-    <div class="col-lg-9">
-        <div class="tab-content">
+<!-- Horizontal Settings Navigation Tabs -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-2">
+        <ul class="nav nav-pills nav-fill flex-column flex-sm-row gap-2" id="settingsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active py-2.5 px-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                        data-bs-toggle="pill" data-bs-target="#generalTab" type="button" role="tab" aria-selected="true">
+                    <i class="bi bi-building fs-6"></i>
+                    <span>ស្ថាប័ន</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-2.5 px-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                        data-bs-toggle="pill" data-bs-target="#brandingTab" type="button" role="tab" aria-selected="false">
+                    <i class="bi bi-palette fs-6"></i>
+                    <span>ស្លាកសញ្ញា</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-2.5 px-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                        data-bs-toggle="pill" data-bs-target="#paymentsTab" type="button" role="tab" aria-selected="false">
+                    <i class="bi bi-qr-code-scan fs-6"></i>
+                    <span>QR ទទួលប្រាក់</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-2.5 px-3 fw-bold d-flex align-items-center justify-content-center gap-2" 
+                        data-bs-toggle="pill" data-bs-target="#profileTab" type="button" role="tab" aria-selected="false">
+                    <i class="bi bi-person-circle fs-6"></i>
+                    <span>គណនីផ្ទាល់ខ្លួន</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="tab-content">
             <!-- GENERAL SETTINGS -->
             <div class="tab-pane fade show active" id="generalTab">
                 <div class="card shadow-sm border-0">
@@ -331,8 +364,7 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
+
 
 <!-- Edit Payment Method Modal -->
 <div class="modal fade" id="editPaymentModal" tabindex="-1" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
@@ -434,12 +466,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Activate tab from URL hash if present
     if (window.location.hash) {
         const hash = window.location.hash;
-        const tabLink = document.querySelector('#settingsTabs a[href="' + hash + '"]');
-        if (tabLink) {
-            const tab = bootstrap.Tab.getOrCreateInstance(tabLink);
+        const trigger = document.querySelector('#settingsTabs [data-bs-target="' + hash + '"]')
+                     || document.querySelector('#settingsTabs [href="' + hash + '"]');
+        if (trigger) {
+            const tab = bootstrap.Tab.getOrCreateInstance(trigger);
             tab.show();
         }
     }
+
+    // Keep URL hash updated when switching tabs
+    document.querySelectorAll('#settingsTabs [data-bs-toggle="pill"], #settingsTabs [data-bs-toggle="tab"]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            const target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
+            if (target && target.startsWith('#')) {
+                history.replaceState(null, null, target);
+            }
+        });
+    });
 
     const sPhotoInput = document.getElementById('settingsProfilePhotoInput');
     const sPreview = document.getElementById('settingsAvatarPreview');
