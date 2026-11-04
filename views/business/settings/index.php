@@ -173,149 +173,25 @@ $user = $user ?? Auth::user() ?? [];
                 $bPaymentProvider = $bSettings['payment_provider'] ?? 'both';
                 ?>
 
-                <!-- 1. Gateway API Integration Card (Bakong QR & ABA Payway Setup) -->
-                <div class="card shadow-sm border-0 mb-4 rounded-4">
-                    <div class="card-header bg-white py-3 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <!-- 1. គណនីទទួលប្រាក់ (Manual Bank Accounts / QR) -->
+                <div class="card shadow-sm border-0 mb-3 rounded-3">
+                    <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="bg-primary-subtle text-primary p-2 rounded-3">
-                                <i class="bi bi-cpu fs-5"></i>
-                            </span>
-                            <div>
-                                <h5 class="fw-bold mb-0 text-dark">
-                                    ការកំណត់ច្រកទូទាត់ស្វ័យប្រវត្តិ (Bakong QR & ABA Payway Setup)
-                                </h5>
-                                <small class="text-muted">កំណត់ Bakong Open API & ABA PayWay Gateway សម្រាប់ស្ថាប័នរបស់អ្នក ទទួលប្រាក់ពីសិក្ខាកាមដោយស្វ័យប្រវត្តិ។</small>
-                            </div>
+                            <i class="bi bi-wallet2 text-primary"></i>
+                            <span class="fw-bold text-dark" style="font-size: 13px;">គណនីទទួលប្រាក់</span>
                         </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <form method="POST" action="<?php echo APP_URL; ?>/settings/gateway-setup">
-                            <?php echo csrfField(); ?>
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold text-secondary">ច្រកទូទាត់ចម្បង (Preferred Payment Option)</label>
-                                    <select class="form-select rounded-3" name="payment_provider">
-                                        <option value="both" <?php echo $bPaymentProvider === 'both' ? 'selected' : ''; ?>>Both (Bakong & ABA)</option>
-                                        <option value="bakong" <?php echo $bPaymentProvider === 'bakong' ? 'selected' : ''; ?>>Bakong KHQR only</option>
-                                        <option value="aba" <?php echo $bPaymentProvider === 'aba' ? 'selected' : ''; ?>>ABA Payway only</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Bakong QR Setup -->
-                            <div class="border-top pt-3 mb-4">
-                                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-qr-code me-2"></i>Bakong QR Setup</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">Bakong Account ID</label>
-                                        <input class="form-control rounded-3 font-monospace" name="bakong_account_id" placeholder="e.g. kosol@ksh.training" value="<?php echo e($bSettings['bakong_account_id'] ?? ''); ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">Merchant Name</label>
-                                        <input class="form-control rounded-3" name="merchant_name" placeholder="e.g. Chan Kosol" value="<?php echo e($bSettings['merchant_name'] ?? ''); ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                            <label class="form-label small fw-bold text-secondary mb-0">Bakong API Token <span class="badge bg-secondary rounded-pill ms-1" id="business-token-count-badge">0</span></label>
-                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-primary" id="manage-business-tokens-btn" style="font-size:12px;"><i class="bi bi-plus-circle me-1"></i>Manage List</button>
-                                        </div>
-                                        <input type="password" class="form-control rounded-3 font-monospace" id="business_bakong_api_token" name="bakong_api_token" placeholder="Your Bakong API Token" value="<?php echo e($bSettings['bakong_api_token'] ?? ''); ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">Bakong API Base URL</label>
-                                        <input class="form-control rounded-3 font-monospace" name="bakong_api_base_url" value="<?php echo e($bSettings['bakong_api_base_url'] ?? 'https://api-bakong.nbc.gov.kh'); ?>">
-                                    </div>
-                                    <div class="col-md-12">
-                                        <label class="form-label small fw-bold text-secondary">Bakong Static QR Text (Fallback)</label>
-                                        <input class="form-control rounded-3 font-monospace" name="bakong_static_qr_text" placeholder="Optional Static QR code string" value="<?php echo e($bSettings['bakong_static_qr_text'] ?? ''); ?>">
-                                    </div>
-                                </div>
-                                <?php if (!empty($bSettings['bakong_account_id']) && !empty($bSettings['bakong_api_token'])): ?>
-                                    <div class="mt-3">
-                                        <span class="badge rounded-pill d-inline-flex align-items-center px-3 py-1.5" style="font-size: 12px; font-weight: 500; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; gap: 6px;">
-                                            <i class="bi bi-check-circle" style="font-size: 13px;"></i> Bakong token saved
-                                        </span>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="mt-3">
-                                        <span class="badge rounded-pill d-inline-flex align-items-center px-3 py-1.5" style="font-size: 12px; font-weight: 500; background-color: #fffbeb; color: #854d0e; border: 1px solid #fef08a; gap: 6px;">
-                                            <i class="bi bi-exclamation-triangle" style="font-size: 13px;"></i> Bakong token not configured
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- ABA Payway Setup -->
-                            <div class="border-top pt-3 mb-3">
-                                <h6 class="fw-bold text-danger mb-3"><i class="bi bi-credit-card-2-front me-2"></i>ABA Payway Setup</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">ABA Merchant ID</label>
-                                        <input class="form-control rounded-3 font-monospace" name="aba_merchant_id" placeholder="findinyou" value="<?php echo e($bSettings['aba_merchant_id'] ?? ''); ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">ABA Merchant Name</label>
-                                        <input class="form-control rounded-3" name="aba_merchant_name" placeholder="e.g. Your Business Name" value="<?php echo e($bSettings['aba_merchant_name'] ?? ''); ?>">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">ABA API Key</label>
-                                        <div class="input-group">
-                                            <input type="password" class="form-control rounded-3 font-monospace" id="business_aba_api_key" name="aba_api_key" placeholder="Your ABA API Key" value="<?php echo e($bSettings['aba_api_key'] ?? ''); ?>">
-                                            <button class="btn btn-outline-secondary" type="button" id="toggle-business-aba-key" title="Show / Hide Key">
-                                                <i class="bi bi-eye" id="toggle-business-aba-icon"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-bold text-secondary">ABA Checkout API URL</label>
-                                        <input class="form-control rounded-3 font-monospace" name="aba_api_url" value="<?php echo e($bSettings['aba_api_url'] ?? 'https://checkout.payway.com.kh/api/payment-gateway/v1/payments/purchase'); ?>">
-                                    </div>
-                                </div>
-                                <?php if (!empty($bSettings['aba_merchant_id']) && !empty($bSettings['aba_api_key'])): ?>
-                                    <div class="mt-3">
-                                        <span class="badge rounded-pill d-inline-flex align-items-center px-3 py-1.5" style="font-size: 12px; font-weight: 500; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; gap: 6px;">
-                                            <i class="bi bi-check-circle" style="font-size: 13px;"></i> ABA API key saved
-                                        </span>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="mt-3">
-                                        <span class="badge rounded-pill d-inline-flex align-items-center px-3 py-1.5" style="font-size: 12px; font-weight: 500; background-color: #fffbeb; color: #854d0e; border: 1px solid #fef08a; gap: 6px;">
-                                            <i class="bi bi-exclamation-triangle" style="font-size: 13px;"></i> ABA API key not configured
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <div class="mt-4 text-end">
-                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">
-                                    <i class="bi bi-check2-circle me-1"></i> រក្សាទុកការកំណត់ទូទាត់ (Save Setup Settings)
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- 2. Manual Bank Transfer / Uploaded QR List Card -->
-                <div class="card shadow-sm border-0 mb-4 rounded-4">
-                    <div class="card-header bg-white py-3 border-bottom border-light d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div>
-                            <h5 class="fw-bold mb-0 text-dark">
-                                <i class="bi bi-wallet2 text-primary me-2"></i>គណនីធនាគារ និងរូបភាព QR ផ្ទាល់ខ្លួន (Manual Bank Transfer QR)
-                            </h5>
-                            <small class="text-muted">បន្ថែមគណនីធនាគារ និងរូបភាព QR សម្រាប់សិក្ខាកាមស្កេន និងផ្ញើបង្កាន់ដៃផ្ទៀងផ្ទាត់ដោយផ្ទាល់។</small>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
-                            <i class="bi bi-plus-lg me-1"></i> + បន្ថែមវិធីសាស្ត្រ
+                        <button type="button" class="btn btn-primary btn-sm px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#addPaymentModal" style="font-size: 12px;">
+                            <i class="bi bi-plus-lg me-1"></i> បន្ថែម
                         </button>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body p-3">
                         <!-- Current Payment Methods -->
                         <div class="row g-3">
                             <?php if (empty($paymentMethods)): ?>
-                                <div class="col-12 text-center py-5 text-muted border rounded-3 bg-light">
-                                    <i class="bi bi-wallet2 fs-2 d-block text-secondary mb-2"></i>
-                                    <p class="mb-3">មិនទាន់មានវិធីសាស្ត្រទទួលប្រាក់</p>
-                                    <button type="button" class="btn btn-sm btn-primary px-3" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                                <div class="col-12 text-center py-4 text-muted border rounded-3 bg-light">
+                                    <i class="bi bi-wallet2 fs-3 d-block text-secondary mb-2"></i>
+                                    <p class="mb-2 small">មិនទាន់មានវិធីសាស្ត្រទទួលប្រាក់</p>
+                                    <button type="button" class="btn btn-sm btn-primary px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#addPaymentModal" style="font-size: 12px;">
                                         <i class="bi bi-plus-lg me-1"></i> បន្ថែមថ្មី
                                     </button>
                                 </div>
@@ -325,31 +201,31 @@ $user = $user ?? Auth::user() ?? [];
                                         <div class="card border rounded-3 h-100 p-3 shadow-sm d-flex flex-column justify-content-between">
                                             <div class="d-flex align-items-start gap-3">
                                                 <?php if (!empty($pm['qr_image_path'])): ?>
-                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail rounded-3 flex-shrink-0" style="width: 80px; height: 80px; object-fit: contain;" alt="QR">
+                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail rounded-3 flex-shrink-0" style="width: 76px; height: 76px; object-fit: contain;" alt="QR">
                                                 <?php else: ?>
-                                                    <div class="bg-light p-3 rounded-3 text-muted flex-shrink-0"><i class="bi bi-qr-code fs-2"></i></div>
+                                                    <div class="bg-light p-3 rounded-3 text-muted flex-shrink-0"><i class="bi bi-qr-code fs-3"></i></div>
                                                 <?php endif; ?>
                                                 <div class="flex-grow-1 overflow-hidden">
                                                     <div class="d-flex justify-content-between align-items-start mb-1">
-                                                        <h6 class="fw-bold mb-0 text-truncate"><?php echo e($pm['name']); ?></h6>
+                                                        <h6 class="fw-bold mb-0 text-truncate" style="font-size: 13px;"><?php echo e($pm['name']); ?></h6>
                                                         <div class="d-flex align-items-center gap-1">
                                                             <?php if (!empty($pm['is_default'])): ?>
-                                                                <span class="badge bg-warning text-dark border border-warning small px-2">
+                                                                <span class="badge bg-warning text-dark border border-warning px-1.5 py-0.5" style="font-size: 10px;">
                                                                     <i class="bi bi-star-fill text-dark me-0.5"></i> ចម្បង
                                                                 </span>
                                                             <?php endif; ?>
                                                             <?php if (($pm['status'] ?? 'active') === 'active'): ?>
-                                                                <span class="badge bg-success-subtle text-success border border-success-subtle small px-2">សកម្ម</span>
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5" style="font-size: 10px;">សកម្ម</span>
                                                             <?php else: ?>
-                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small px-2">អសកម្ម</span>
+                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-1.5 py-0.5" style="font-size: 10px;">អសកម្ម</span>
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
-                                                    <div class="text-muted small"><strong>ធនាគារ:</strong> <?php echo e($pm['bank'] ?: 'ធនាគារ'); ?></div>
-                                                    <div class="text-muted small"><strong>គណនី:</strong> <?php echo e($pm['account_name'] ?: 'N/A'); ?> (<?php echo e($pm['account_number'] ?: 'N/A'); ?>)</div>
-                                                    <div class="text-muted small"><strong>រូបិយប័ណ្ណ:</strong> <?php echo e($pm['currency']); ?></div>
+                                                    <div class="text-muted small" style="font-size: 12px;"><strong>ធនាគារ:</strong> <?php echo e($pm['bank'] ?: 'ធនាគារ'); ?></div>
+                                                    <div class="text-muted small" style="font-size: 12px;"><strong>គណនី:</strong> <?php echo e($pm['account_name'] ?: 'N/A'); ?> (<?php echo e($pm['account_number'] ?: 'N/A'); ?>)</div>
+                                                    <div class="text-muted small" style="font-size: 12px;"><strong>រូបិយប័ណ្ណ:</strong> <?php echo e($pm['currency']); ?></div>
                                                     <?php if (!empty($pm['instructions'])): ?>
-                                                        <div class="text-muted small mt-1 text-truncate" title="<?php echo e($pm['instructions']); ?>">
+                                                        <div class="text-muted small mt-1 text-truncate" style="font-size: 11px;" title="<?php echo e($pm['instructions']); ?>">
                                                             <i class="bi bi-info-circle me-1"></i><?php echo e($pm['instructions']); ?>
                                                         </div>
                                                     <?php endif; ?>
@@ -363,25 +239,25 @@ $user = $user ?? Auth::user() ?? [];
                                                         <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/set-default" class="d-inline m-0">
                                                             <?php echo csrfField(); ?>
                                                             <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
-                                                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark py-1 px-2.5" title="កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង">
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark py-0.5 px-2" style="font-size: 11px;" title="កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង">
                                                                 <i class="bi bi-star me-1 text-warning"></i> កំណត់ជាចម្បង
                                                             </button>
                                                         </form>
                                                     <?php else: ?>
-                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5" style="font-size: 10px;">
                                                             <i class="bi bi-check-circle-fill me-1"></i> គណនីចម្បង
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <div class="d-flex align-items-center" style="gap: 10px;">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded" 
+                                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2 rounded" style="font-size: 11px;"
                                                             onclick='openEditPaymentMethod(<?php echo json_encode($pm, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>
                                                         <i class="bi bi-pencil-square me-1"></i> កែប្រែ
                                                     </button>
                                                     <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline m-0" onsubmit="return confirm('តើអ្នកពិតជាចង់លុប «<?php echo e($pm['name']); ?>» មែនទេ?');">
                                                         <?php echo csrfField(); ?>
                                                         <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5 rounded">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0.5 px-2 rounded" style="font-size: 11px;">
                                                             <i class="bi bi-trash me-1"></i> លុប
                                                         </button>
                                                     </form>
@@ -391,6 +267,139 @@ $user = $user ?? Auth::user() ?? [];
                                     </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. ច្រកទូទាត់ស្វ័យប្រវត្តិ (Bakong & ABA Gateway - Collapsible) -->
+                <div class="card shadow-sm border-0 mb-4 rounded-3">
+                    <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center"
+                         role="button" data-bs-toggle="collapse" data-bs-target="#gatewaySetupCollapse" aria-expanded="false" style="cursor: pointer;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-cpu text-primary"></i>
+                            <span class="fw-bold text-dark" style="font-size: 13px;">ច្រកទូទាត់ស្វ័យប្រវត្តិ</span>
+                            <?php if ($bHasBakongToken): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle py-0.5 px-1.5" style="font-size: 10px;">Bakong</span>
+                            <?php endif; ?>
+                            <?php if ($bHasAbaKey): ?>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-0.5 px-1.5" style="font-size: 10px;">ABA</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="text-muted d-flex align-items-center gap-1" style="font-size: 12px;">
+                            <span class="small">កំណត់</span>
+                            <i class="bi bi-chevron-down small" id="gatewayChevron"></i>
+                        </div>
+                    </div>
+                    <div class="collapse" id="gatewaySetupCollapse">
+                        <div class="card-body p-3">
+                            <form method="POST" action="<?php echo APP_URL; ?>/settings/gateway-setup">
+                                <?php echo csrfField(); ?>
+
+                                <div class="row align-items-center g-2 mb-3">
+                                    <div class="col-auto">
+                                        <label class="form-label text-muted mb-0 small" style="font-size: 12px;">ច្រកទូទាត់៖</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select class="form-select form-select-sm rounded-2" name="payment_provider" style="font-size: 12px; width: auto;">
+                                            <option value="both" <?php echo $bPaymentProvider === 'both' ? 'selected' : ''; ?>>Bakong & ABA</option>
+                                            <option value="bakong" <?php echo $bPaymentProvider === 'bakong' ? 'selected' : ''; ?>>Bakong តែប៉ុណ្ណោះ</option>
+                                            <option value="aba" <?php echo $bPaymentProvider === 'aba' ? 'selected' : ''; ?>>ABA តែប៉ុណ្ណោះ</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Accordion for Bakong and ABA -->
+                                <div class="accordion border rounded-2 mb-3" id="accordionGateways">
+                                    <!-- Bakong Item -->
+                                    <div class="accordion-item border-0">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed py-2 px-3 bg-light text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBakong" aria-expanded="false" style="font-size: 12px;">
+                                                <i class="bi bi-qr-code text-danger me-2"></i>
+                                                <span class="fw-bold">Bakong QR</span>
+                                                <?php if ($bHasBakongToken): ?>
+                                                    <span class="badge bg-success ms-2 py-0.5 px-1.5" style="font-size: 10px;">ភ្ជាប់រួច</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary ms-2 py-0.5 px-1.5" style="font-size: 10px;">មិនទាន់ភ្ជាប់</span>
+                                                <?php endif; ?>
+                                            </button>
+                                        </h2>
+                                        <div id="collapseBakong" class="accordion-collapse collapse" data-bs-parent="#accordionGateways">
+                                            <div class="accordion-body p-3">
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Account ID</label>
+                                                        <input class="form-control form-control-sm font-monospace" name="bakong_account_id" placeholder="user@bakong" value="<?php echo e($bSettings['bakong_account_id'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">ឈ្មោះគណនី</label>
+                                                        <input class="form-control form-control-sm" name="merchant_name" placeholder="ឈ្មោះស្ថាប័ន ឬបុគ្គល" value="<?php echo e($bSettings['merchant_name'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">API Token</label>
+                                                        <input type="password" class="form-control form-control-sm font-monospace" id="business_bakong_api_token" name="bakong_api_token" placeholder="Token" value="<?php echo e($bSettings['bakong_api_token'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Base URL</label>
+                                                        <input class="form-control form-control-sm font-monospace" name="bakong_api_base_url" value="<?php echo e($bSettings['bakong_api_base_url'] ?? 'https://api-bakong.nbc.gov.kh'); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Static QR Text (ជំនួយ)</label>
+                                                        <input class="form-control form-control-sm font-monospace" name="bakong_static_qr_text" placeholder="កូដ QR ថេរ (បើមាន)" value="<?php echo e($bSettings['bakong_static_qr_text'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA Item -->
+                                    <div class="accordion-item border-0 border-top">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed py-2 px-3 bg-light text-dark shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAba" aria-expanded="false" style="font-size: 12px;">
+                                                <i class="bi bi-credit-card-2-front text-primary me-2"></i>
+                                                <span class="fw-bold">ABA Payway</span>
+                                                <?php if ($bHasAbaKey): ?>
+                                                    <span class="badge bg-success ms-2 py-0.5 px-1.5" style="font-size: 10px;">ភ្ជាប់រួច</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary ms-2 py-0.5 px-1.5" style="font-size: 10px;">មិនទាន់ភ្ជាប់</span>
+                                                <?php endif; ?>
+                                            </button>
+                                        </h2>
+                                        <div id="collapseAba" class="accordion-collapse collapse" data-bs-parent="#accordionGateways">
+                                            <div class="accordion-body p-3">
+                                                <div class="row g-2">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Merchant ID</label>
+                                                        <input class="form-control form-control-sm font-monospace" name="aba_merchant_id" placeholder="Merchant ID" value="<?php echo e($bSettings['aba_merchant_id'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">ឈ្មោះគណនី</label>
+                                                        <input class="form-control form-control-sm" name="aba_merchant_name" placeholder="ឈ្មោះគណនី" value="<?php echo e($bSettings['aba_merchant_name'] ?? ''); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">API Key</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="password" class="form-control font-monospace" id="business_aba_api_key" name="aba_api_key" placeholder="API Key" value="<?php echo e($bSettings['aba_api_key'] ?? ''); ?>" style="font-size: 12px;">
+                                                            <button class="btn btn-outline-secondary" type="button" id="toggle-business-aba-key">
+                                                                <i class="bi bi-eye" id="toggle-business-aba-icon"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Checkout URL</label>
+                                                        <input class="form-control form-control-sm font-monospace" name="aba_api_url" value="<?php echo e($bSettings['aba_api_url'] ?? 'https://checkout.payway.com.kh/api/payment-gateway/v1/payments/purchase'); ?>" style="font-size: 12px;">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-dark btn-sm rounded-pill px-3" style="font-size: 12px;">
+                                        <i class="bi bi-check2-circle me-1"></i> រក្សាទុក
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -687,6 +696,20 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         updateBadge();
         bakongTokenInput.addEventListener('input', updateBadge);
+    }
+
+        // Chevron toggle for gateway collapse
+    const gwCollapse = document.getElementById('gatewaySetupCollapse');
+    const gwChevron  = document.getElementById('gatewayChevron');
+    if (gwCollapse && gwChevron) {
+        gwCollapse.addEventListener('show.bs.collapse', function () {
+            gwChevron.classList.remove('bi-chevron-down');
+            gwChevron.classList.add('bi-chevron-up');
+        });
+        gwCollapse.addEventListener('hide.bs.collapse', function () {
+            gwChevron.classList.remove('bi-chevron-up');
+            gwChevron.classList.add('bi-chevron-down');
+        });
     }
 
     // Activate tab from URL hash if present
