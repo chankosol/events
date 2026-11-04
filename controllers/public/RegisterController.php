@@ -331,7 +331,27 @@ class PublicRegisterController {
             $isPrivateInvite = !empty($inviteCode);
             $rawPmChoice = $_POST['payment_method_choice'] ?? $_POST['payment_method_id'] ?? null;
             $isBakong = ($rawPmChoice === 'bakong');
-            $isPaidMethod = $isBakong || !empty($_POST['payment_confirmed']);
+            
+            // STRICT VERIFICATION: Query NBC Bakong Open API directly to verify payment
+            $bakongVerified = false;
+            $bakongMd5 = trim($_POST['bakong_md5'] ?? '');
+            if ($isBakong && !empty($bakongMd5)) {
+                $rawBSettings = $db->query("SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?", [$workshop['business_id']]);
+                $bSettings = [];
+                if (is_array($rawBSettings)) {
+                    foreach ($rawBSettings as $bs) {
+                        $bSettings[$bs['setting_key']] = $bs['setting_value'];
+                    }
+                }
+                $bToken = trim($bSettings['bakong_api_token'] ?? '');
+                $bBase  = trim($bSettings['bakong_api_base_url'] ?? 'https://api-bakong.nbc.gov.kh');
+
+                require_once ROOT_PATH . '/helpers/bakong_helper.php';
+                $verifyRes = bakong_check_payment_by_md5($bakongMd5, $bToken, $bBase);
+                if (!empty($verifyRes['paid'])) {
+                    $bakongVerified = true;
+                }
+            }
 
             if ($isWaitlist) {
                 $status = 'waitlisted';
@@ -348,11 +368,12 @@ class PublicRegisterController {
             } elseif ($isFree && $requiresApproval) {
                 $status = 'pending_approval';
                 $paymentStatus = 'complimentary';
-            } elseif ($isPaidMethod && !$isFree) {
-                // Attendee paid via Bakong KHQR / instant payment verified: auto-confirm and issue instant QR ticket!
+            } elseif (!$isFree && $bakongVerified) {
+                // Attendee paid via Bakong KHQR AND VERIFIED BY NBC BAKONG API: auto-confirm & instant QR!
                 $status = 'confirmed';
                 $paymentStatus = 'paid';
             } elseif (!$isFree) {
+                // Unpaid / pending payment verification: MUST NOT be confirmed!
                 $status = 'pending_verification';
                 $paymentStatus = 'pending';
             } else {
@@ -724,27 +745,12 @@ class PublicRegisterController {
             exit;
         }
 
-        // Smart Fallback: If Bakong Open API token is expired (HTTP 401/403/etc) or unconfigured,
-        // auto-verify payment once attendee has stayed on the QR scan screen (6+ seconds)
-        $scanSeconds = (int)($input['scan_seconds'] ?? 0);
-        if (($checkRes['http_code'] !== 200 || empty($bBakongToken) || empty($checkRes['ok'])) && $scanSeconds >= 6) {
-            echo json_encode([
-                'success' => true,
-                'paid' => true,
-                'auto_verified' => true,
-                'message' => 'ការទូទាត់ត្រូវបានផ្ទៀងផ្ទាត់ជោគជ័យ!',
-                'md5' => $md5
-            ]);
-            exit;
-        }
-
         echo json_encode([
             'success' => true,
             'paid' => false,
             'message' => $checkRes['message'] ?? 'កំពុងរង់ចាំការទូទាត់...',
             'md5' => $md5,
-            'http_code' => $checkRes['http_code'] ?? 0,
-            'scan_seconds' => $scanSeconds
+            'http_code' => $checkRes['http_code'] ?? 0
         ]);
         exit;
     }

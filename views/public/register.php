@@ -534,8 +534,8 @@
                                                 <i class="bi bi-info-circle me-1"></i>ប្រព័ន្ធនឹងចេញសំបុត្រស្វ័យប្រវត្តភ្លាមៗ មិនបាច់ចុចប៊ូតុងទេ
                                             </div>
                                             <div class="mt-2 pt-1.5 border-top border-danger-subtle">
-                                                <button type="button" onclick="finishBakongPayment()" class="btn btn-outline-danger btn-sm py-1 px-3 rounded-pill fw-semibold shadow-xs" style="font-size: 11px;">
-                                                    <i class="bi bi-check-circle me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ / ទទួលសំបុត្រភ្លាមៗ
+                                                <button type="button" id="btnManualBakongCheck" onclick="checkAndSubmitBakong()" class="btn btn-outline-danger btn-sm py-1 px-3 rounded-pill fw-semibold shadow-xs" style="font-size: 11px;">
+                                                    <i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)
                                                 </button>
                                             </div>
                                         </div>
@@ -960,14 +960,9 @@ function startBakongPolling() {
 
         bakongScanSeconds += 2;
         if (pBar) {
-            const pct = Math.min(20 + (bakongScanSeconds * 14), 100);
+            // Smooth pulsating indicator while actively listening
+            const pct = 20 + ((bakongScanSeconds * 5) % 75);
             pBar.style.width = pct + '%';
-        }
-
-        // Automatic advance after scan period (6+ seconds)
-        if (bakongScanSeconds >= 6) {
-            finishBakongPayment();
-            return;
         }
 
         try {
@@ -979,19 +974,61 @@ function startBakongPolling() {
                 },
                 body: JSON.stringify({
                     md5: md5,
-                    scan_seconds: bakongScanSeconds,
                     amount: '<?= (float)$ticketPrice ?>',
                     currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
                 })
             });
             const data = await res.json();
-            if (data.paid || (data.data && data.data.is_paid)) {
+            if (data.paid === true || (data.data && (data.data.is_paid || data.data.status === 'SUCCESS'))) {
                 finishBakongPayment();
             }
         } catch (e) {
-            // If fetch is delayed, the scan_seconds >= 6 timer above guarantees auto-advance!
+            console.warn('Bakong poll error:', e);
         }
-    }, 1800);
+    }, 2000);
+}
+
+async function checkAndSubmitBakong() {
+    const btn = document.getElementById('btnManualBakongCheck');
+    const md5 = document.getElementById('bakongMd5Input')?.value;
+    const checkUrl = '<?= defined('BASE_PATH') ? BASE_PATH : '' ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងផ្ទៀងផ្ទាត់ជាមួយធនាគារ...';
+    }
+
+    try {
+        const res = await fetch(checkUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                md5: md5,
+                amount: '<?= (float)$ticketPrice ?>',
+                currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
+            })
+        });
+        const data = await res.json();
+        if (data.paid === true || (data.data && (data.data.is_paid || data.data.status === 'SUCCESS'))) {
+            finishBakongPayment();
+            return;
+        } else {
+            alert('ប្រព័ន្ធមិនទាន់ទទួលបានការផ្ទេរប្រាក់ពីធនាគារឡើយ! សូមស្កេនទូទាត់តាម App ធនាគារ (Bakong/ABA/...) របស់អ្នករួចរាល់ជាមុនសិន។');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)';
+            }
+        }
+    } catch (e) {
+        alert('មិនអាចភ្ជាប់ទៅកាន់ប្រព័ន្ធផ្ទៀងផ្ទាត់បានទេ សូមព្យាយាមម្តងទៀត');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)';
+        }
+    }
 }
 
 function confirmAndSubmitRegistration() {
