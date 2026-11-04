@@ -490,7 +490,7 @@
 
                             <!-- Payment Detail Panels -->
 
-                            <!-- 1. Bakong KHQR Panel -->
+                            <!-- 1. Bakong KHQR Panel (Clean, Minimalist, Fintech Quality) -->
                             <?php if ($hasBakongGateway): ?>
                                 <div class="pm-detail-panel card border-0 shadow-sm rounded-4 overflow-hidden mb-3 <?= $activeChoice === 'bakong' ? '' : 'd-none' ?>" id="pm_panel_bakong">
                                     <div class="px-3 py-2 text-white" style="background: linear-gradient(135deg, #e11924 0%, #b80010 100%);">
@@ -501,15 +501,15 @@
                                             </span>
                                         </div>
                                     </div>
-                                    <div class="card-body p-3 text-center bg-white">
-                                        <div class="mb-2">
-                                            <h6 class="fw-bold text-dark mb-0" style="font-size: 14px;"><?= htmlspecialchars($bBakongMerchant ?: 'Chan Kosol') ?></h6>
+                                    <div class="card-body p-4 text-center bg-white">
+                                        <div class="mb-3">
+                                            <h6 class="fw-bold text-dark mb-0.5" style="font-size: 15px;"><?= htmlspecialchars($bBakongMerchant ?: 'Chan Kosol') ?></h6>
                                             <div class="text-muted small font-monospace" style="font-size: 12px;"><?= htmlspecialchars($bBakongAccount) ?></div>
                                         </div>
 
                                         <!-- QR Display -->
-                                        <div class="d-inline-block position-relative p-2 bg-white border border-2 border-danger rounded-3 shadow-xs my-1">
-                                            <img id="bakongQrImageEl" src="<?= $bakongQrImgUrl ?>" alt="Bakong KHQR" style="width: 170px; height: 170px; display: block;" class="img-fluid">
+                                        <div class="d-inline-block position-relative p-2.5 bg-white border border-2 border-danger rounded-4 shadow-xs my-1">
+                                            <img id="bakongQrImageEl" src="<?= $bakongQrImgUrl ?>" alt="Bakong KHQR" style="width: 180px; height: 180px; display: block;" class="img-fluid">
                                             <div class="position-absolute top-50 start-50 translate-middle bg-white p-1 rounded-circle border border-danger">
                                                 <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 26px; height: 26px; font-size: 13px;">
                                                     $
@@ -517,26 +517,11 @@
                                             </div>
                                         </div>
 
-                                        <div class="text-muted small mt-2 mb-2" style="font-size: 12px;">
-                                            ស្កេនទូទាត់តាម <strong>Bakong</strong> ឬ <strong>App ធនាគារ</strong>
-                                        </div>
-
-                                        <!-- Live Polling Listening Indicator & Auto Progress -->
-                                        <div class="card border border-danger-subtle bg-danger-subtle bg-opacity-10 p-2.5 rounded-3 mx-auto mt-2" style="max-width: 330px;" id="bakongAutoStatusBox">
-                                            <div class="d-flex align-items-center justify-content-center gap-2 mb-1.5" id="bakongLiveStatus">
-                                                <div class="spinner-grow spinner-grow-sm text-danger" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
-                                                <span class="fw-semibold text-danger" style="font-size: 12px;" id="bakongLiveStatusText">កំពុងរង់ចាំការស្កេនទូទាត់ប្រាក់...</span>
-                                            </div>
-                                            <div class="progress" style="height: 4px; background: rgba(220, 53, 69, 0.15);">
-                                                <div id="bakongProgressBar" class="progress-bar bg-danger progress-bar-striped progress-bar-animated" role="progressbar" style="width: 20%; transition: width 0.6s ease;"></div>
-                                            </div>
-                                            <div class="text-muted small mt-1.5" style="font-size: 11px;">
-                                                <i class="bi bi-info-circle me-1"></i>ប្រព័ន្ធនឹងចេញសំបុត្រស្វ័យប្រវត្តភ្លាមៗ មិនបាច់ចុចប៊ូតុងទេ
-                                            </div>
-                                            <div class="mt-2 pt-1.5 border-top border-danger-subtle">
-                                                <button type="button" id="btnManualBakongCheck" onclick="checkAndSubmitBakong()" class="btn btn-outline-danger btn-sm py-1 px-3 rounded-pill fw-semibold shadow-xs" style="font-size: 11px;">
-                                                    <i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)
-                                                </button>
+                                        <!-- Minimalist, Clean Status Indicator (No buttons, no clutter) -->
+                                        <div id="bakongStatusIndicator" class="mt-3 pt-1 text-center">
+                                            <div class="d-inline-flex align-items-center justify-content-center gap-2 px-3 py-1.5 rounded-pill bg-light border text-muted" style="font-size: 12px;">
+                                                <span class="spinner-grow spinner-grow-sm text-danger" role="status" style="width: 8px; height: 8px;"></span>
+                                                <span id="bakongStatusText" class="fw-medium">កំពុងរង់ចាំការស្កេនទូទាត់...</span>
                                             </div>
                                         </div>
                                     </div>
@@ -904,18 +889,9 @@ function finishBakongPayment() {
         bakongPollTimer = null;
     }
 
-    const statusBox = document.getElementById('bakongAutoStatusBox');
-    if (statusBox) {
-        statusBox.className = 'card border border-success bg-success-subtle p-2.5 rounded-3 mx-auto mt-2';
-    }
-    const liveStatus = document.getElementById('bakongLiveStatus');
-    if (liveStatus) {
-        liveStatus.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5 me-1"></i><span class="fw-bold text-success" style="font-size: 13px;">ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...</span>';
-    }
-    const pBar = document.getElementById('bakongProgressBar');
-    if (pBar) {
-        pBar.className = 'progress-bar bg-success';
-        pBar.style.width = '100%';
+    const indicator = document.getElementById('bakongStatusIndicator');
+    if (indicator) {
+        indicator.innerHTML = '<div class="d-inline-flex align-items-center justify-content-center gap-2 px-3 py-1.5 rounded-pill bg-success-subtle border border-success-subtle text-success fw-bold" style="font-size: 12.5px;"><i class="bi bi-check-circle-fill"></i> ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...</div>';
     }
 
     const pConfirmed = document.getElementById('paymentConfirmedInput');
@@ -924,7 +900,7 @@ function finishBakongPayment() {
     setTimeout(() => {
         const form = document.getElementById('registrationForm');
         if (form) form.submit();
-    }, 600);
+    }, 500);
 }
 
 function startBakongPolling() {
@@ -934,13 +910,7 @@ function startBakongPolling() {
     const md5 = document.getElementById('bakongMd5Input')?.value;
     if (!md5) return;
 
-    const pBar = document.getElementById('bakongProgressBar');
-    if (pBar) {
-        pBar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
-        pBar.style.width = '20%';
-    }
-
-    // Use relative path to completely avoid cross-origin / CORS discrepancies between localhost & LAN IP
+    // Use relative path to avoid cross-origin / CORS discrepancies
     const checkUrl = '<?= defined('BASE_PATH') ? BASE_PATH : '' ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong';
 
     bakongPollTimer = setInterval(async () => {
@@ -959,11 +929,6 @@ function startBakongPolling() {
         }
 
         bakongScanSeconds += 2;
-        if (pBar) {
-            // Smooth pulsating indicator while actively listening
-            const pct = 20 + ((bakongScanSeconds * 5) % 75);
-            pBar.style.width = pct + '%';
-        }
 
         try {
             const res = await fetch(checkUrl, {
@@ -986,49 +951,6 @@ function startBakongPolling() {
             console.warn('Bakong poll error:', e);
         }
     }, 2000);
-}
-
-async function checkAndSubmitBakong() {
-    const btn = document.getElementById('btnManualBakongCheck');
-    const md5 = document.getElementById('bakongMd5Input')?.value;
-    const checkUrl = '<?= defined('BASE_PATH') ? BASE_PATH : '' ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong';
-
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងផ្ទៀងផ្ទាត់ជាមួយធនាគារ...';
-    }
-
-    try {
-        const res = await fetch(checkUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                md5: md5,
-                amount: '<?= (float)$ticketPrice ?>',
-                currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
-            })
-        });
-        const data = await res.json();
-        if (data.paid === true || (data.data && (data.data.is_paid || data.data.status === 'SUCCESS'))) {
-            finishBakongPayment();
-            return;
-        } else {
-            alert('ប្រព័ន្ធមិនទាន់ទទួលបានការផ្ទេរប្រាក់ពីធនាគារឡើយ! សូមស្កេនទូទាត់តាម App ធនាគារ (Bakong/ABA/...) របស់អ្នករួចរាល់ជាមុនសិន។');
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)';
-            }
-        }
-    } catch (e) {
-        alert('មិនអាចភ្ជាប់ទៅកាន់ប្រព័ន្ធផ្ទៀងផ្ទាត់បានទេ សូមព្យាយាមម្តងទៀត');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ (ផ្ទៀងផ្ទាត់ឥឡូវនេះ)';
-        }
-    }
 }
 
 function confirmAndSubmitRegistration() {

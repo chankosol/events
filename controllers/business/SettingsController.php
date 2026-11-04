@@ -372,5 +372,45 @@ class BusinessSettingsController {
         Session::flash('success', 'បានរក្សាទុកការកំណត់ Bakong QR និង ABA PayWay ដោយជោគជ័យ។');
         redirect(APP_URL . '/settings#paymentsTab');
     }
+
+    public static function testBakong(): void {
+        header('Content-Type: application/json; charset=utf-8');
+        requireAuth();
+        requirePermission('business.settings');
+
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true) ?: $_POST;
+        $token = trim($input['token'] ?? '');
+
+        if (empty($token)) {
+            echo json_encode(['success' => false, 'message' => 'សូមបញ្ចូល Token ដើម្បីធ្វើតេស្ត']);
+            exit;
+        }
+
+        require_once ROOT_PATH . '/helpers/bakong_helper.php';
+        $res = bakong_check_payment_by_md5('d41d8cd98f00b204e9800998ecf8427e', $token);
+        $code = $res['http_code'] ?? 0;
+        $errCode = $res['raw']['errorCode'] ?? 0;
+
+        if ($code === 401 || $errCode === 6) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Token ផុតកំណត់ ឬមិនទាន់បានអនុញ្ញាតពី NBC Bakong (HTTP 401: Unauthorized / Code 6)។ សូមស្នើសុំ Token ថ្មីពី NBC Bakong Developer Portal។'
+            ]);
+            exit;
+        } elseif ($code >= 200 && $code < 300) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Token ត្រឹមត្រូវ និងភ្ជាប់ទៅកាន់ NBC Bakong បានជោគជ័យ!'
+            ]);
+            exit;
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'ស្ថានភាពឆ្លើយតបពី NBC: HTTP ' . $code . ' (' . ($res['message'] ?: 'Unknown error') . ')'
+            ]);
+            exit;
+        }
+    }
 }
 

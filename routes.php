@@ -651,6 +651,11 @@ $router->post('/settings/gateway-setup', function() {
     BusinessSettingsController::saveGatewaySetup();
 });
 
+$router->post('/settings/test-bakong', function() {
+    require_once ROOT_PATH . '/controllers/business/SettingsController.php';
+    BusinessSettingsController::testBakong();
+});
+
 $router->get('/staff', function() {
     require_once ROOT_PATH . '/controllers/business/StaffController.php';
     StaffController::index();

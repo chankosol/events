@@ -335,8 +335,19 @@ $user = $user ?? Auth::user() ?? [];
                                                         <input class="form-control form-control-sm" name="merchant_name" placeholder="ឈ្មោះស្ថាប័ន ឬបុគ្គល" value="<?php echo e($bSettings['merchant_name'] ?? ''); ?>" style="font-size: 12px;">
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <label class="form-label text-muted mb-1 small" style="font-size: 11px;">API Token</label>
-                                                        <input type="password" class="form-control form-control-sm font-monospace" id="business_bakong_api_token" name="bakong_api_token" placeholder="Token" value="<?php echo e($bSettings['bakong_api_token'] ?? ''); ?>" style="font-size: 12px;">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <label class="form-label text-muted mb-0 small" style="font-size: 11px;">API Token</label>
+                                                            <button type="button" class="btn btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;" onclick="testBusinessBakongToken()">
+                                                                <i class="bi bi-shield-check me-0.5"></i> ធ្វើតេស្ត Token
+                                                            </button>
+                                                        </div>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="password" class="form-control font-monospace" id="business_bakong_api_token" name="bakong_api_token" placeholder="Token" value="<?php echo e($bSettings['bakong_api_token'] ?? ''); ?>" style="font-size: 12px;">
+                                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('business_bakong_api_token', this)">
+                                                                <i class="bi bi-eye"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div id="bakongTestResult" class="small mt-1 d-none" style="font-size: 11.5px;"></div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label text-muted mb-1 small" style="font-size: 11px;">Base URL</label>
@@ -748,4 +759,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    const icon = btn.querySelector('i');
+    if (icon) {
+        icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+}
+
+async function testBusinessBakongToken() {
+    const tokenInp = document.getElementById('business_bakong_api_token');
+    const resultBox = document.getElementById('bakongTestResult');
+    const token = tokenInp ? tokenInp.value.trim() : '';
+
+    if (!token) {
+        alert('សូមបញ្ចូល Token ជាមុនសិន!');
+        return;
+    }
+
+    resultBox.className = 'small mt-1 text-muted';
+    resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងធ្វើតេស្តភ្ជាប់ទៅកាន់ NBC Bakong...';
+    resultBox.classList.remove('d-none');
+
+    try {
+        const res = await fetch('<?= APP_URL ?>/settings/test-bakong', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ token: token })
+        });
+        const data = await res.json();
+        if (data.success) {
+            resultBox.className = 'small mt-1 text-success fw-bold';
+            resultBox.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ' + data.message;
+        } else {
+            resultBox.className = 'small mt-1 text-danger fw-bold';
+            resultBox.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> ' + data.message;
+        }
+    } catch (err) {
+        resultBox.className = 'small mt-1 text-danger';
+        resultBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> មិនអាចភ្ជាប់ទៅកាន់ម៉ាស៊ីនបម្រើបានទេ។';
+    }
+}
 </script>
