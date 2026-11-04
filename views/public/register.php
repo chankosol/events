@@ -26,29 +26,15 @@
                         <div class="alert alert-danger py-2 small"><?= htmlspecialchars(Session::flash('error')) ?></div>
                     <?php endif; ?>
 
-                    <!-- Quick Ticket Retrieval for existing attendees -->
-                    <div class="alert alert-primary-subtle border border-primary-subtle d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-xs">
-                        <div class="d-flex align-items-center me-2 mb-2 mb-sm-0">
-                            <i class="bi bi-ticket-perforated-fill text-primary fs-3 me-3"></i>
-                            <div>
-                                <span class="fw-bold d-block text-dark">ធ្លាប់បានចុះឈ្មោះរួចហើយ?</span>
-                                <small class="text-muted">ស្វែងរកសំបុត្រ ឬទាញយក QR Code របស់អ្នកឡើងវិញដោយប្រើលេខទូរស័ព្ទ</small>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-bold" onclick="openFindTicketModal()">
-                            <i class="bi bi-search me-1"></i> រកសំបុត្ររបស់ខ្ញុំ
-                        </button>
-                    </div>
-
                     <?php
                     $isFreeMode = ($workshop['payment_mode'] === 'free');
-                    // In Free Mode with single ticket, hide ticket selection completely
-                    $showTicketSelection = !$isFreeMode || count($tickets) > 1;
+                    // Only show ticket selection if there are more than 1 ticket to choose from
+                    $showTicketSelection = (count($tickets) > 1);
                     $stepIdx = 1;
                     $khmerNumbers = [1 => '១', 2 => '២', 3 => '៣', 4 => '៤', 5 => '៥'];
                     ?>
 
-                    <form action="<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug']) ?>/register" method="POST">
+                    <form action="<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug']) ?>/register" method="POST" enctype="multipart/form-data" id="registrationForm">
                         <?= csrfField() ?>
                         
                         <?php 
@@ -69,11 +55,14 @@
                             <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-4 rounded-3 border-0 shadow-xs">
                                 <i class="bi bi-shield-check text-success fs-3 me-2"></i>
                                 <div>
-                                    <strong class="d-block text-dark">តំណភ្ជាប់សំបុត្រពិសេស (Private Ticket Access)</strong>
+                                    <strong class="d-block text-dark">តំណភ្ជាប់សំបុត្រពិសេស</strong>
                                     <small class="text-muted">អ្នកកំពុងចុះឈ្មោះសំបុត្រ «<?= htmlspecialchars($directTicket['name']) ?>» តាមរយៈតំណភ្ជាប់ផ្ទាល់។</small>
                                 </div>
                             </div>
                         <?php endif; ?>
+
+                        <!-- Step 1: Attendee Information -->
+                        <div id="step1Section">
 
                         <?php if ($showTicketSelection): ?>
                             <h5 class="fw-bold text-primary mb-3">
@@ -103,7 +92,13 @@
                             </div>
                         <?php else: ?>
                             <?php if (!empty($tickets)): ?>
-                                <input type="hidden" name="ticket_id" value="<?= htmlspecialchars($tickets[0]['id']) ?>">
+                                <input type="hidden" name="ticket_id" id="hiddenTicketId" value="<?= htmlspecialchars($tickets[0]['id']) ?>" data-name="<?= htmlspecialchars($tickets[0]['name']) ?>" data-price="<?= (float)$tickets[0]['price'] ?>">
+                                <?php if ((float)$tickets[0]['price'] > 0): ?>
+                                    <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 px-3 mb-3 rounded-3">
+                                        <span class="small text-muted"><i class="bi bi-ticket-perforated me-1 text-primary"></i> សំបុត្រ: <strong class="text-dark"><?= htmlspecialchars($tickets[0]['name']) ?></strong></span>
+                                        <span class="badge bg-primary fs-6">$<?= number_format($tickets[0]['price'], 2) ?></span>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         <?php endif; ?>
 
@@ -327,44 +322,161 @@
                         <?php endforeach; ?>
                         <?php endif; ?>
 
-                        <?php if (!$isFreeMode): ?>
-                        <div class="mb-4 mt-3">
-                            <label class="form-label small fw-bold">កូដបញ្ចុះតម្លៃ <span class="text-muted fw-normal small">(ជម្រើស)</span></label>
-                            <input type="text" name="promo_code" class="form-control" placeholder="ឧ. PROMO20" value="<?= htmlspecialchars($old['promo_code'] ?? '') ?>">
-                        </div>
-                        <?php endif; ?>
+                            <!-- Step 1 Button -->
+                            <div class="d-grid mt-4">
+                                <?php if ($isFreeMode): ?>
+                                    <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm py-3" id="btnSubmitFree">
+                                        <i class="bi bi-check-circle me-1"></i> ចុះឈ្មោះឥឡូវនេះ
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-primary btn-lg fw-bold shadow-sm py-3" id="btnGoToPayment" onclick="goToPaymentStep()">
+                                        <i class="bi bi-arrow-right-circle me-1"></i> បន្ទាប់
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div> <!-- End #step1Section -->
 
-                        <?php if (!empty($paymentMethods) && !$isFreeMode): ?>
-                        <div class="mt-4 p-3 bg-light rounded border mb-4">
-                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-wallet2 text-primary me-1"></i> គណនីបង់ប្រាក់</h6>
-                            <p class="text-muted small mb-3">សូមផ្ទេរប្រាក់ទៅកាន់គណនីខាងក្រោម ហើយបញ្ចូលបង្កាន់ដៃនៅជំហានបន្ទាប់៖</p>
-                            <div class="row g-3">
-                                <?php foreach ($paymentMethods as $pm): ?>
-                                    <div class="col-md-6">
-                                        <div class="card h-100 p-2 shadow-sm border">
-                                            <div class="card-body p-2 small">
-                                                <h6 class="fw-bold mb-1"><?= htmlspecialchars($pm['name']) ?></h6>
-                                                <?php if ($pm['bank']): ?><div><strong>ធនាគារ:</strong> <?= htmlspecialchars($pm['bank']) ?></div><?php endif; ?>
-                                                <?php if ($pm['account_name']): ?><div><strong>ឈ្មោះគណនី:</strong> <?= htmlspecialchars($pm['account_name']) ?></div><?php endif; ?>
-                                                <?php if ($pm['account_number']): ?><div><strong>លេខគណនី:</strong> <?= htmlspecialchars($pm['account_number']) ?></div><?php endif; ?>
-                                                <?php if (!empty($pm['qr_image_path'])): ?>
-                                                    <div class="text-center mt-2">
-                                                        <img src="<?= APP_URL . '/' . htmlspecialchars($pm['qr_image_path']) ?>" alt="QR" class="img-thumbnail" style="max-height: 120px;">
+                        <?php if (!$isFreeMode): ?>
+                        <!-- Step 2: Payment Section (Shown after clicking 'បន្ទាប់') -->
+                        <div id="step2Section" class="d-none">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                <h5 class="fw-bold text-primary mb-0">
+                                    <i class="bi bi-wallet2 me-1"></i> ការទូទាត់ប្រាក់
+                                </h5>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
+                                    ជំហានបន្ទាប់
+                                </span>
+                            </div>
+
+                            <!-- Attendee & Ticket Summary Card -->
+                            <div class="card border rounded-3 p-3 mb-3 bg-light shadow-2xs">
+                                <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom">
+                                    <span class="text-muted small">សិក្ខាកាម:</span>
+                                    <span class="fw-bold text-dark small" id="summaryAttendeeName">-</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom">
+                                    <span class="text-muted small">សំបុត្រ:</span>
+                                    <span class="fw-bold text-dark small" id="summaryTicketName"><?= htmlspecialchars($tickets[0]['name'] ?? 'សំបុត្រ') ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-1">
+                                    <span class="fw-bold text-dark">ទឹកប្រាក់ត្រូវបង់:</span>
+                                    <span class="fw-bold text-primary fs-5" id="summaryTicketPriceDisplay">
+                                        <?= isset($tickets[0]) ? ((float)$tickets[0]['price'] == 0 ? 'ឥតគិតថ្លៃ' : '$' . number_format($tickets[0]['price'], 2)) : '$0.00' ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Promo Code (Optional) -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="bi bi-tag text-primary me-1"></i> កូដបញ្ចុះតម្លៃ <span class="text-muted fw-normal small">(ប្រសិនបើមាន)</span>
+                                </label>
+                                <input type="text" name="promo_code" id="promoCodeInput" class="form-control form-control-sm" placeholder="ឧ. PROMO20" value="<?= htmlspecialchars($old['promo_code'] ?? '') ?>">
+                            </div>
+
+                            <!-- Business Payment Information -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark mb-2">
+                                    <i class="bi bi-bank text-primary me-1"></i> ព័ត៌មានគណនីបង់ប្រាក់របស់ស្ថាប័ន
+                                </label>
+                                <?php if (!empty($paymentMethods)): ?>
+                                    <div class="d-flex flex-column gap-3">
+                                        <?php foreach ($paymentMethods as $pm): ?>
+                                            <div class="card border rounded-3 p-3 bg-white shadow-2xs">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-primary text-white p-1.5 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 26px; height: 26px;">
+                                                            <i class="bi bi-wallet2" style="font-size: 0.75rem;"></i>
+                                                        </span>
+                                                        <strong class="text-dark"><?= htmlspecialchars($pm['name']) ?></strong>
+                                                    </div>
+                                                    <?php if (!empty($pm['bank'])): ?>
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2">
+                                                            <?= htmlspecialchars($pm['bank']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <!-- QR Code Display -->
+                                                <div class="text-center my-2 p-2 bg-light rounded-3 border d-inline-block mx-auto">
+                                                    <?php 
+                                                    if (!empty($pm['qr_image_path'])) {
+                                                        $qrImgSrc = APP_URL . '/' . htmlspecialchars($pm['qr_image_path']);
+                                                    } else {
+                                                        // Fallback QR code from bank details
+                                                        $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
+                                                        $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
+                                                    }
+                                                    ?>
+                                                    <img src="<?= $qrImgSrc ?>" alt="QR Payment" class="img-fluid rounded" style="max-height: 180px; width: 180px; object-fit: contain;">
+                                                    <div class="text-muted small mt-1" style="font-size: 0.72rem;">ស្កេនដើម្បីបង់ប្រាក់</div>
+                                                </div>
+
+                                                <!-- Bank Account Details -->
+                                                <div class="bg-light p-2.5 rounded-3 border small">
+                                                    <?php if (!empty($pm['account_name'])): ?>
+                                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                        <span class="text-muted">ឈ្មោះគណនី:</span>
+                                                        <strong class="text-dark"><?= htmlspecialchars($pm['account_name']) ?></strong>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($pm['account_number'])): ?>
+                                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                        <span class="text-muted">លេខគណនី:</span>
+                                                        <div class="d-flex align-items-center gap-1.5">
+                                                            <strong class="text-primary font-monospace fs-6"><?= htmlspecialchars($pm['account_number']) ?></strong>
+                                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1.5" style="font-size: 0.7rem;" onclick="copyDirectText('<?= htmlspecialchars($pm['account_number']) ?>', this)">
+                                                                <i class="bi bi-copy me-1"></i> ចម្លង
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                    <div class="d-flex justify-content-between align-items-center py-1">
+                                                        <span class="text-muted">រូបិយប័ណ្ណ:</span>
+                                                        <span class="fw-bold text-dark"><?= htmlspecialchars($pm['currency'] ?: 'USD') ?></span>
+                                                    </div>
+                                                </div>
+
+                                                <?php if (!empty($pm['instructions'])): ?>
+                                                    <div class="text-muted small mt-2 pt-2 border-top" style="font-size: 0.78rem;">
+                                                        <i class="bi bi-info-circle me-1"></i> <?= htmlspecialchars($pm['instructions']) ?>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
-                                        </div>
+                                        <?php endforeach; ?>
                                     </div>
-                                <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="alert alert-secondary small text-center">
+                                        មិនទាន់មានព័ត៌មានគណនីបង់ប្រាក់។ សូមទាក់ទងអ្នករៀបចំកម្មវិធី។
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Upload Payment Proof -->
+                            <div class="card border rounded-3 p-3 mb-4 bg-light shadow-2xs">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="bi bi-receipt text-primary me-1"></i> ភ្ជាប់បង្កាន់ដៃបង់ប្រាក់ <span class="text-muted fw-normal small">(ជម្រើស)</span>
+                                </label>
+                                <input type="file" name="payment_slip" id="paymentSlipInput" class="form-control form-control-sm bg-white" accept="image/*" onchange="previewSlip(this)">
+                                <div class="form-text text-muted" style="font-size: 0.75rem;">
+                                    ផ្ទុករូបភាពបង្កាន់ដៃ ឬវិក្កយបត្រផ្ទេរប្រាក់ (JPG, PNG)។ អ្នកក៏អាចផ្ញើតាមក្រោយបានដែរ។
+                                </div>
+                                <div id="slipPreviewWrapper" class="text-center mt-2 d-none">
+                                    <img id="slipPreviewImg" src="" class="img-thumbnail" style="max-height: 140px;">
+                                </div>
+                            </div>
+
+                            <!-- Step 2 Navigation Buttons -->
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary py-2.5 px-3 fw-bold" onclick="goToStep1()">
+                                    <i class="bi bi-arrow-left me-1"></i> ត្រឡប់ក្រោយ
+                                </button>
+                                <button type="submit" class="btn btn-primary py-2.5 px-4 fw-bold flex-grow-1 shadow-sm" id="btnSubmitPaid">
+                                    <i class="bi bi-check-circle me-1"></i> បញ្ជាក់ការចុះឈ្មោះ
+                                </button>
                             </div>
                         </div>
                         <?php endif; ?>
-
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm py-3">
-                                <i class="bi bi-check-circle me-1"></i> ចុះឈ្មោះឥឡូវនេះ
-                            </button>
-                        </div>
 
                         <div class="text-center mt-3">
                             <button type="button" class="btn btn-link text-decoration-none text-muted small" onclick="openFindTicketModal()">
@@ -475,6 +587,130 @@ async function submitFindTicket(e) {
         alertBox.innerHTML = '<i class="bi bi-x-circle-fill me-2 fs-5"></i><div>មានបញ្ហាក្នុងការភ្ជាប់ សូមព្យាយាមម្តងទៀត។</div>';
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-search me-1"></i> ស្វែងរកសំបុត្រឥឡូវនេះ';
+    }
+}
+
+// 2-Step Registration & Payment Navigation
+function goToPaymentStep() {
+    const form = document.getElementById('registrationForm');
+    if (!form) return;
+
+    // Check HTML5 validity on required inputs in step 1
+    const nameInp = form.querySelector('input[name="name"]');
+    const phoneInp = form.querySelector('input[name="phone"]');
+
+    if (nameInp && !nameInp.value.trim()) {
+        nameInp.focus();
+        nameInp.reportValidity();
+        return;
+    }
+    if (phoneInp && phoneInp.hasAttribute('required') && !phoneInp.value.trim()) {
+        phoneInp.focus();
+        phoneInp.reportValidity();
+        return;
+    }
+
+    // Check custom required fields in step 1
+    const requiredInputs = document.querySelectorAll('#step1Section [required]');
+    for (let inp of requiredInputs) {
+        if (!inp.value.trim()) {
+            inp.focus();
+            inp.reportValidity();
+            return;
+        }
+    }
+
+    // Check Face Scan if required
+    const faceReq = document.getElementById('faceEnrollRequired');
+    const faceDesc = document.getElementById('faceDescriptorInput');
+    if (faceReq && (!faceDesc || !faceDesc.value)) {
+        alert('សូមស្គេនផ្ទៃមុខមុនបន្ត (*ចាំបាច់)');
+        document.getElementById('faceEnrollSection')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+
+    // Populate summary in Step 2
+    const summaryName = document.getElementById('summaryAttendeeName');
+    if (summaryName && nameInp) summaryName.textContent = nameInp.value.trim();
+
+    // Determine selected ticket
+    let ticketName = 'សំបុត្រទូទៅ';
+    let ticketPriceText = '$0.00';
+    let isFreeTicket = false;
+
+    const checkedRadio = document.querySelector('input[name="ticket_id"]:checked');
+    const hiddenInp = document.getElementById('hiddenTicketId');
+
+    if (checkedRadio) {
+        const parentLabel = checkedRadio.closest('label');
+        ticketName = parentLabel ? parentLabel.querySelector('.fw-bold')?.textContent.trim() : 'សំបុត្រ';
+        const badge = parentLabel ? parentLabel.querySelector('.badge')?.textContent.trim() : '';
+        ticketPriceText = badge;
+        isFreeTicket = badge.includes('ឥតគិតថ្លៃ');
+    } else if (hiddenInp) {
+        ticketName = hiddenInp.getAttribute('data-name') || 'សំបុត្រ';
+        const p = parseFloat(hiddenInp.getAttribute('data-price') || 0);
+        ticketPriceText = p === 0 ? 'ឥតគិតថ្លៃ' : '$' + p.toFixed(2);
+        isFreeTicket = (p === 0);
+    }
+
+    // If ticket is free, submit form directly
+    if (isFreeTicket) {
+        form.submit();
+        return;
+    }
+
+    const summaryTicket = document.getElementById('summaryTicketName');
+    const summaryPrice = document.getElementById('summaryTicketPriceDisplay');
+    if (summaryTicket) summaryTicket.textContent = ticketName;
+    if (summaryPrice) summaryPrice.textContent = ticketPriceText;
+
+    // Show step 2
+    document.getElementById('step1Section').classList.add('d-none');
+    const step2 = document.getElementById('step2Section');
+    if (step2) step2.classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goToStep1() {
+    const step2 = document.getElementById('step2Section');
+    if (step2) step2.classList.add('d-none');
+    document.getElementById('step1Section').classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function previewSlip(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('slipPreviewImg');
+            const wrapper = document.getElementById('slipPreviewWrapper');
+            if (preview && wrapper) {
+                preview.src = e.target.result;
+                wrapper.classList.remove('d-none');
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function copyDirectText(text, btn) {
+    if (!text) return;
+    const button = btn || (window.event ? window.event.currentTarget : null);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+    } else {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+    }
+    if (button) {
+        const orig = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check2"></i> បានចម្លង!';
+        setTimeout(() => button.innerHTML = orig, 1200);
     }
 }
 </script>

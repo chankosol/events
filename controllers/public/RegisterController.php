@@ -205,7 +205,7 @@ class PublicRegisterController {
 
         // Validate ticket
         $ticket = null;
-        if (!$ticketId && $workshop['payment_mode'] === 'free') {
+        if (!$ticketId) {
             $defaultTicket = $db->queryOne(
                 "SELECT * FROM tickets WHERE workshop_id = ? AND status = 'active' ORDER BY sort_order ASC LIMIT 1",
                 [$workshop['id']]
@@ -421,12 +421,38 @@ class PublicRegisterController {
             }
 
             // Create payment record if paid
+            $hasProofUploaded = false;
             if (!$isFree && $finalAmount > 0) {
                 $db->execute(
                     "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, amount, currency, status)
                      VALUES (?, ?, ?, ?, ?, ?, 'pending')",
                     [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $finalAmount, $ticket ? $ticket['currency'] : 'USD']
                 );
+                $paymentId = (int)$db->lastInsertId();
+
+                if (!empty($_FILES['payment_slip']['name'])) {
+                    if (!function_exists('uploadFile')) {
+                        require_once ROOT_PATH . '/helpers/upload_helper.php';
+                    }
+                    $upload = uploadFile($_FILES['payment_slip'], 'payment_proof', (int)$workshop['business_id'], (int)$workshop['id']);
+                    if ($upload['success']) {
+                        $db->execute(
+                            "INSERT INTO payment_proofs (payment_id, registration_id, business_id, proof_file, amount_claimed, currency, transaction_reference, notes, status)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
+                            [
+                                $paymentId,
+                                $registrationId,
+                                $workshop['business_id'],
+                                $upload['path'],
+                                $finalAmount,
+                                $ticket ? $ticket['currency'] : 'USD',
+                                trim($_POST['transaction_reference'] ?? ''),
+                                trim($_POST['payment_notes'] ?? 'Uploaded during registration')
+                            ]
+                        );
+                        $hasProofUploaded = true;
+                    }
+                }
             }
 
             // If confirmed, generate QR code
@@ -477,6 +503,7 @@ class PublicRegisterController {
                 'currency'      => $ticket ? $ticket['currency'] : 'USD',
                 'participant_email' => $email,
                 'qr_token'      => $qrToken,
+                'has_proof'     => $hasProofUploaded,
             ]);
 
             redirect(APP_URL . '/event/' . $slug . '/confirmation');

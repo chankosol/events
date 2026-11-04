@@ -565,14 +565,29 @@ body {
                     <div class="bg-warning text-white rounded-circle d-inline-flex p-3 mb-3 mx-auto">
                         <i class="bi bi-clock-history fs-1"></i>
                     </div>
-                    <h3 class="fw-bold text-warning mb-2">រង់ចាំការផ្ទៀងផ្ទាត់ការបង់ប្រាក់</h3>
-                    <p class="text-muted mb-3">ការចុះឈ្មោះសម្រាប់ <strong><?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?></strong> កំពុងរង់ចាំការត្រួតពិនិត្យបង្កាន់ដៃផ្ទេរប្រាក់។</p>
+                    <h4 class="fw-bold text-warning mb-2">រង់ចាំការផ្ទៀងផ្ទាត់ការបង់ប្រាក់</h4>
+                    <p class="text-muted mb-3">ការចុះឈ្មោះសម្រាប់ <strong><?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?></strong> កំពុងរង់ចាំការត្រួតពិនិត្យការទូទាត់ប្រាក់។</p>
                     <div class="alert alert-info py-2 px-3 d-inline-block small mb-3">
                         <strong>ទឹកប្រាក់ត្រូវបង់:</strong> <?= htmlspecialchars($reg['currency'] ?? 'USD') ?> <?= number_format($reg['final_amount'] ?? 0, 2) ?>
                     </div>
-                    <div>
-                        <a href="<?= APP_URL ?>/participant/login" class="btn btn-primary fw-bold px-4 py-2">
-                            <i class="bi bi-box-arrow-in-right me-1"></i> ចូលគណនីដើម្បីបញ្ចូលបង្កាន់ដៃ
+                    
+                    <div class="mb-3">
+                        <span class="text-muted small d-block">លេខកូដចុះឈ្មោះរបស់អ្នក៖</span>
+                        <strong class="font-monospace fs-5 text-primary"><?= htmlspecialchars($regCode) ?></strong>
+                    </div>
+
+                    <?php if (!empty($reg['has_proof'])): ?>
+                        <div class="alert alert-success py-2 px-3 small mb-3">
+                            <i class="bi bi-check-circle-fill me-1"></i> បានទទួលបង្កាន់ដៃបង់ប្រាក់រួចរាល់! ក្រុមការងារនឹងផ្ទៀងផ្ទាត់ និងបញ្ជាក់សំបុត្រជូនក្នុងពេលឆាប់ៗ។
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="<?= APP_URL ?>/ticket/<?= urlencode($regCode) ?>" class="btn btn-outline-primary fw-bold px-3 py-2">
+                            <i class="bi bi-ticket-perforated me-1"></i> មើលសំបុត្រ & ស្ថានភាព
+                        </a>
+                        <a href="<?= APP_URL ?>/event/<?= htmlspecialchars($reg['workshop_slug'] ?? $slug ?? '') ?>" class="btn btn-light px-3 py-2">
+                            ត្រឡប់ទៅកម្មវិធី
                         </a>
                     </div>
                 </div>
