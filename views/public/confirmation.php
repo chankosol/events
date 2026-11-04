@@ -931,10 +931,14 @@ if ($showSuccessPopup):
 <script src="<?= APP_URL ?>/assets/js/html2canvas.min.js"></script>
 <script>
     if (typeof QRCode === 'undefined') {
-        document.write('<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"><\/script>');
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+        document.head.appendChild(s);
     }
     if (typeof html2canvas === 'undefined') {
-        document.write('<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script>');
+        const s2 = document.createElement('script');
+        s2.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        document.head.appendChild(s2);
     }
 </script>
 
