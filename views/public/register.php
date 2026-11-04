@@ -65,15 +65,28 @@
                             </div>
                         <?php endif; ?>
 
+                        <?php if (!empty($directTicket['_is_direct_private'])): ?>
+                            <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-4 rounded-3 border-0 shadow-xs">
+                                <i class="bi bi-shield-check text-success fs-3 me-2"></i>
+                                <div>
+                                    <strong class="d-block text-dark">តំណភ្ជាប់សំបុត្រពិសេស (Private Ticket Access)</strong>
+                                    <small class="text-muted">អ្នកកំពុងចុះឈ្មោះសំបុត្រ «<?= htmlspecialchars($directTicket['name']) ?>» តាមរយៈតំណភ្ជាប់ផ្ទាល់។</small>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <?php if ($showTicketSelection): ?>
                             <h5 class="fw-bold text-primary mb-3">
                                 <i class="bi bi-ticket-perforated me-1"></i> <?= $khmerNumbers[$stepIdx++] ?>. ប្រភេទសំបុត្រ
                             </h5>
                             <div class="list-group mb-4">
                                 <?php foreach ($tickets as $ticket): ?>
+                                <?php 
+                                $isTicketChecked = (($old['ticket_id'] ?? '') == $ticket['id']) || (!empty($directTicketId) && $directTicketId == $ticket['id']) || count($tickets) === 1;
+                                ?>
                                 <label class="list-group-item d-flex justify-content-between align-items-center p-3">
                                     <div>
-                                        <input class="form-check-input me-2" type="radio" name="ticket_id" value="<?= $ticket['id'] ?>" <?= (($old['ticket_id'] ?? '') == $ticket['id'] || count($tickets) === 1) ? 'checked' : '' ?> required>
+                                        <input class="form-check-input me-2" type="radio" name="ticket_id" value="<?= $ticket['id'] ?>" <?= $isTicketChecked ? 'checked' : '' ?> required>
                                         <span class="fw-bold"><?= htmlspecialchars($ticket['name']) ?></span>
                                         <?php if ($ticket['description']): ?>
                                             <small class="d-block text-muted ps-4"><?= htmlspecialchars($ticket['description']) ?></small>

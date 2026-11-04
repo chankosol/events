@@ -690,32 +690,121 @@ $breadcrumbs = [
 </div>
 
 <!-- 3. Modal: Ticket Types (Pure Khmer, No (Tickets)) -->
+<!-- 3. Modal: Ticket Types & Direct Links -->
 <div class="modal fade" id="ticketsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                    <i class="bi bi-ticket-perforated-fill text-primary"></i> ប្រភេទសំបុត្រ
+                    <i class="bi bi-ticket-perforated-fill text-primary"></i> ប្រភេទសំបុត្រ និងតំណភ្ជាប់ផ្ទាល់ (Direct Link)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <ul class="list-group list-group-flush mb-3">
-                    <?php foreach ($tickets as $t): ?>
-                        <li class="list-group-item px-0 py-2.5 d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-bold text-dark"><?php echo e($t['name']); ?></div>
-                                <div class="text-muted small"><?php echo ucfirst($t['ticket_type']); ?></div>
-                            </div>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 fs-6">
-                                <?php echo $t['price'] == 0 ? 'ឥតគិតថ្លៃ' : '$' . number_format($t['price'], 2); ?>
-                            </span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-                <div class="text-center pt-2 border-top">
+                <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
+                    <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
+                    <div>
+                        <strong>ការគ្រប់គ្រងសំបុត្រ ៖</strong> សំបុត្រដែល <strong>«លាក់ (ឯកជន)»</strong> នឹងមិនបង្ហាញលើទំព័រសាធារណៈឡើយ។ លោកអ្នកអាចចម្លងតំណភ្ជាប់ផ្ទាល់ (Direct Link) ឬ QR កូដនៃសំបុត្រនោះ ផ្ញើជូនតែបុគ្គល ឬភ្ញៀវពិសេសដែលត្រូវទទួលបានប៉ុណ្ណោះ។
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover mb-0">
+                        <thead class="table-light small">
+                            <tr>
+                                <th>ឈ្មោះសំបុត្រ</th>
+                                <th>ប្រភេទ</th>
+                                <th>តម្លៃ</th>
+                                <th class="text-center">ស្ថានភាពបង្ហាញ</th>
+                                <th class="text-end">តំណភ្ជាប់ផ្ទាល់ & QR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($tickets as $t): ?>
+                                <?php 
+                                $ticketDirectUrl = qrCodeUrl('/event/' . $workshop['slug'] . '/register?ticket=' . $t['id']);
+                                $isVis = (int)($t['is_visible'] ?? 1);
+                                ?>
+                                <tr id="ticket-row-<?php echo $t['id']; ?>">
+                                    <td>
+                                        <div class="fw-bold text-dark"><?php echo e($t['name']); ?></div>
+                                        <?php if (!empty($t['description'])): ?>
+                                            <div class="text-muted small"><?php echo e($t['description']); ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-secondary border"><?php echo ucfirst($t['ticket_type']); ?></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo (float)$t['price'] == 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'; ?> px-2.5 py-1 fw-bold fs-6">
+                                            <?php echo (float)$t['price'] == 0 ? 'ឥតគិតថ្លៃ' : '$' . number_format($t['price'], 2); ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" 
+                                                class="btn btn-sm <?php echo $isVis ? 'btn-success text-white' : 'btn-outline-secondary'; ?> rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1"
+                                                id="vis-btn-<?php echo $t['id']; ?>"
+                                                onclick="toggleTicketVisibility(<?php echo $workshop['id']; ?>, <?php echo $t['id']; ?>)"
+                                                title="<?php echo $isVis ? 'ចុចដើម្បីលាក់សំបុត្រនេះពីទំព័រសាធារណៈ' : 'ចុចដើម្បីបង្ហាញសំបុត្រនេះជាសាធារណៈ'; ?>">
+                                            <i class="bi <?php echo $isVis ? 'bi-eye-fill' : 'bi-eye-slash-fill'; ?>" id="vis-icon-<?php echo $t['id']; ?>"></i>
+                                            <span id="vis-text-<?php echo $t['id']; ?>"><?php echo $isVis ? 'សាធារណៈ' : 'លាក់ (ឯកជន)'; ?></span>
+                                        </button>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    onclick="copyDirectLink('<?php echo e($ticketDirectUrl); ?>', this)" 
+                                                    title="ចម្លងតំណភ្ជាប់ផ្ទាល់សម្រាប់សំបុត្រនេះ">
+                                                <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
+                                            </button>
+                                            <button type="button" class="btn btn-outline-dark" 
+                                                    onclick="showTicketQrModal('<?php echo e(addslashes($t['name'])); ?>', '<?php echo (float)$t['price'] == 0 ? 'ឥតគិតថ្លៃ' : '$' . number_format($t['price'], 2); ?>', '<?php echo e($ticketDirectUrl); ?>')"
+                                                    title="មើល QR Code សម្រាប់សំបុត្រនេះ">
+                                                <i class="bi bi-qr-code"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-center pt-3 mt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="text-muted small text-start">
+                        <i class="bi bi-shield-check text-success me-1"></i> សំបុត្រដែល «លាក់» អាចចុះឈ្មោះបានតាមរយៈតំណភ្ជាប់ផ្ទាល់ (Direct Link) ប៉ុណ្ណោះ
+                    </span>
                     <a href="<?php echo APP_URL; ?>/workshops/<?php echo $workshop['id']; ?>/edit" class="btn btn-outline-primary btn-sm px-3">
-                        <i class="bi bi-pencil me-1"></i> កែសម្រួលព័ត៌មានសំបុត្រ
+                        <i class="bi bi-pencil me-1"></i> កែសម្រួលព័ត៌មានលម្អិត
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Ticket Specific QR Code -->
+<div class="modal fade" id="ticketQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 text-center p-3">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold text-dark w-100" id="ticketQrTitle">QR កូដសំបុត្រ</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-2">
+                <div class="badge bg-primary-subtle text-primary border border-primary-subtle mb-2" id="ticketQrPrice"></div>
+                <div class="bg-white p-2 rounded-3 border d-inline-block shadow-xs mb-2">
+                    <img id="ticketQrImg" src="" class="img-fluid" alt="Ticket QR" style="width: 180px; height: 180px;">
+                </div>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" id="ticketQrUrlInput" class="form-control form-control-sm font-monospace text-center small" readonly>
+                </div>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm btn-primary px-3" onclick="copyTicketQrInput(this)">
+                        <i class="bi bi-clipboard me-1"></i> ចម្លង Link
+                    </button>
+                    <a id="ticketQrDownloadBtn" href="" download="ticket_qr.png" target="_blank" class="btn btn-sm btn-outline-secondary px-3">
+                        <i class="bi bi-download me-1"></i> ទាញយក
                     </a>
                 </div>
             </div>
@@ -1154,6 +1243,93 @@ async function confirmCapacityUpgrade(id) {
     } else {
         alert(data.message || 'ការដំឡើងចំណុះមិនបានជោគជ័យ។');
     }
+// Toggle ticket visibility
+async function toggleTicketVisibility(workshopId, ticketId) {
+    const btn = document.getElementById(`vis-btn-${ticketId}`);
+    const icon = document.getElementById(`vis-icon-${ticketId}`);
+    const text = document.getElementById(`vis-text-${ticketId}`);
+    if (btn) btn.disabled = true;
+
+    try {
+        const fd = new FormData();
+        fd.append('_csrf_token', '<?php echo generateCsrfToken(); ?>');
+
+        const res = await fetch(`<?php echo APP_URL; ?>/workshops/${workshopId}/tickets/${ticketId}/toggle-visibility`, {
+            method: 'POST',
+            body: fd
+        });
+        const data = await res.json();
+        if (data.success) {
+            const isVis = data.data ? data.data.is_visible : (data.is_visible ?? 1);
+            if (isVis === 1) {
+                btn.className = 'btn btn-sm btn-success text-white rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1';
+                icon.className = 'bi bi-eye-fill';
+                text.textContent = 'សាធារណៈ';
+                btn.title = 'ចុចដើម្បីលាក់សំបុត្រនេះពីទំព័រសាធារណៈ';
+            } else {
+                btn.className = 'btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1';
+                icon.className = 'bi bi-eye-slash-fill';
+                text.textContent = 'លាក់ (ឯកជន)';
+                btn.title = 'ចុចដើម្បីបង្ហាញសំបុត្រនេះជាសាធារណៈ';
+            }
+        } else {
+            alert(data.message || 'មិនអាចផ្លាស់ប្តូរស្ថានភាពសំបុត្របានទេ');
+        }
+    } catch (e) {
+        alert('បញ្ហាបណ្តាញ៖ ' + e.message);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+// Copy direct ticket link
+function copyDirectLink(url, btn) {
+    const doCopy = () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(url);
+        } else {
+            const temp = document.createElement('input');
+            temp.value = url;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            return Promise.resolve();
+        }
+    };
+
+    doCopy().then(() => {
+        if (btn) {
+            const origHtml = btn.innerHTML;
+            btn.className = 'btn btn-sm btn-success text-white';
+            btn.innerHTML = '<i class="bi bi-check2 me-1"></i> បានចម្លង!';
+            setTimeout(() => {
+                btn.className = 'btn btn-sm btn-outline-primary';
+                btn.innerHTML = origHtml;
+            }, 1200);
+        }
+    });
+}
+
+// Show Ticket QR modal
+function showTicketQrModal(name, price, url) {
+    document.getElementById('ticketQrTitle').textContent = name;
+    document.getElementById('ticketQrPrice').textContent = price;
+    document.getElementById('ticketQrUrlInput').value = url;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+    document.getElementById('ticketQrImg').src = qrSrc;
+    document.getElementById('ticketQrDownloadBtn').href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(url)}`;
+    document.getElementById('ticketQrDownloadBtn').download = `qr_ticket_${encodeURIComponent(name)}.png`;
+
+    const modal = new bootstrap.Modal(document.getElementById('ticketQrModal'));
+    modal.show();
+}
+
+// Copy input inside ticket QR modal
+function copyTicketQrInput(btn) {
+    const input = document.getElementById('ticketQrUrlInput');
+    if (!input) return;
+    copyDirectLink(input.value, btn);
 }
 
 function copyPublicLink(inputId, btn) {

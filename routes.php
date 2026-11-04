@@ -352,6 +352,12 @@ $router->get('/workshops/{id}/agenda/print', function($id) {
     WorkshopController::printAgenda((int)$id);
 });
 
+$router->post('/workshops/{id}/tickets/{ticketId}/toggle-visibility', function($id, $ticketId) {
+    require_once ROOT_PATH . '/controllers/business/WorkshopController.php';
+    WorkshopController::toggleTicketVisibility((int)$id, (int)$ticketId);
+});
+
+
 // Registrations
 $router->get('/workshops/{id}/registrations', function($id) {
     require_once ROOT_PATH . '/controllers/business/RegistrationController.php';

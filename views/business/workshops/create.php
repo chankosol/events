@@ -634,7 +634,7 @@ button.btn i {
                             <?php if (empty($tickets)): ?>
                                 <div class="card bg-light border p-3 mb-3 ticket-row">
                                     <div class="row g-2 align-items-center">
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label class="form-label small fw-bold">ឈ្មោះសំបុត្រ</label>
                                             <input type="text" name="tickets[0][name]" class="form-control" value="សំបុត្រទូទៅ (Standard Ticket)" required>
                                         </div>
@@ -647,12 +647,19 @@ button.btn i {
                                                 <option value="student">សិស្ស/និស្សិត (Student)</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <label class="form-label small fw-bold">តម្លៃ ($ ដុល្លារ)</label>
                                             <input type="number" step="0.01" name="tickets[0][price]" class="form-control" value="<?php echo ($workshop['payment_mode'] === 'free') ? '0.00' : '25.00'; ?>" required>
                                         </div>
-                                        <div class="col-md-2 text-end pt-3">
-                                            <button type="button" class="btn btn-sm btn-danger remove-ticket-btn"><i class="bi bi-trash"></i></button>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold">ការបង្ហាញលើ Web</label>
+                                            <select name="tickets[0][is_visible]" class="form-select">
+                                                <option value="1" selected>👁️ បង្ហាញសាធារណៈ</option>
+                                                <option value="0">🔒 លាក់ (ឯកជន/Free)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-1 text-end pt-3">
+                                            <button type="button" class="btn btn-sm btn-danger remove-ticket-btn" title="លុបសំបុត្រ"><i class="bi bi-trash"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -661,7 +668,7 @@ button.btn i {
                                     <div class="card bg-light border p-3 mb-3 ticket-row">
                                         <input type="hidden" name="tickets[<?php echo $idx; ?>][id]" value="<?php echo $t['id']; ?>">
                                         <div class="row g-2 align-items-center">
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <label class="form-label small fw-bold">ឈ្មោះសំបុត្រ</label>
                                                 <input type="text" name="tickets[<?php echo $idx; ?>][name]" class="form-control" value="<?php echo e($t['name']); ?>" required>
                                             </div>
@@ -675,12 +682,19 @@ button.btn i {
                                                     <option value="complimentary" <?php echo $t['ticket_type'] === 'complimentary' ? 'selected' : ''; ?>>អញ្ជើញពិសេស (Complimentary)</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-3">
+                                            <div class="col-md-2">
                                                 <label class="form-label small fw-bold">តម្លៃ ($ ដុល្លារ)</label>
                                                 <input type="number" step="0.01" name="tickets[<?php echo $idx; ?>][price]" class="form-control" value="<?php echo number_format($t['price'], 2, '.', ''); ?>" required>
                                             </div>
-                                            <div class="col-md-2 text-end pt-3">
-                                                <button type="button" class="btn btn-sm btn-danger remove-ticket-btn"><i class="bi bi-trash"></i></button>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-bold">ការបង្ហាញលើ Web</label>
+                                                <select name="tickets[<?php echo $idx; ?>][is_visible]" class="form-select">
+                                                    <option value="1" <?php echo ((int)($t['is_visible'] ?? 1) === 1) ? 'selected' : ''; ?>>👁️ បង្ហាញសាធារណៈ</option>
+                                                    <option value="0" <?php echo ((int)($t['is_visible'] ?? 1) === 0) ? 'selected' : ''; ?>>🔒 លាក់ (ឯកជន/Free)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1 text-end pt-3">
+                                                <button type="button" class="btn btn-sm btn-danger remove-ticket-btn" title="លុបសំបុត្រ"><i class="bi bi-trash"></i></button>
                                             </div>
                                         </div>
                                     </div>
@@ -806,7 +820,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const html = `
                 <div class="card bg-light border p-3 mb-3 ticket-row">
                     <div class="row g-2 align-items-center">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label small fw-bold">ឈ្មោះសំបុត្រ</label>
                             <input type="text" name="tickets[${count}][name]" class="form-control" placeholder="ឧទាហរណ៍៖ សំបុត្រ VIP" required>
                         </div>
@@ -820,12 +834,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <option value="complimentary">អញ្ជើញពិសេស (Complimentary)</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label small fw-bold">តម្លៃ ($ ដុល្លារ)</label>
                             <input type="number" step="0.01" name="tickets[${count}][price]" class="form-control" value="0.00" required>
                         </div>
-                        <div class="col-md-2 text-end pt-3">
-                            <button type="button" class="btn btn-sm btn-danger remove-ticket-btn"><i class="bi bi-trash"></i></button>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">ការបង្ហាញលើ Web</label>
+                            <select name="tickets[${count}][is_visible]" class="form-select">
+                                <option value="1" selected>👁️ បង្ហាញសាធារណៈ</option>
+                                <option value="0">🔒 លាក់ (ឯកជន/Free)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 text-end pt-3">
+                            <button type="button" class="btn btn-sm btn-danger remove-ticket-btn" title="លុបសំបុត្រ"><i class="bi bi-trash"></i></button>
                         </div>
                     </div>
                 </div>`;

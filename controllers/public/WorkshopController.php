@@ -43,7 +43,7 @@ class PublicWorkshopController {
         }
 
         $tickets = $db->query(
-            "SELECT * FROM tickets WHERE workshop_id = ? AND status = 'active'
+            "SELECT * FROM tickets WHERE workshop_id = ? AND status = 'active' AND is_visible = 1
              ORDER BY sort_order",
             [$workshop['id']]
         );

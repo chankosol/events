@@ -436,23 +436,24 @@ class WorkshopController {
                 $currency = $ticket['currency'] ?? 'USD';
                 $capacity = !empty($ticket['capacity']) ? (int)$ticket['capacity'] : null;
                 $description = $ticket['description'] ?? '';
+                $isVisible = isset($ticket['is_visible']) ? (int)$ticket['is_visible'] : 1;
 
                 $ticketId = (int)($ticket['id'] ?? 0);
                 if ($ticketId > 0 && isset($existingById[$ticketId])) {
                     // Update existing ticket in-place
                     $db->execute(
                         "UPDATE tickets 
-                         SET name = ?, description = ?, ticket_type = ?, price = ?, currency = ?, capacity = ?, status = 'active', sort_order = ?
+                         SET name = ?, description = ?, ticket_type = ?, price = ?, currency = ?, capacity = ?, is_visible = ?, status = 'active', sort_order = ?
                          WHERE id = ? AND workshop_id = ? AND business_id = ?",
-                        [$ticket['name'], $description, $type, $price, $currency, $capacity, $idx, $ticketId, $workshopId, $businessId]
+                        [$ticket['name'], $description, $type, $price, $currency, $capacity, $isVisible, $idx, $ticketId, $workshopId, $businessId]
                     );
                     $retainedIds[] = $ticketId;
                 } else {
                     // Insert new ticket
                     $db->execute(
-                        "INSERT INTO tickets (workshop_id, business_id, name, description, ticket_type, price, currency, capacity, status, sort_order)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)",
-                        [$workshopId, $businessId, $ticket['name'], $description, $type, $price, $currency, $capacity, $idx]
+                        "INSERT INTO tickets (workshop_id, business_id, name, description, ticket_type, price, currency, capacity, is_visible, status, sort_order)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)",
+                        [$workshopId, $businessId, $ticket['name'], $description, $type, $price, $currency, $capacity, $isVisible, $idx]
                     );
                     $retainedIds[] = (int)$db->lastInsertId();
                 }
@@ -1336,5 +1337,38 @@ class WorkshopController {
 
         require_once VIEWS_PATH . '/business/workshops/agenda_print.php';
     }
+
+    /**
+     * Toggle ticket visibility (public vs hidden/private)
+     */
+    public static function toggleTicketVisibility(int $workshopId, int $ticketId): void {
+        requireAuth();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $workshop = $db->queryOne("SELECT id, business_id FROM workshops WHERE id = ? AND (business_id = ? OR ?)", [$workshopId, $businessId, Auth::isPlatformAdmin()]);
+        if (!$workshop) {
+            jsonResponse(false, 'រកមិនឃើញសិក្ខាសាលា');
+        }
+
+        $ticket = $db->queryOne("SELECT * FROM tickets WHERE id = ? AND workshop_id = ?", [$ticketId, $workshopId]);
+        if (!$ticket) {
+            jsonResponse(false, 'រកមិនឃើញសំបុត្រនេះឡើយ');
+        }
+
+        $newVisible = ((int)($ticket['is_visible'] ?? 1) === 1) ? 0 : 1;
+        $db->execute("UPDATE tickets SET is_visible = ? WHERE id = ?", [$newVisible, $ticketId]);
+
+        auditLog('ticket_visibility_toggled', 'tickets', $ticketId, [
+            'workshop_id' => $workshopId,
+            'is_visible' => $newVisible
+        ]);
+
+        jsonResponse(true, $newVisible ? 'សំបុត្រត្រូវបានបើកបង្ហាញជាសាធារណៈ' : 'សំបុត្រត្រូវបានលាក់ (ឯកជន)', [
+            'is_visible' => $newVisible,
+            'ticket_id' => $ticketId
+        ]);
+    }
 }
+
 

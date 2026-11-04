@@ -41,14 +41,33 @@
                             <div class="mb-3">
                                 <?php 
                                 $minPrice = null;
+                                $maxPrice = null;
+                                $hasFree = false;
+                                $hasPaid = false;
                                 foreach ($tickets as $t) {
-                                    if ($minPrice === null || (float)$t['price'] < $minPrice) $minPrice = (float)$t['price'];
+                                    $p = (float)$t['price'];
+                                    if ($p == 0.0) {
+                                        $hasFree = true;
+                                    } else {
+                                        $hasPaid = true;
+                                    }
+                                    if ($minPrice === null || $p < $minPrice) $minPrice = $p;
+                                    if ($maxPrice === null || $p > $maxPrice) $maxPrice = $p;
                                 }
-                                $isFreeEvent = ($workshop['payment_mode'] === 'free') || ($minPrice === null || $minPrice == 0.0);
+
+                                $isFreeEvent = ($workshop['payment_mode'] === 'free') || (!empty($tickets) && !$hasPaid);
                                 ?>
                                 <div class="text-muted small"><?= $isFreeEvent ? 'តម្លៃចូលរួម' : 'តម្លៃចាប់ផ្តើមពី' ?></div>
                                 <div class="fs-3 fw-bold <?= $isFreeEvent ? 'text-success' : 'text-primary' ?>">
-                                    <?= $isFreeEvent ? '<i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ' : '$' . number_format($minPrice, 2) ?>
+                                    <?php if ($isFreeEvent): ?>
+                                        <i class="bi bi-gift me-1"></i> ឥតគិតថ្លៃ
+                                    <?php elseif ($hasFree && $hasPaid && $maxPrice > 0): ?>
+                                        <span class="fs-4">ឥតគិតថ្លៃ - $<?= number_format($maxPrice, 2) ?></span>
+                                    <?php elseif ($minPrice !== null && $minPrice > 0): ?>
+                                        $<?= number_format($minPrice, 2) ?>
+                                    <?php else: ?>
+                                        <i class="bi bi-cash-coin me-1"></i> សំបុត្រគិតថ្លៃ
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <?php if ($workshop['status'] === 'registration_open'): ?>

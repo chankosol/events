@@ -38,6 +38,32 @@ class PublicRegisterController {
             [$workshop['id']]
         );
 
+        // Check direct ticket access via ?ticket={id}
+        $directTicketId = (int)($_GET['ticket'] ?? 0);
+        $directTicket = null;
+        if ($directTicketId > 0) {
+            $directTicket = $db->queryOne(
+                "SELECT * FROM tickets WHERE id = ? AND workshop_id = ? AND status = 'active'
+                 AND (sale_start IS NULL OR sale_start <= NOW())
+                 AND (sale_end IS NULL OR sale_end >= NOW())",
+                [$directTicketId, $workshop['id']]
+            );
+            if ($directTicket) {
+                $inVisibleList = false;
+                foreach ($tickets as $t) {
+                    if ((int)$t['id'] === $directTicketId) {
+                        $inVisibleList = true;
+                        break;
+                    }
+                }
+                // If the direct ticket is hidden (private), make it available for this direct link user!
+                if (!$inVisibleList) {
+                    $directTicket['_is_direct_private'] = true;
+                    $tickets = [$directTicket];
+                }
+            }
+        }
+
         // Get custom registration fields
         $fields = $db->query(
             "SELECT * FROM registration_fields WHERE workshop_id = ? AND status = 'active' AND is_internal = 0 ORDER BY sort_order",
