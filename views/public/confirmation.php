@@ -55,6 +55,25 @@ $isPaymentSuccessful = (!empty($reg['payment_status']) && $reg['payment_status']
     || (!empty($latestPayment['status']) && $latestPayment['status'] === 'paid')
     || isset($_GET['paid'])
     || !empty($reg['just_paid']);
+
+// Retrieve Organization / Workshop branding logo
+$orgLogo = null;
+$workshopId = $reg['workshop_id'] ?? null;
+$businessId = $reg['business_id'] ?? null;
+if (!empty($workshopId)) {
+    $db = Database::getInstance();
+    $wb = $db->queryOne("SELECT logo FROM workshop_branding WHERE workshop_id = ?", [$workshopId]);
+    if (!empty($wb['logo'])) {
+        $orgLogo = $wb['logo'];
+    }
+}
+if (empty($orgLogo) && !empty($businessId)) {
+    $db = Database::getInstance();
+    $bb = $db->queryOne("SELECT logo_path FROM business_branding WHERE business_id = ?", [$businessId]);
+    if (!empty($bb['logo_path'])) {
+        $orgLogo = $bb['logo_path'];
+    }
+}
 ?>
 
 <style>
@@ -372,26 +391,29 @@ body {
 
 /* Success Animation Popup Overlay */
 .success-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
     background: rgba(15, 23, 42, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+    margin: 0 !important;
     opacity: 1;
     transition: opacity 0.35s ease, visibility 0.35s ease;
 }
 .success-popup-overlay.fade-out {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 .confetti-canvas {
     position: absolute;
@@ -405,11 +427,12 @@ body {
 .success-popup-card {
     background: #ffffff;
     border-radius: 28px;
-    padding: 30px 24px 22px;
+    padding: 32px 24px 22px;
     max-width: 360px;
-    width: 100%;
+    width: 90%;
+    margin: auto !important;
     text-align: center;
-    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2);
     position: relative;
     z-index: 2;
     animation: successCardPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
@@ -419,68 +442,10 @@ body {
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-/* Checkmark ripple & SVG animation */
-.success-icon-wrapper {
-    position: relative;
-    width: 76px;
-    height: 76px;
-    margin: 0 auto;
-}
-.success-icon-circle {
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);
-    position: relative;
-    z-index: 2;
-}
-.success-icon-ripple {
-    position: absolute;
-    top: -6px;
-    left: -6px;
-    right: -6px;
-    bottom: -6px;
-    border-radius: 50%;
-    border: 3px solid rgba(16, 185, 129, 0.4);
-    animation: rippleAnim 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
-    z-index: 1;
-}
-@keyframes rippleAnim {
-    0% { transform: scale(0.9); opacity: 1; }
-    100% { transform: scale(1.35); opacity: 0; }
-}
-.success-svg-check {
-    width: 48px;
-    height: 48px;
-    display: block;
-}
-.success-svg-circle {
-    stroke-dasharray: 166;
-    stroke-dashoffset: 166;
-    stroke-width: 3;
-    stroke-miterlimit: 10;
-    stroke: rgba(255, 255, 255, 0.5);
-    animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-}
-.success-svg-check-path {
-    transform-origin: 50% 50%;
-    stroke-dasharray: 48;
-    stroke-dashoffset: 48;
-    stroke-width: 4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke: #ffffff;
-    animation: strokeCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.35s forwards;
-}
-@keyframes strokeCircle {
-    100% { stroke-dashoffset: 0; }
-}
-@keyframes strokeCheck {
-    100% { stroke-dashoffset: 0; }
+@keyframes bounceBadge {
+    0% { transform: scale(0.35); opacity: 0; }
+    60% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 /* Auto-close progress bar */
@@ -490,131 +455,191 @@ body {
     background: #e2e8f0;
     border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-top: 8px;
+    margin-bottom: 4px;
 }
 .success-autoclose-fill {
     height: 100%;
     background: #10b981;
     width: 100%;
-    animation: autoCloseTimer 2.6s linear forwards;
+    animation: autoCloseTimer 2.2s linear forwards;
 }
 @keyframes autoCloseTimer {
     0% { width: 100%; }
     100% { width: 0%; }
 }
+
+/* Floating Action Button for Face Check-in */
+.floating-face-btn-wrapper {
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    z-index: 9998;
+}
+.floating-face-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 50px;
+    padding: 11px 18px 11px 14px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-decoration: none;
+}
+.floating-face-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 14px 28px -4px rgba(37, 99, 235, 0.6), 0 0 0 3px rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+.floating-face-btn.face-enrolled {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 10px 25px -4px rgba(16, 185, 129, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+.floating-face-icon-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+.floating-pulse-ring {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    animation: fabPulse 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
+}
+@keyframes fabPulse {
+    0% { transform: scale(0.85); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+.floating-check-badge {
+    position: absolute;
+    bottom: -3px;
+    right: -5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #059669;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
 </style>
+
+<?php 
+$showSuccessPopup = isset($_GET['already_registered']) 
+    || isset($_GET['paid']) 
+    || !empty($reg['just_paid']) 
+    || Session::has('info') 
+    || !empty($_GET['success'])
+    || !empty($_GET['new']);
+
+if ($showSuccessPopup): 
+    $isPaidPopup = (isset($_GET['paid']) || !empty($reg['just_paid']));
+    $isAlreadyReg = (isset($_GET['already_registered']) || Session::has('info'));
+
+    if ($isPaidPopup) {
+        $popupTitle = 'ការទូទាត់ប្រាក់ជោគជ័យ!';
+        $popupSub = 'ប្រព័ន្ធបានផ្ទៀងផ្ទាត់ការទូទាត់ និងចេញសំបុត្រផ្លូវការជូនរួចរាល់';
+    } elseif ($isAlreadyReg) {
+        $popupTitle = 'បានចុះឈ្មោះរួចរាល់!';
+        $popupSub = 'លោកអ្នកបានចុះឈ្មោះរួចហើយ នេះជាសំបុត្រ និងកូដ QR របស់អ្នក';
+    } else {
+        $popupTitle = 'ការចុះឈ្មោះជោគជ័យ!';
+        $popupSub = 'ប្រព័ន្ធបានចេញសំបុត្រផ្លូវការ និង QR Code ជូនលោកអ្នករួចរាល់';
+    }
+?>
+<!-- Success Celebration Popup Modal (Centered, Auto-close, No button) -->
+<div id="successAnimationOverlay" class="success-popup-overlay" onclick="closeSuccessPopup()">
+    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+    <div class="success-popup-card" onclick="event.stopPropagation()">
+        <!-- Verified Badge Icon with gentle pop animation -->
+        <div class="mb-3 d-flex justify-content-center">
+            <img src="<?= APP_URL ?>/assets/images/verified_badge.png" alt="Verified" style="width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(16, 185, 129, 0.35)); animation: bounceBadge 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+            <?= htmlspecialchars($popupTitle) ?>
+        </h4>
+        <p class="text-muted small px-2 mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+            <?= htmlspecialchars($popupSub) ?>
+        </p>
+
+        <div class="d-inline-flex align-items-center gap-1.5 px-3 py-1 bg-light rounded-pill border mb-3">
+            <i class="bi bi-ticket-perforated text-primary"></i>
+            <span class="font-monospace fw-bold text-dark small"><?= htmlspecialchars($regCode) ?></span>
+        </div>
+
+        <!-- Auto-close countdown progress bar -->
+        <div class="success-autoclose-bar">
+            <div class="success-autoclose-fill"></div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="container py-3 py-md-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
 
-            <?php 
-            $showSuccessPopup = isset($_GET['already_registered']) 
-                || isset($_GET['paid']) 
-                || !empty($reg['just_paid']) 
-                || Session::has('info') 
-                || !empty($_GET['success'])
-                || !empty($_GET['new']);
-
-            if ($showSuccessPopup): 
-                $isPaidPopup = (isset($_GET['paid']) || !empty($reg['just_paid']));
-                $isAlreadyReg = (isset($_GET['already_registered']) || Session::has('info'));
-
-                if ($isPaidPopup) {
-                    $popupTitle = 'ការទូទាត់ប្រាក់ជោគជ័យ!';
-                    $popupSub = 'ប្រព័ន្ធបានផ្ទៀងផ្ទាត់ការទូទាត់ និងចេញសំបុត្រផ្លូវការជូនរួចរាល់';
-                } elseif ($isAlreadyReg) {
-                    $popupTitle = 'បានចុះឈ្មោះរួចរាល់!';
-                    $popupSub = 'លោកអ្នកបានចុះឈ្មោះរួចហើយ នេះជាសំបុត្រ និងកូដ QR របស់អ្នក';
-                } else {
-                    $popupTitle = 'ការចុះឈ្មោះជោគជ័យ!';
-                    $popupSub = 'ប្រព័ន្ធបានចេញសំបុត្រផ្លូវការ និង QR Code ជូនលោកអ្នករួចរាល់';
-                }
-            ?>
-            <!-- Success Animation Popup Overlay -->
-            <div id="successAnimationOverlay" class="success-popup-overlay" onclick="closeSuccessPopup()">
-                <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
-
-                <div class="success-popup-card" onclick="event.stopPropagation()">
-                    <!-- Animated Circular Checkmark -->
-                    <div class="success-icon-wrapper mb-3">
-                        <div class="success-icon-ripple"></div>
-                        <div class="success-icon-circle">
-                            <svg class="success-svg-check" viewBox="0 0 52 52">
-                                <circle class="success-svg-circle" cx="26" cy="26" r="23" fill="none"/>
-                                <path class="success-svg-check-path" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                            </svg>
-                        </div>
-                    </div>
-
-                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
-                        <?= htmlspecialchars($popupTitle) ?>
-                    </h4>
-                    <p class="text-muted small px-2 mb-3" style="font-size: 0.85rem; line-height: 1.5;">
-                        <?= htmlspecialchars($popupSub) ?>
-                    </p>
-
-                    <div class="d-inline-flex align-items-center gap-1.5 px-3 py-1 bg-light rounded-pill border mb-3">
-                        <i class="bi bi-ticket-perforated text-primary"></i>
-                        <span class="font-monospace fw-bold text-dark small"><?= htmlspecialchars($regCode) ?></span>
-                    </div>
-
-                    <!-- Auto-close countdown progress bar -->
-                    <div class="success-autoclose-bar">
-                        <div class="success-autoclose-fill"></div>
-                    </div>
-
-                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold w-100 shadow-sm" onclick="closeSuccessPopup()" style="font-size: 13px;">
-                        <i class="bi bi-eye me-1"></i> មើលសំបុត្រចូលរួម
-                    </button>
-                </div>
-            <?php endif; ?>
-
             <?php if ($status === 'confirmed' || $status === 'attended' || $status === 'completed' || $isPaymentSuccessful): ?>
                 <div class="ticket-page-wrapper">
-
-                    <!-- Top Status Bar -->
-                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                            <i class="bi bi-check-circle-fill me-1"></i> ចុះឈ្មោះជោគជ័យ
-                        </span>
-                        <small class="text-muted">
-                            <?= date('d M Y, H:i') ?>
-                        </small>
-                    </div>
 
                     <!-- TICKET CARD CAPTURE AREA -->
                     <div id="ticketCaptureArea" class="ticket-card-premium" data-code="<?= htmlspecialchars($regCode) ?>">
                         
                         <!-- Header -->
-                        <div class="ticket-header-premium">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="ticket-glass-pill">
-                                    <i class="bi bi-ticket-perforated-fill me-1"></i> សំបុត្រផ្លូវការ
-                                </span>
-                                <span class="ticket-status-pill">
-                                    <i class="bi bi-patch-check-fill me-1"></i> រួចរាល់
-                                </span>
+                        <div class="ticket-header-premium position-relative">
+                            <!-- Top-Right Verified Badge (No text, enlarged) -->
+                            <div class="position-absolute" style="top: 14px; right: 16px; z-index: 2;">
+                                <img src="<?= APP_URL ?>/assets/images/verified_badge.png" alt="Verified" style="width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.25));" title="បានផ្ទៀងផ្ទាត់រួចរាល់">
                             </div>
 
-                            <h4 class="ticket-workshop-name">
-                                <?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?>
-                            </h4>
+                            <!-- Organization Logo + Workshop Title + Meta badges -->
+                            <div class="d-flex align-items-start gap-3 pe-5 pt-1">
+                                <?php if (!empty($orgLogo)): ?>
+                                    <img src="<?= APP_URL . '/' . htmlspecialchars(ltrim($orgLogo, '/')) ?>" alt="Logo" class="rounded-3 border border-2 border-white shadow-sm flex-shrink-0" style="width: 48px; height: 48px; object-fit: cover; background: #ffffff;">
+                                <?php else: ?>
+                                    <div class="rounded-3 bg-white text-primary d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 48px; height: 48px; font-size: 22px;">
+                                        <i class="bi bi-buildings"></i>
+                                    </div>
+                                <?php endif; ?>
 
-                            <div class="ticket-meta-badges">
-                                <span class="ticket-meta-chip">
-                                    <i class="bi bi-calendar3 me-1"></i> <?= formatDate($reg['start_date'] ?? date('Y-m-d')) ?>
-                                </span>
-                                <?php if (!empty($reg['start_time'])): ?>
-                                    <span class="ticket-meta-chip">
-                                        <i class="bi bi-clock me-1"></i> <?= substr($reg['start_time'], 0, 5) ?>
-                                    </span>
-                                <?php endif; ?>
-                                <?php if (!empty($reg['venue'])): ?>
-                                    <span class="ticket-meta-chip">
-                                        <i class="bi bi-geo-alt-fill me-1"></i> <?= htmlspecialchars($reg['venue']) ?>
-                                    </span>
-                                <?php endif; ?>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <h4 class="ticket-workshop-name m-0" style="font-size: 1.15rem; line-height: 1.35; color: #ffffff;">
+                                        <?= htmlspecialchars($reg['workshop_name'] ?? 'សិក្ខាសាលា') ?>
+                                    </h4>
+
+                                    <div class="ticket-meta-badges mt-2">
+                                        <span class="ticket-meta-chip">
+                                            <i class="bi bi-calendar3 me-1"></i> <?= formatDate($reg['start_date'] ?? date('Y-m-d')) ?>
+                                        </span>
+                                        <?php if (!empty($reg['start_time'])): ?>
+                                            <span class="ticket-meta-chip">
+                                                <i class="bi bi-clock me-1"></i> <?= substr($reg['start_time'], 0, 5) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($reg['venue'])): ?>
+                                            <span class="ticket-meta-chip">
+                                                <i class="bi bi-geo-alt-fill me-1"></i> <?= htmlspecialchars($reg['venue']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -623,6 +648,13 @@ body {
                             <div class="tear-notch tear-notch-left"></div>
                             <div class="tear-dashed-line"></div>
                             <div class="tear-notch tear-notch-right"></div>
+                        </div>
+
+                        <!-- Relocated & Renamed: សំបុត្រចូលរួម centered beneath dashed line -->
+                        <div class="text-center pt-2 pb-1 bg-white">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold shadow-xs" style="font-size: 0.8rem; letter-spacing: 0.3px;">
+                                <i class="bi bi-ticket-perforated-fill me-1 text-primary"></i> សំបុត្រចូលរួម
+                            </span>
                         </div>
 
                         <!-- Ticket Body -->
@@ -786,28 +818,18 @@ body {
                     </div>
                     <?php endif; ?>
 
-                    <!-- Express Face Check-in (Opt-In) Card -->
-                    <div class="card border-0 rounded-4 shadow-sm p-3 mt-3 bg-white text-center">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <div class="d-flex align-items-center gap-2 text-start">
-                                <span class="badge bg-primary-subtle text-primary p-2 rounded-circle">
-                                    <i class="bi bi-person-bounding-box fs-5"></i>
-                                </span>
-                                <div>
-                                    <strong class="d-block text-dark" style="font-size: 0.92rem;">Express Face Check-in</strong>
-                                    <small class="text-muted" style="font-size: 0.76rem;">ស្កេនផ្ទៃមុខទុកមុន សម្រាប់ដើរចូលកម្មវិធីលឿន</small>
-                                </div>
+                    <!-- Floating Face Check-in Action Button (Attendee quick scan ahead) -->
+                    <div class="floating-face-btn-wrapper" id="floatingFaceScanBtn">
+                        <button type="button" class="floating-face-btn <?= $hasEnrolledFace ? 'face-enrolled' : '' ?>" onclick="openPublicFaceEnrollModal()" title="<?= $hasEnrolledFace ? 'បានស្កេនផ្ទៃមុខរួច (ចុចដើម្បីថតឡើងវិញ)' : 'ស្កេនផ្ទៃមុខទុកមុន សម្រាប់ចូលកម្មវិធីលឿន' ?>">
+                            <div class="floating-face-icon-box">
+                                <i class="bi bi-person-bounding-box"></i>
+                                <?php if (!$hasEnrolledFace): ?>
+                                    <span class="floating-pulse-ring"></span>
+                                <?php else: ?>
+                                    <span class="floating-check-badge"><i class="bi bi-check-lg"></i></span>
+                                <?php endif; ?>
                             </div>
-                            <?php if ($hasEnrolledFace): ?>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;" id="ticketFaceStatusBadge">
-                                    <i class="bi bi-check-circle-fill me-1"></i> បានចុះឈ្មោះរួច
-                                </span>
-                            <?php else: ?>
-                                <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;" id="ticketFaceStatusBadge">ស្រេចចិត្ត</span>
-                            <?php endif; ?>
-                        </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill fw-bold py-2 w-100 mt-1" onclick="openPublicFaceEnrollModal()" title="ស្កេនមុខសម្រាប់ Check-in ដោយមិនបាច់ប្រើសំបុត្រ QR">
-                            <i class="bi bi-camera me-1"></i> <?= $hasEnrolledFace ? 'ស្កេនមុខឡើងវិញ' : 'ស្កេនមុខ' ?>
+                            <span class="floating-face-label"><?= $hasEnrolledFace ? 'បានស្កេនមុខ' : 'ស្កេនមុខ' ?></span>
                         </button>
                     </div>
 
@@ -1242,6 +1264,16 @@ async function submitPublicFaceEnroll() {
                 badge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill';
                 badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> បានចុះឈ្មោះរួច';
             }
+
+            const fab = document.getElementById('floatingFaceScanBtn');
+            if (fab) {
+                const fbtn = fab.querySelector('.floating-face-btn');
+                if (fbtn) fbtn.classList.add('face-enrolled');
+                const flabel = fab.querySelector('.floating-face-label');
+                if (flabel) flabel.innerText = 'បានស្កេនមុខ';
+                const pulse = fab.querySelector('.floating-pulse-ring');
+                if (pulse) pulse.remove();
+            }
         } else {
             alert(data.message || 'បរាជ័យក្នុងការចុះឈ្មោះ');
         }
@@ -1268,10 +1300,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('successAnimationOverlay');
     if (!overlay) return;
 
-    // Auto-close after 2.6 seconds
+    // Auto-close smoothly after 2.2 seconds
     setTimeout(function() {
         closeSuccessPopup();
-    }, 2600);
+    }, 2200);
 
     // Celebratory Confetti Cannon
     try {
