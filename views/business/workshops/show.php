@@ -690,46 +690,42 @@ $breadcrumbs = [
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
-                    <i class="bi bi-ticket-perforated-fill text-primary"></i> គ្រប់គ្រងសំបុត្រ & តំណភ្ជាប់ QR (<?php echo count($tickets); ?>)
+                    <i class="bi bi-ticket-perforated-fill text-primary"></i> គ្រប់គ្រងសំបុត្រ (<?php echo count($tickets); ?>)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <!-- 1. Public Event Landing Page Link Card -->
                 <?php $publicEventUrl = qrCodeUrl('/event/' . $workshop['slug']); ?>
-                <div class="card border-primary-subtle bg-primary bg-opacity-10 rounded-3 mb-4 p-3 shadow-xs">
+                <div class="card border-primary-subtle bg-primary bg-opacity-10 rounded-3 mb-3 p-2.5 shadow-xs">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
-                                <i class="bi bi-globe fs-5"></i>
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+                                <i class="bi bi-globe fs-6"></i>
                             </div>
                             <div>
-                                <span class="fw-bold text-dark d-block">ទំព័រដើមសិក្ខាសាលា (Public Event Page)</span>
-                                <small class="text-muted">តំណភ្ជាប់ទូទៅសម្រាប់សាធារណជនចូលមើលព័ត៌មាន និងចុះឈ្មោះសំបុត្រសាធារណៈ</small>
+                                <span class="fw-bold text-dark d-block">ទំព័រដើមកម្មវិធី</span>
                             </div>
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-1.5">
                             <button type="button" class="btn btn-sm btn-primary px-3 fw-bold" onclick="copyDirectLink('<?php echo e($publicEventUrl); ?>', this)">
                                 <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
                             </button>
-                            <button type="button" class="btn btn-sm btn-dark px-2.5" onclick="showTicketQrModal('ទំព័រដើមសិក្ខាសាលា', 'សាធារណៈ', '<?php echo e($publicEventUrl); ?>')" title="មើល QR Code">
+                            <button type="button" class="btn btn-sm btn-dark px-2.5" onclick="showTicketQrModal('ទំព័រដើមកម្មវិធី', 'សាធារណៈ', '<?php echo e($publicEventUrl); ?>')" title="មើល QR">
                                 <i class="bi bi-qr-code me-1"></i> QR
                             </button>
-                            <a href="<?php echo e($publicEventUrl); ?>" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="បើកមើលទំព័រសាធារណៈ">
+                            <a href="<?php echo e($publicEventUrl); ?>" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="បើកមើល">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Tickets Table Header & Add Ticket Button -->
+                <!-- 2. Tickets Table Header -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                        <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5">
-                            <i class="bi bi-ticket-detailed text-primary"></i> បញ្ជីប្រភេទសំបុត្រនីមួយៗ (<?php echo count($tickets); ?>)
-                        </h6>
-                        <small class="text-muted">ចម្លងតំណភ្ជាប់ ឬ QR នៃសំបុត្រជាក់លាក់ណាមួយដើម្បីប្រើប្រាស់</small>
-                    </div>
+                    <span class="fw-bold text-dark">
+                        <i class="bi bi-ticket-detailed text-primary me-1"></i> ប្រភេទសំបុត្រ
+                    </span>
                     <button type="button" class="btn btn-sm btn-outline-primary fw-bold" data-bs-toggle="collapse" data-bs-target="#quickAddTicketCollapse">
                         <i class="bi bi-plus-lg me-1"></i> បន្ថែមសំបុត្រ
                     </button>
@@ -742,16 +738,16 @@ $breadcrumbs = [
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold mb-1">ឈ្មោះសំបុត្រ <span class="text-danger">*</span></label>
-                                    <input type="text" name="name" class="form-control form-control-sm" placeholder="ឧ. សំបុត្រ VIP / សំបុត្រគិតថ្លៃ" required>
+                                    <input type="text" name="name" class="form-control form-control-sm" placeholder="ឧ. សំបុត្រពិសេស" required>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label small fw-bold mb-1">ប្រភេទ</label>
                                     <select name="ticket_type" class="form-select form-select-sm">
-                                        <option value="standard">ទូទៅ (Standard)</option>
-                                        <option value="vip">ពិសេស (VIP)</option>
-                                        <option value="early_bird">ចុះឈ្មោះមុន (Early Bird)</option>
-                                        <option value="student">សិស្ស/និស្សិត (Student)</option>
-                                        <option value="complimentary">អញ្ជើញពិសេស (Complimentary)</option>
+                                        <option value="standard">ទូទៅ</option>
+                                        <option value="vip">ពិសេស</option>
+                                        <option value="early_bird">ចុះមុន</option>
+                                        <option value="student">សិស្ស</option>
+                                        <option value="complimentary">អញ្ជើញ</option>
                                     </select>
                                 </div>
                                 <div class="col-md-2">
@@ -761,14 +757,14 @@ $breadcrumbs = [
                                 <div class="col-md-3">
                                     <label class="form-label small fw-bold mb-1">ការបង្ហាញ</label>
                                     <select name="is_visible" class="form-select form-select-sm">
-                                        <option value="1">👁️ សាធារណៈ</option>
-                                        <option value="0">🔒 លាក់ (ឯកជន/Free)</option>
+                                        <option value="1">សាធារណៈ</option>
+                                        <option value="0">លាក់</option>
                                     </select>
                                 </div>
                                 <div class="col-12 text-end pt-2">
                                     <button type="button" class="btn btn-sm btn-secondary me-1" data-bs-toggle="collapse" data-bs-target="#quickAddTicketCollapse">បោះបង់</button>
                                     <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitAddTicket">
-                                        <i class="bi bi-check-lg me-1"></i> រក្សាទុកសំបុត្រ
+                                        <i class="bi bi-check-lg me-1"></i> រក្សាទុក
                                     </button>
                                 </div>
                             </div>
@@ -784,15 +780,27 @@ $breadcrumbs = [
                                 <th>ឈ្មោះសំបុត្រ</th>
                                 <th>ប្រភេទ</th>
                                 <th>តម្លៃ</th>
-                                <th class="text-center">ស្ថានភាពបង្ហាញ</th>
-                                <th class="text-end">តំណភ្ជាប់ផ្ទាល់ & QR</th>
+                                <th class="text-center">ការបង្ហាញ</th>
+                                <th class="text-end">តំណភ្ជាប់ & QR</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <?php 
+                            $typeMap = [
+                                'standard' => 'ទូទៅ',
+                                'vip' => 'ពិសេស',
+                                'early_bird' => 'ចុះមុន',
+                                'student' => 'សិស្ស',
+                                'group' => 'ក្រុម',
+                                'complimentary' => 'អញ្ជើញ',
+                                'custom' => 'ផ្សេងៗ'
+                            ];
+                            ?>
                             <?php foreach ($tickets as $t): ?>
                                 <?php 
                                 $ticketDirectUrl = qrCodeUrl('/event/' . $workshop['slug'] . '/register?ticket=' . $t['id']);
                                 $isVis = (int)($t['is_visible'] ?? 1);
+                                $typeKhmer = $typeMap[$t['ticket_type']] ?? 'ទូទៅ';
                                 ?>
                                 <tr id="ticket-row-<?php echo $t['id']; ?>">
                                     <td>
@@ -802,7 +810,7 @@ $breadcrumbs = [
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <span class="badge bg-light text-secondary border"><?php echo ucfirst($t['ticket_type']); ?></span>
+                                        <span class="badge bg-light text-secondary border"><?php echo $typeKhmer; ?></span>
                                     </td>
                                     <td>
                                         <span class="badge <?php echo (float)$t['price'] == 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'; ?> px-2.5 py-1 fw-bold fs-6">
@@ -814,22 +822,22 @@ $breadcrumbs = [
                                                 class="btn btn-sm <?php echo $isVis ? 'btn-success text-white' : 'btn-outline-secondary'; ?> rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1"
                                                 id="vis-btn-<?php echo $t['id']; ?>"
                                                 onclick="toggleTicketVisibility(<?php echo $workshop['id']; ?>, <?php echo $t['id']; ?>)"
-                                                title="<?php echo $isVis ? 'ចុចដើម្បីលាក់សំបុត្រនេះពីទំព័រសាធារណៈ' : 'ចុចដើម្បីបង្ហាញសំបុត្រនេះជាសាធារណៈ'; ?>">
+                                                title="<?php echo $isVis ? 'ចុចដើម្បីលាក់' : 'ចុចដើម្បីបង្ហាញ'; ?>">
                                             <i class="bi <?php echo $isVis ? 'bi-eye-fill' : 'bi-eye-slash-fill'; ?>" id="vis-icon-<?php echo $t['id']; ?>"></i>
-                                            <span id="vis-text-<?php echo $t['id']; ?>"><?php echo $isVis ? 'សាធារណៈ' : 'លាក់ (ឯកជន)'; ?></span>
+                                            <span id="vis-text-<?php echo $t['id']; ?>"><?php echo $isVis ? 'សាធារណៈ' : 'លាក់'; ?></span>
                                         </button>
                                     </td>
                                     <td class="text-end">
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-outline-primary" 
                                                     onclick="copyDirectLink('<?php echo e($ticketDirectUrl); ?>', this)" 
-                                                    title="ចម្លងតំណភ្ជាប់ផ្ទាល់សម្រាប់សំបុត្រនេះ">
+                                                    title="ចម្លងតំណភ្ជាប់">
                                                 <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
                                             </button>
                                             <button type="button" class="btn btn-outline-dark" 
                                                     onclick="showTicketQrModal('<?php echo e(addslashes($t['name'])); ?>', '<?php echo (float)$t['price'] == 0 ? 'ឥតគិតថ្លៃ' : '$' . number_format($t['price'], 2); ?>', '<?php echo e($ticketDirectUrl); ?>')"
-                                                    title="មើល QR Code សម្រាប់សំបុត្រនេះ">
-                                                <i class="bi bi-qr-code"></i>
+                                                    title="មើល QR">
+                                                <i class="bi bi-qr-code me-1"></i> QR
                                             </button>
                                         </div>
                                     </td>
@@ -841,10 +849,10 @@ $breadcrumbs = [
 
                 <div class="text-center pt-3 mt-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span class="text-muted small text-start">
-                        <i class="bi bi-shield-check text-success me-1"></i> សំបុត្រដែល «លាក់» អាចចុះឈ្មោះបានតាមរយៈតំណភ្ជាប់ផ្ទាល់ (Direct Link) ប៉ុណ្ណោះ
+                        * សំបុត្រ «លាក់» ប្រើបានតែតាមរយៈតំណភ្ជាប់ផ្ទាល់ប៉ុណ្ណោះ
                     </span>
                     <a href="<?php echo APP_URL; ?>/workshops/<?php echo $workshop['id']; ?>/edit" class="btn btn-outline-primary btn-sm px-3">
-                        <i class="bi bi-pencil me-1"></i> កែសម្រួលព័ត៌មានលម្អិត
+                        <i class="bi bi-pencil me-1"></i> កែសម្រួល
                     </a>
                 </div>
             </div>
@@ -1362,12 +1370,12 @@ async function toggleTicketVisibility(workshopId, ticketId) {
                 btn.className = 'btn btn-sm btn-success text-white rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1';
                 icon.className = 'bi bi-eye-fill';
                 text.textContent = 'សាធារណៈ';
-                btn.title = 'ចុចដើម្បីលាក់សំបុត្រនេះពីទំព័រសាធារណៈ';
+                btn.title = 'ចុចដើម្បីលាក់';
             } else {
                 btn.className = 'btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1';
                 icon.className = 'bi bi-eye-slash-fill';
-                text.textContent = 'លាក់ (ឯកជន)';
-                btn.title = 'ចុចដើម្បីបង្ហាញសំបុត្រនេះជាសាធារណៈ';
+                text.textContent = 'លាក់';
+                btn.title = 'ចុចដើម្បីបង្ហាញ';
             }
         } else {
             alert(data.message || 'មិនអាចផ្លាស់ប្តូរស្ថានភាពសំបុត្របានទេ');
