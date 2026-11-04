@@ -66,3 +66,10 @@ CREATE TABLE IF NOT EXISTS attendance_slots (
   FOREIGN KEY (registration_id) REFERENCES registrations(id),
   FOREIGN KEY (participant_id) REFERENCES participants(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ============================================================
+-- Ticket Visibility & Payment Method Enhancements
+-- ============================================================
+ALTER TABLE tickets ADD COLUMN is_visible TINYINT(1) DEFAULT 1;
+ALTER TABLE business_payment_methods ADD COLUMN is_default TINYINT(1) DEFAULT 0;
+
