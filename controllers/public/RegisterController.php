@@ -49,18 +49,8 @@ class PublicRegisterController {
                 [$directTicketId, $workshop['id']]
             );
             if ($directTicket) {
-                $inVisibleList = false;
-                foreach ($tickets as $t) {
-                    if ((int)$t['id'] === $directTicketId) {
-                        $inVisibleList = true;
-                        break;
-                    }
-                }
-                // If the direct ticket is hidden (private), make it available for this direct link user!
-                if (!$inVisibleList) {
-                    $directTicket['_is_direct_private'] = true;
-                    $tickets = [$directTicket];
-                }
+                // When accessed with a direct ticket link, lock exclusively to this ticket and hide choices!
+                $tickets = [$directTicket];
             }
         }
 

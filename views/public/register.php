@@ -323,14 +323,14 @@
                         <?php endif; ?>
 
                             <!-- Step 1 Button -->
-                            <div class="d-grid mt-4">
+                            <div class="mt-4 pt-1 text-center">
                                 <?php if ($isFreeMode): ?>
-                                    <button type="submit" class="btn btn-primary btn-lg fw-bold shadow-sm py-3" id="btnSubmitFree">
+                                    <button type="submit" class="btn btn-primary py-2.5 px-4 fw-bold rounded-pill shadow-xs w-100" id="btnSubmitFree" style="max-width: 300px; font-size: 14px;">
                                         <i class="bi bi-check-circle me-1"></i> ចុះឈ្មោះឥឡូវនេះ
                                     </button>
                                 <?php else: ?>
-                                    <button type="button" class="btn btn-primary btn-lg fw-bold shadow-sm py-3" id="btnGoToPayment" onclick="goToPaymentStep()">
-                                        <i class="bi bi-arrow-right-circle me-1"></i> បន្ទាប់
+                                    <button type="button" class="btn btn-primary py-2.5 px-4 fw-bold rounded-pill shadow-xs w-100" id="btnGoToPayment" onclick="goToPaymentStep()" style="max-width: 240px; font-size: 14px;">
+                                        បន្ទាប់ <i class="bi bi-arrow-right ms-1"></i>
                                     </button>
                                 <?php endif; ?>
                             </div>
