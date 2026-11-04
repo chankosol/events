@@ -369,41 +369,209 @@ body {
     from { opacity: 0; transform: translate(-50%, 15px); }
     to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* Success Animation Popup Overlay */
+.success-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 1;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.success-popup-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.confetti-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+.success-popup-card {
+    background: #ffffff;
+    border-radius: 28px;
+    padding: 30px 24px 22px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 2;
+    animation: successCardPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes successCardPop {
+    0% { transform: scale(0.65) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Checkmark ripple & SVG animation */
+.success-icon-wrapper {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto;
+}
+.success-icon-circle {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);
+    position: relative;
+    z-index: 2;
+}
+.success-icon-ripple {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-radius: 50%;
+    border: 3px solid rgba(16, 185, 129, 0.4);
+    animation: rippleAnim 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
+    z-index: 1;
+}
+@keyframes rippleAnim {
+    0% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+.success-svg-check {
+    width: 48px;
+    height: 48px;
+    display: block;
+}
+.success-svg-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: rgba(255, 255, 255, 0.5);
+    animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.success-svg-check-path {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke: #ffffff;
+    animation: strokeCheck 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.35s forwards;
+}
+@keyframes strokeCircle {
+    100% { stroke-dashoffset: 0; }
+}
+@keyframes strokeCheck {
+    100% { stroke-dashoffset: 0; }
+}
+
+/* Auto-close progress bar */
+.success-autoclose-bar {
+    width: 100%;
+    height: 3px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.success-autoclose-fill {
+    height: 100%;
+    background: #10b981;
+    width: 100%;
+    animation: autoCloseTimer 2.6s linear forwards;
+}
+@keyframes autoCloseTimer {
+    0% { width: 100%; }
+    100% { width: 0%; }
+}
 </style>
 
 <div class="container py-3 py-md-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-8 col-lg-6">
 
-            <?php if (Session::has('info') || isset($_GET['already_registered'])): ?>
-                <div class="alert alert-info py-2 px-3 small rounded-3 mb-3 d-flex align-items-center shadow-xs">
-                    <i class="bi bi-info-circle-fill text-primary me-2 fs-5"></i>
-                    <div><?= htmlspecialchars(Session::flash('info') ?: 'លោកអ្នកបានចុះឈ្មោះសម្រាប់សិក្ខាសាលានេះរួចរាល់ហើយ! នេះជាសំបុត្រ និង QR Code របស់អ្នក។') ?></div>
+            <?php 
+            $showSuccessPopup = isset($_GET['already_registered']) 
+                || isset($_GET['paid']) 
+                || !empty($reg['just_paid']) 
+                || Session::has('info') 
+                || !empty($_GET['success'])
+                || !empty($_GET['new']);
+
+            if ($showSuccessPopup): 
+                $isPaidPopup = (isset($_GET['paid']) || !empty($reg['just_paid']));
+                $isAlreadyReg = (isset($_GET['already_registered']) || Session::has('info'));
+
+                if ($isPaidPopup) {
+                    $popupTitle = 'ការទូទាត់ប្រាក់ជោគជ័យ!';
+                    $popupSub = 'ប្រព័ន្ធបានផ្ទៀងផ្ទាត់ការទូទាត់ និងចេញសំបុត្រផ្លូវការជូនរួចរាល់';
+                } elseif ($isAlreadyReg) {
+                    $popupTitle = 'បានចុះឈ្មោះរួចរាល់!';
+                    $popupSub = 'លោកអ្នកបានចុះឈ្មោះរួចហើយ នេះជាសំបុត្រ និងកូដ QR របស់អ្នក';
+                } else {
+                    $popupTitle = 'ការចុះឈ្មោះជោគជ័យ!';
+                    $popupSub = 'ប្រព័ន្ធបានចេញសំបុត្រផ្លូវការ និង QR Code ជូនលោកអ្នករួចរាល់';
+                }
+            ?>
+            <!-- Success Animation Popup Overlay -->
+            <div id="successAnimationOverlay" class="success-popup-overlay" onclick="closeSuccessPopup()">
+                <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+                <div class="success-popup-card" onclick="event.stopPropagation()">
+                    <!-- Animated Circular Checkmark -->
+                    <div class="success-icon-wrapper mb-3">
+                        <div class="success-icon-ripple"></div>
+                        <div class="success-icon-circle">
+                            <svg class="success-svg-check" viewBox="0 0 52 52">
+                                <circle class="success-svg-circle" cx="26" cy="26" r="23" fill="none"/>
+                                <path class="success-svg-check-path" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <h4 class="fw-bold text-dark mb-1" style="font-size: 1.25rem;">
+                        <?= htmlspecialchars($popupTitle) ?>
+                    </h4>
+                    <p class="text-muted small px-2 mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+                        <?= htmlspecialchars($popupSub) ?>
+                    </p>
+
+                    <div class="d-inline-flex align-items-center gap-1.5 px-3 py-1 bg-light rounded-pill border mb-3">
+                        <i class="bi bi-ticket-perforated text-primary"></i>
+                        <span class="font-monospace fw-bold text-dark small"><?= htmlspecialchars($regCode) ?></span>
+                    </div>
+
+                    <!-- Auto-close countdown progress bar -->
+                    <div class="success-autoclose-bar">
+                        <div class="success-autoclose-fill"></div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-bold w-100 shadow-sm" onclick="closeSuccessPopup()" style="font-size: 13px;">
+                        <i class="bi bi-eye me-1"></i> មើលសំបុត្រចូលរួម
+                    </button>
                 </div>
             <?php endif; ?>
 
             <?php if ($status === 'confirmed' || $status === 'attended' || $status === 'completed' || $isPaymentSuccessful): ?>
                 <div class="ticket-page-wrapper">
-                    
-                    <?php if ($isPaymentSuccessful): ?>
-                    <!-- Payment Success Banner (សារបញ្ជាក់ការបង់ប្រាក់ជោគជ័យ) -->
-                    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white border-start border-4 border-success">
-                        <div class="d-flex align-items-center gap-2.5">
-                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px; font-size: 20px;">
-                                <i class="bi bi-check2-circle"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center gap-1.5">
-                                    <h6 class="fw-bold text-success mb-0" style="font-size: 14.5px;">ការទូទាត់ប្រាក់ជោគជ័យ!</h6>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">ជោគជ័យ</span>
-                                </div>
-                                <div class="text-muted small mt-0.5" style="font-size: 11.5px;">
-                                    ប្រព័ន្ធបានចេញសំបុត្រផ្លូវការ និងបង្កាន់ដៃជូនលោកអ្នករួចរាល់។
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <!-- Top Status Bar -->
                     <div class="d-flex align-items-center justify-content-between mb-2 px-1">
@@ -1084,4 +1252,86 @@ async function submitPublicFaceEnroll() {
         btn.innerHTML = '<i class="bi bi-camera-fill me-1"></i> ថត & ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ';
     }
 }
+
+// Success Animation Popup Logic
+function closeSuccessPopup() {
+    const overlay = document.getElementById('successAnimationOverlay');
+    if (overlay && !overlay.classList.contains('fade-out')) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 360);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('successAnimationOverlay');
+    if (!overlay) return;
+
+    // Auto-close after 2.6 seconds
+    setTimeout(function() {
+        closeSuccessPopup();
+    }, 2600);
+
+    // Celebratory Confetti Cannon
+    try {
+        const canvas = document.getElementById('confettiCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#e11d48'];
+        const particles = [];
+        const count = Math.min(75, Math.floor(window.innerWidth / 12));
+
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: canvas.width / 2 + (Math.random() - 0.5) * 80,
+                y: canvas.height / 2 - 30,
+                vx: (Math.random() - 0.5) * 14,
+                vy: (Math.random() - 1.1) * 12 - 2,
+                size: Math.random() * 8 + 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rotation: Math.random() * 360,
+                rotSpeed: (Math.random() - 0.5) * 12,
+                opacity: 1
+            });
+        }
+
+        function renderConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let alive = false;
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.32; // gravity
+                p.vx *= 0.99; // drag
+                p.rotation += p.rotSpeed;
+                p.opacity -= 0.009;
+                if (p.opacity > 0) {
+                    alive = true;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, p.opacity);
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+                    ctx.restore();
+                }
+            });
+            if (alive) {
+                requestAnimationFrame(renderConfetti);
+            }
+        }
+        requestAnimationFrame(renderConfetti);
+    } catch (e) {
+        // Fallback gracefully
+    }
+});
 </script>
