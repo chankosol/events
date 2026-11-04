@@ -1197,20 +1197,58 @@ document.addEventListener('DOMContentLoaded', function() {
                     សូមដាក់ផ្ទៃមុខឱ្យចំកណ្តាលរង្វង់ពងក្រពើ ដើម្បីថតកត់ត្រា៖
                 </p>
 
-                <!-- Camera Viewport with Oval Guide -->
+                <!-- Camera Viewport with Oval Guide & Overlays -->
                 <div class="position-relative mx-auto rounded-4 overflow-hidden mb-2 bg-black shadow-xs" style="width: 100%; max-width: 340px; aspect-ratio: 4/3;">
                     <video id="pubFaceVideo" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
                     <canvas id="pubFaceCanvas" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; transform: scaleX(-1);"></canvas>
+                    <img id="pubFacePreviewImg" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;" alt="Face Preview">
                     <div id="pubFaceOval" class="position-absolute" style="top:50%; left:50%; transform:translate(-50%, -50%); width: 170px; height: 215px; border: 2.5px dashed rgba(255,255,255,0.6); border-radius: 50%; pointer-events:none; transition: all 0.25s ease;"></div>
+
+                    <!-- Overlay Box shown if camera permission is blocked -->
+                    <div id="pubFaceCameraBlockedOverlay" class="position-absolute d-none flex-column align-items-center justify-content-center p-3 text-center" style="top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.94); z-index: 5;">
+                        <i class="bi bi-camera-video-off text-danger-subtle fs-1 mb-2"></i>
+                        <h6 class="text-white fw-bold mb-1" style="font-size: 0.9rem;">មិនទាន់បានអនុញ្ញាតកាមេរ៉ា</h6>
+                        <p class="text-white-50 small mb-3" style="font-size: 0.74rem; line-height: 1.35;">
+                            សូមចុចប៊ូតុងខាងក្រោមដើម្បីអនុញ្ញាត ឬ ជ្រើសរើសរូបថតផ្ទៃមុខជំនួសវិញ
+                        </p>
+                        <div class="d-flex flex-column gap-2 w-100" style="max-width: 220px;">
+                            <button type="button" class="btn btn-primary btn-sm fw-bold rounded-pill py-2 shadow-sm" onclick="startPubFaceCamera()">
+                                <i class="bi bi-camera-fill me-1"></i> សាកល្បងបើកកាមេរ៉ាម្ដងទៀត
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm fw-bold rounded-pill py-2 shadow-sm" onclick="triggerPubFaceUpload()">
+                                <i class="bi bi-image me-1 text-primary"></i> ជ្រើសរើសរូបថតផ្ទៃមុខ
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="pubFaceStatusBadge" class="badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-3" style="font-size: 0.76rem;">
+                <div id="pubFaceStatusBadge" class="badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-2" style="font-size: 0.76rem;">
                     កំពុងបើកកាមេរ៉ា & ផ្ទុក AI Model...
+                </div>
+
+                <!-- Browser Permission Guide Alert (Shown when camera blocked) -->
+                <div id="pubFacePermGuideAlert" class="alert alert-warning border border-warning-subtle text-start p-2.5 rounded-3 mb-3 d-none shadow-xs" style="font-size: 0.74rem;">
+                    <div class="d-flex align-items-center gap-1.5 text-dark fw-bold mb-1">
+                        <i class="bi bi-info-circle-fill text-warning fs-6"></i>
+                        <span>របៀបអនុញ្ញាតសិទ្ធិកាមេរ៉ាក្នុង Browser៖</span>
+                    </div>
+                    <ul class="m-0 ps-3 text-muted" style="line-height: 1.45;">
+                        <li><strong>នៅលើ Desktop / Chrome៖</strong> ចុចលើ Icon <i class="bi bi-lock-fill text-primary"></i> <strong>សោ (Lock)</strong> នៅខាងឆ្វេង URL &rarr; ប្តូរ <strong>Camera</strong> ទៅជា <strong>Allow</strong> &rarr; ចុចប៊ូតុង <strong>សាកល្បងបើកម្តងទៀត</strong></li>
+                        <li><strong>នៅលើទូរស័ព្ទ (Safari/Chrome)៖</strong> ចុចលើ <strong>Site Settings</strong> &rarr; បើក <strong>Camera</strong> ឬប្រើប៊ូតុង <strong>«ជ្រើសរើសរូបថត»</strong> ខាងក្រោម</li>
+                    </ul>
                 </div>
 
                 <button type="button" id="btnPubCaptureFace" class="btn btn-primary w-100 py-2.5 fw-bold rounded-pill shadow-xs" onclick="submitPublicFaceEnroll()" disabled>
                     <i class="bi bi-camera-fill me-1"></i> ថត & ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ
                 </button>
+
+                <!-- Hidden file input for photo upload fallback -->
+                <div class="mt-2.5 pt-2 border-top border-light-subtle">
+                    <input type="file" id="pubFaceFileInput" accept="image/*" capture="user" class="d-none" onchange="handlePubFaceFileUpload(event)">
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0" onclick="triggerPubFaceUpload()">
+                        <i class="bi bi-upload me-1 text-primary"></i> មិនដំណើរការកាមេរ៉ា? ចុចទីនេះដើម្បី <strong>ជ្រើសរើសរូបថត</strong> ផ្ទៃមុខ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1222,6 +1260,7 @@ let pubFaceModelLoaded = false;
 let pubFaceStream = null;
 let pubFaceDescriptor = null;
 let pubFacePhoto = null;
+let pubFaceCheckInterval = null;
 const PUB_FACE_REG_CODE = <?= json_encode($regCode) ?>;
 
 function openPublicFaceEnrollModal() {
@@ -1238,31 +1277,91 @@ if (pubModalEl) {
     pubModalEl.addEventListener('hidden.bs.modal', stopPubFaceCamera);
 }
 
+function triggerPubFaceUpload() {
+    const fileInput = document.getElementById('pubFaceFileInput');
+    if (fileInput) fileInput.click();
+}
+
+function showCameraBlockedUI(msg) {
+    const statusBadge = document.getElementById('pubFaceStatusBadge');
+    const blockedOverlay = document.getElementById('pubFaceCameraBlockedOverlay');
+    const permGuide = document.getElementById('pubFacePermGuideAlert');
+    const btn = document.getElementById('btnPubCaptureFace');
+
+    if (statusBadge) {
+        statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-2';
+        statusBadge.innerText = msg || 'មិនអាចបើកកាមេរ៉ា (សូមអនុញ្ញាត Permission ឬ ជ្រើសរើសរូបថត)';
+    }
+    if (blockedOverlay) {
+        blockedOverlay.classList.remove('d-none');
+        blockedOverlay.classList.add('d-flex');
+    }
+    if (permGuide) {
+        permGuide.classList.remove('d-none');
+    }
+    if (btn) btn.disabled = true;
+}
+
+async function loadPubFaceModels() {
+    if (pubFaceModelLoaded) return true;
+    try {
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/')
+        ]);
+        pubFaceModelLoaded = true;
+        return true;
+    } catch (e) {
+        console.error('Model load error:', e);
+        return false;
+    }
+}
+
 async function startPubFaceCamera() {
     const video = document.getElementById('pubFaceVideo');
     const canvas = document.getElementById('pubFaceCanvas');
+    const previewImg = document.getElementById('pubFacePreviewImg');
     const oval = document.getElementById('pubFaceOval');
     const statusBadge = document.getElementById('pubFaceStatusBadge');
     const btn = document.getElementById('btnPubCaptureFace');
+    const blockedOverlay = document.getElementById('pubFaceCameraBlockedOverlay');
+    const permGuide = document.getElementById('pubFacePermGuideAlert');
 
+    // Reset views
+    if (previewImg) previewImg.style.display = 'none';
+    if (video) video.style.display = 'block';
+    if (canvas) canvas.style.display = 'block';
+    if (blockedOverlay) {
+        blockedOverlay.classList.remove('d-flex');
+        blockedOverlay.classList.add('d-none');
+    }
+    if (permGuide) permGuide.classList.add('d-none');
+
+    statusBadge.className = 'badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-2';
+    statusBadge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងបើកកាមេរ៉ា & ផ្ទុក AI Model...';
+
+    // 1. Ensure models loaded
     if (!pubFaceModelLoaded) {
-        statusBadge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងទាញយក Face Model...';
-        try {
-            await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
-                faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/'),
-                faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/')
-            ]);
-            pubFaceModelLoaded = true;
-        } catch (e) {
-            console.error('Model load error:', e);
-            statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-3';
-            statusBadge.innerText = 'កំហុស Model (សូម Refresh)';
+        const loaded = await loadPubFaceModels();
+        if (!loaded) {
+            statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-2';
+            statusBadge.innerText = 'កំហុស Model (សូមពិនិត្យការភ្ជាប់ Internet)';
             return;
         }
     }
 
+    // 2. Check browser support for mediaDevices
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showCameraBlockedUI('Browser មិនគាំទ្រ Live Camera លើ Connection នេះទេ (ទាមទារ HTTPS) សូមជ្រើសរើសរូបថត');
+        return;
+    }
+
     try {
+        if (pubFaceStream) {
+            pubFaceStream.getTracks().forEach(t => t.stop());
+            pubFaceStream = null;
+        }
         pubFaceStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
             audio: false
@@ -1273,9 +1372,10 @@ async function startPubFaceCamera() {
         const displaySize = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
         faceapi.matchDimensions(canvas, displaySize);
 
-        const checkInterval = setInterval(async () => {
+        if (pubFaceCheckInterval) clearInterval(pubFaceCheckInterval);
+        pubFaceCheckInterval = setInterval(async () => {
             if (video.paused || video.ended || !pubFaceStream) {
-                clearInterval(checkInterval);
+                clearInterval(pubFaceCheckInterval);
                 return;
             }
 
@@ -1295,9 +1395,10 @@ async function startPubFaceCamera() {
                     oval.style.borderColor = '#10b981';
                     oval.style.borderStyle = 'solid';
                     oval.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
-                    statusBadge.className = 'badge bg-success px-3 py-1.5 rounded-pill mb-3';
+                    statusBadge.className = 'badge bg-success px-3 py-1.5 rounded-pill mb-2';
                     statusBadge.innerHTML = '<i class="bi bi-check-circle me-1"></i> ទីតាំងល្អ! អាចថតបាន';
                     btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-camera-fill me-1"></i> ថត & ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ';
 
                     pubFaceDescriptor = Array.from(detection.descriptor);
 
@@ -1311,7 +1412,7 @@ async function startPubFaceCamera() {
                     oval.style.borderColor = 'rgba(255,255,255,0.6)';
                     oval.style.borderStyle = 'dashed';
                     oval.style.boxShadow = 'none';
-                    statusBadge.className = 'badge bg-warning text-dark px-3 py-1.5 rounded-pill mb-3';
+                    statusBadge.className = 'badge bg-warning text-dark px-3 py-1.5 rounded-pill mb-2';
                     statusBadge.innerText = 'សូមរំកិលមុខមកកណ្តាលរង្វង់';
                     btn.disabled = true;
                 }
@@ -1319,18 +1420,99 @@ async function startPubFaceCamera() {
                 oval.style.borderColor = 'rgba(255,255,255,0.6)';
                 oval.style.borderStyle = 'dashed';
                 oval.style.boxShadow = 'none';
-                statusBadge.className = 'badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-3';
+                statusBadge.className = 'badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill mb-2';
                 statusBadge.innerText = 'សូមបែរមុខមករកកាមេរ៉ា...';
                 btn.disabled = true;
             }
         }, 160);
     } catch (err) {
-        statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-3';
-        statusBadge.innerText = 'មិនអាចបើកកាមេរ៉ា (សូមអនុញ្ញាត Permission)';
+        console.warn('Camera access failed:', err);
+        showCameraBlockedUI('មិនអាចបើកកាមេរ៉ា (សូមអនុញ្ញាត Permission ឬ ជ្រើសរើសរូបថត)');
     }
 }
 
+async function handlePubFaceFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const video = document.getElementById('pubFaceVideo');
+    const canvas = document.getElementById('pubFaceCanvas');
+    const previewImg = document.getElementById('pubFacePreviewImg');
+    const oval = document.getElementById('pubFaceOval');
+    const statusBadge = document.getElementById('pubFaceStatusBadge');
+    const btn = document.getElementById('btnPubCaptureFace');
+    const blockedOverlay = document.getElementById('pubFaceCameraBlockedOverlay');
+    const permGuide = document.getElementById('pubFacePermGuideAlert');
+
+    stopPubFaceCamera();
+
+    if (blockedOverlay) {
+        blockedOverlay.classList.remove('d-flex');
+        blockedOverlay.classList.add('d-none');
+    }
+    if (permGuide) permGuide.classList.add('d-none');
+
+    statusBadge.className = 'badge bg-primary px-3 py-1.5 rounded-pill mb-2';
+    statusBadge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងផ្ទុក និងវិភាគផ្ទៃមុខពីរូបថត...';
+
+    const loaded = await loadPubFaceModels();
+    if (!loaded) {
+        statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-2';
+        statusBadge.innerText = 'កំហុស Model (សូម Refresh)';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = async function() {
+            if (video) video.style.display = 'none';
+            if (canvas) canvas.style.display = 'none';
+            if (previewImg) {
+                previewImg.src = img.src;
+                previewImg.style.display = 'block';
+            }
+
+            const detection = await faceapi.detectSingleFace(
+                img,
+                new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 })
+            ).withFaceLandmarks().withFaceDescriptor();
+
+            if (detection) {
+                pubFaceDescriptor = Array.from(detection.descriptor);
+
+                const tempC = document.createElement('canvas');
+                tempC.width = 160;
+                tempC.height = 160;
+                const tctx = tempC.getContext('2d');
+                tctx.drawImage(img, 0, 0, 160, 160);
+                pubFacePhoto = tempC.toDataURL('image/jpeg', 0.85);
+
+                oval.style.borderColor = '#10b981';
+                oval.style.borderStyle = 'solid';
+                oval.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
+                statusBadge.className = 'badge bg-success px-3 py-1.5 rounded-pill mb-2';
+                statusBadge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ផ្ទៃមុខច្បាស់ល្អ! រួចរាល់សម្រាប់ចុះឈ្មោះ';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> ចុះឈ្មោះផ្ទៃមុខឥឡូវនេះ';
+            } else {
+                oval.style.borderColor = '#ef4444';
+                oval.style.boxShadow = 'none';
+                statusBadge.className = 'badge bg-danger text-white px-3 py-1.5 rounded-pill mb-2';
+                statusBadge.innerText = 'រកមិនឃើញផ្ទៃមុខច្បាស់ទេ សូមជ្រើសរើសរូបថតចំពីមុខច្បាស់មួយទៀត';
+                btn.disabled = true;
+            }
+        };
+        img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
 function stopPubFaceCamera() {
+    if (pubFaceCheckInterval) {
+        clearInterval(pubFaceCheckInterval);
+        pubFaceCheckInterval = null;
+    }
     if (pubFaceStream) {
         pubFaceStream.getTracks().forEach(t => t.stop());
         pubFaceStream = null;
