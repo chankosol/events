@@ -861,7 +861,7 @@ $breadcrumbs = [
 </div>
 
 <!-- Modal: Ticket Specific QR Code -->
-<div class="modal fade" id="ticketQrModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="ticketQrModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 shadow-lg rounded-4 text-center p-3">
             <div class="modal-header border-0 pb-0">
@@ -1320,6 +1320,8 @@ async function confirmCapacityUpgrade(id) {
     } else {
         alert(data.message || 'ការដំឡើងចំណុះមិនបានជោគជ័យ។');
     }
+}
+
 // Submit quick add ticket
 async function submitQuickAddTicket(e, workshopId) {
     e.preventDefault();
@@ -1389,45 +1391,69 @@ async function toggleTicketVisibility(workshopId, ticketId) {
 
 // Copy direct ticket link
 function copyDirectLink(url, btn) {
-    const doCopy = () => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(url);
-        } else {
-            const temp = document.createElement('input');
-            temp.value = url;
-            document.body.appendChild(temp);
-            temp.select();
+    if (!url) return;
+    const button = btn || (window.event ? window.event.currentTarget : null);
+
+    const fallbackCopy = (text) => {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'fixed';
+        temp.style.left = '-9999px';
+        temp.style.top = '0';
+        document.body.appendChild(temp);
+        temp.focus();
+        temp.select();
+        temp.setSelectionRange(0, 99999);
+        try {
             document.execCommand('copy');
-            document.body.removeChild(temp);
-            return Promise.resolve();
+        } catch (e) {
+            console.error('Copy failed:', e);
         }
+        document.body.removeChild(temp);
     };
 
-    doCopy().then(() => {
-        if (btn) {
-            const origHtml = btn.innerHTML;
-            btn.className = 'btn btn-sm btn-success text-white';
-            btn.innerHTML = '<i class="bi bi-check2 me-1"></i> បានចម្លង!';
-            setTimeout(() => {
-                btn.className = 'btn btn-sm btn-outline-primary';
-                btn.innerHTML = origHtml;
-            }, 1200);
-        }
-    });
+    if (navigator.clipboard && window.isSecureContext && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).catch(() => fallbackCopy(url));
+    } else {
+        fallbackCopy(url);
+    }
+
+    if (button) {
+        const origHtml = button.innerHTML;
+        const origClass = button.className;
+        button.className = 'btn btn-sm btn-success text-white fw-bold';
+        button.innerHTML = '<i class="bi bi-check2 me-1"></i> បានចម្លង!';
+        setTimeout(() => {
+            button.className = origClass;
+            button.innerHTML = origHtml;
+        }, 1200);
+    }
 }
 
 // Show Ticket QR modal
 function showTicketQrModal(name, price, url) {
-    document.getElementById('ticketQrTitle').textContent = name;
-    document.getElementById('ticketQrPrice').textContent = price;
-    document.getElementById('ticketQrUrlInput').value = url;
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
-    document.getElementById('ticketQrImg').src = qrSrc;
-    document.getElementById('ticketQrDownloadBtn').href = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(url)}`;
-    document.getElementById('ticketQrDownloadBtn').download = `qr_ticket_${encodeURIComponent(name)}.png`;
+    const titleEl = document.getElementById('ticketQrTitle');
+    const priceEl = document.getElementById('ticketQrPrice');
+    const inputEl = document.getElementById('ticketQrUrlInput');
+    const imgEl = document.getElementById('ticketQrImg');
+    const dlEl = document.getElementById('ticketQrDownloadBtn');
 
-    const modal = new bootstrap.Modal(document.getElementById('ticketQrModal'));
-    modal.show();
+    if (titleEl) titleEl.textContent = name;
+    if (priceEl) priceEl.textContent = price;
+    if (inputEl) inputEl.value = url;
+    const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(url);
+    if (imgEl) imgEl.src = qrSrc;
+    if (dlEl) {
+        dlEl.href = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=' + encodeURIComponent(url);
+        dlEl.download = 'qr_' + encodeURIComponent(name) + '.png';
+    }
+
+    const qrModalEl = document.getElementById('ticketQrModal');
+    if (qrModalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(qrModalEl);
+        modal.show();
+    }
 }
 
 // Copy input inside ticket QR modal
