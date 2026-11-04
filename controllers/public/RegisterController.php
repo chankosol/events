@@ -70,13 +70,27 @@ class PublicRegisterController {
             [$workshop['id']]
         );
 
-        // Get payment methods if paid workshop
+        // Get payment methods and business settings if paid workshop
         $paymentMethods = [];
+        $businessSettings = [];
         if ($workshop['payment_mode'] !== 'free') {
+            if (file_exists(ROOT_PATH . '/helpers/bakong_helper.php')) {
+                require_once ROOT_PATH . '/helpers/bakong_helper.php';
+            }
+            if (file_exists(ROOT_PATH . '/helpers/aba_helper.php')) {
+                require_once ROOT_PATH . '/helpers/aba_helper.php';
+            }
             $paymentMethods = $db->query(
                 "SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY is_default DESC, sort_order ASC, id ASC",
                 [$workshop['business_id']]
             );
+            $rawBSettings = $db->query(
+                "SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?",
+                [$workshop['business_id']]
+            );
+            foreach ($rawBSettings as $bs) {
+                $businessSettings[$bs['setting_key']] = $bs['setting_value'];
+            }
         }
 
         // Form field configuration
@@ -423,12 +437,19 @@ class PublicRegisterController {
             // Create payment record if paid
             $hasProofUploaded = false;
             if (!$isFree && $finalAmount > 0) {
-                $paymentMethodId = !empty($_POST['payment_method_id']) ? (int)$_POST['payment_method_id'] : null;
+                $rawPmChoice = $_POST['payment_method_choice'] ?? $_POST['payment_method_id'] ?? null;
+                $paymentMethodId = (is_numeric($rawPmChoice) && (int)$rawPmChoice > 0) ? (int)$rawPmChoice : null;
+                $paymentNotes = trim($_POST['payment_notes'] ?? '');
+                if ($rawPmChoice === 'bakong') {
+                    $paymentNotes = 'Bakong KHQR' . ($paymentNotes ? ' - ' . $paymentNotes : '');
+                } elseif ($rawPmChoice === 'aba') {
+                    $paymentNotes = 'ABA Payway' . ($paymentNotes ? ' - ' . $paymentNotes : '');
+                }
 
                 $db->execute(
-                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, payment_method_id, amount, currency, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
-                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $paymentMethodId, $finalAmount, $ticket ? $ticket['currency'] : 'USD']
+                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, payment_method_id, amount, currency, status, notes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $paymentMethodId, $finalAmount, $ticket ? $ticket['currency'] : 'USD', $paymentNotes]
                 );
                 $paymentId = (int)$db->lastInsertId();
 
@@ -450,7 +471,7 @@ class PublicRegisterController {
                                 $finalAmount,
                                 $ticket ? $ticket['currency'] : 'USD',
                                 trim($_POST['transaction_reference'] ?? ''),
-                                trim($_POST['payment_notes'] ?? 'Uploaded during registration')
+                                trim($_POST['payment_notes'] ?? ($rawPmChoice === 'bakong' ? 'Bakong KHQR' : 'Uploaded during registration'))
                             ]
                         );
                         $hasProofUploaded = true;
