@@ -11,6 +11,13 @@ class BusinessSettingsController {
         $business = $db->queryOne("SELECT * FROM businesses WHERE id = ?", [$businessId]);
         $branding = $db->queryOne("SELECT * FROM business_branding WHERE business_id = ?", [$businessId]);
         $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY is_default DESC, sort_order ASC, id ASC", [$businessId]);
+        
+        $settingsRows = $db->query("SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?", [$businessId]);
+        $businessSettings = [];
+        foreach ($settingsRows as $r) {
+            $businessSettings[$r['setting_key']] = $r['setting_value'];
+        }
+
         $userId = Auth::id();
         $user = $db->queryOne("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", [$userId]) ?? Auth::user();
 
@@ -247,6 +254,41 @@ class BusinessSettingsController {
 
         auditLog('payment_method_deleted', 'business_payment_methods', $id);
         Session::flash('success', 'បានលុបវិធីសាស្ត្រទូទាត់ដោយជោគជ័យ។');
+        redirect(APP_URL . '/settings#paymentsTab');
+    }
+
+    public static function saveGatewaySetup(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $fields = [
+            'payment_provider',
+            'bakong_account_id',
+            'merchant_name',
+            'bakong_api_token',
+            'bakong_api_base_url',
+            'bakong_static_qr_text',
+            'aba_merchant_id',
+            'aba_merchant_name',
+            'aba_api_key',
+            'aba_api_url'
+        ];
+
+        foreach ($fields as $key) {
+            $val = trim($_POST[$key] ?? '');
+            $db->execute(
+                "INSERT INTO business_settings (business_id, setting_key, setting_value) 
+                 VALUES (?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()",
+                [$businessId, $key, $val]
+            );
+        }
+
+        auditLog('gateway_setup_updated', 'business_settings', $businessId);
+        Session::flash('success', 'បានរក្សាទុកការកំណត់ Bakong QR និង ABA PayWay ដោយជោគជ័យ។');
         redirect(APP_URL . '/settings#paymentsTab');
     }
 }
