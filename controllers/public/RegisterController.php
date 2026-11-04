@@ -332,7 +332,9 @@ class PublicRegisterController {
             $isFree = $workshop['payment_mode'] === 'free' || $finalAmount == 0;
             $requiresApproval = (bool)$workshop['requires_approval'];
             $inviteCode = trim($_POST['invite'] ?? $_GET['invite'] ?? $_GET['direct'] ?? '');
-            $isPrivateInvite = !empty($inviteCode);
+            $rawPmChoice = $_POST['payment_method_choice'] ?? $_POST['payment_method_id'] ?? null;
+            $isBakong = ($rawPmChoice === 'bakong');
+            $isPaidMethod = $isBakong || !empty($_POST['payment_confirmed']);
 
             if ($isWaitlist) {
                 $status = 'waitlisted';
@@ -341,7 +343,7 @@ class PublicRegisterController {
             } elseif ($isPrivateInvite) {
                 // Private invite link bypasses manual approval: auto-confirm & instant QR
                 $status = 'confirmed';
-                $paymentStatus = $isFree ? 'complimentary' : 'pending';
+                $paymentStatus = $isFree ? 'complimentary' : 'paid';
             } elseif ($isFree && $workshop['auto_confirm']) {
                 // Free mode with auto_confirm enabled: instant QR
                 $status = 'confirmed';
@@ -349,6 +351,10 @@ class PublicRegisterController {
             } elseif ($isFree && $requiresApproval) {
                 $status = 'pending_approval';
                 $paymentStatus = 'complimentary';
+            } elseif ($isPaidMethod && !$isFree) {
+                // Attendee paid via Bakong KHQR / instant payment verified: auto-confirm and issue instant QR ticket!
+                $status = 'confirmed';
+                $paymentStatus = 'paid';
             } elseif (!$isFree) {
                 $status = 'pending_verification';
                 $paymentStatus = 'pending';
@@ -436,20 +442,25 @@ class PublicRegisterController {
 
             // Create payment record if paid
             $hasProofUploaded = false;
+            $paymentTrxRef = trim($_POST['transaction_reference'] ?? $_POST['bakong_md5'] ?? '');
             if (!$isFree && $finalAmount > 0) {
-                $rawPmChoice = $_POST['payment_method_choice'] ?? $_POST['payment_method_id'] ?? null;
                 $paymentMethodId = (is_numeric($rawPmChoice) && (int)$rawPmChoice > 0) ? (int)$rawPmChoice : null;
                 $paymentNotes = trim($_POST['payment_notes'] ?? '');
                 if ($rawPmChoice === 'bakong') {
                     $paymentNotes = 'Bakong KHQR' . ($paymentNotes ? ' - ' . $paymentNotes : '');
+                    if (empty($paymentTrxRef)) {
+                        $paymentTrxRef = 'BK-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4)));
+                    }
                 } elseif ($rawPmChoice === 'aba') {
                     $paymentNotes = 'ABA Payway' . ($paymentNotes ? ' - ' . $paymentNotes : '');
                 }
 
+                $paymentStatusVal = ($status === 'confirmed' || $isPaidMethod) ? 'paid' : 'pending';
+
                 $db->execute(
-                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, payment_method_id, amount, currency, status, notes)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
-                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $paymentMethodId, $finalAmount, $ticket ? $ticket['currency'] : 'USD', $paymentNotes]
+                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, payment_method_id, amount, currency, status, transaction_reference, payment_date, notes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?)",
+                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $paymentMethodId, $finalAmount, $ticket ? $ticket['currency'] : 'USD', $paymentStatusVal, $paymentTrxRef, $paymentNotes]
                 );
                 $paymentId = (int)$db->lastInsertId();
 
@@ -519,18 +530,32 @@ class PublicRegisterController {
             Session::set('last_registration', [
                 'id'            => $registrationId,
                 'code'          => $regCode,
+                'registration_code' => $regCode,
                 'status'        => $status,
                 'payment_status'=> $paymentStatus,
                 'is_waitlist'   => $isWaitlist,
                 'workshop_name' => $workshop['name'],
+                'workshop_slug' => $workshop['slug'] ?? $slug,
+                'venue'         => $workshop['venue'] ?? '',
+                'address'       => $workshop['address'] ?? '',
+                'start_date'    => $workshop['start_date'] ?? date('Y-m-d'),
+                'start_time'    => $workshop['start_time'] ?? '',
+                'participant_name'  => $name,
+                'participant_phone' => $phone,
+                'participant_email' => $email,
+                'ticket_name'   => $ticket ? $ticket['name'] : 'សំបុត្រទូទៅ',
+                'ticket_price'  => $ticketPrice,
                 'final_amount'  => $finalAmount,
                 'currency'      => $ticket ? $ticket['currency'] : 'USD',
-                'participant_email' => $email,
                 'qr_token'      => $qrToken,
                 'has_proof'     => $hasProofUploaded,
+                'payment_method'=> $rawPmChoice === 'bakong' ? 'Bakong KHQR' : ($rawPmChoice === 'aba' ? 'ABA Payway' : 'Manual Transfer'),
+                'transaction_reference' => $paymentTrxRef ?? '',
+                'paid_at'       => ($paymentStatus === 'paid') ? date('Y-m-d H:i:s') : null,
+                'just_paid'     => ($paymentStatus === 'paid') ? 1 : 0
             ]);
 
-            redirect(APP_URL . '/event/' . $slug . '/confirmation');
+            redirect(APP_URL . '/event/' . $slug . '/confirmation' . ($paymentStatus === 'paid' ? '?paid=1' : ''));
 
         } catch (Exception $e) {
             $db->rollback();
@@ -654,6 +679,60 @@ class PublicRegisterController {
             'participant_name' => $found['participant_name'],
             'redirect_url' => APP_URL . '/ticket/' . urlencode($found['registration_code']),
             'ticket_url' => APP_URL . '/ticket/' . urlencode($found['registration_code'])
+        ]);
+        exit;
+    }
+
+    /**
+     * Check Bakong KHQR payment status via background AJAX polling
+     */
+    public static function checkBakongPayment(string $slug): void {
+        header('Content-Type: application/json; charset=utf-8');
+        $db = Database::getInstance();
+        $workshop = $db->queryOne("SELECT * FROM workshops WHERE slug = ? AND deleted_at IS NULL", [$slug]);
+        if (!$workshop) {
+            echo json_encode(['success' => false, 'paid' => false, 'message' => 'Workshop not found']);
+            exit;
+        }
+
+        $rawInput = file_get_contents('php://input');
+        $input = json_decode($rawInput, true) ?: $_POST;
+        $md5 = trim($input['md5'] ?? '');
+
+        if (empty($md5)) {
+            echo json_encode(['success' => false, 'paid' => false, 'message' => 'Missing MD5 hash']);
+            exit;
+        }
+
+        // Load business settings for Bakong
+        $rawBSettings = $db->query("SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?", [$workshop['business_id']]);
+        $bSettings = [];
+        foreach ($rawBSettings as $bs) {
+            $bSettings[$bs['setting_key']] = $bs['setting_value'];
+        }
+        $bBakongToken = trim($bSettings['bakong_api_token'] ?? '');
+        $bBakongBase  = trim($bSettings['bakong_api_base_url'] ?? 'https://api-bakong.nbc.gov.kh');
+
+        require_once ROOT_PATH . '/helpers/bakong_helper.php';
+        $checkRes = bakong_check_payment_by_md5($md5, $bBakongToken, $bBakongBase);
+
+        if (!empty($checkRes['paid'])) {
+            echo json_encode([
+                'success' => true,
+                'paid' => true,
+                'message' => 'ការទូទាត់ទទួលបានជោគជ័យ!',
+                'md5' => $md5,
+                'data' => $checkRes['data'] ?? null
+            ]);
+            exit;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'paid' => false,
+            'message' => $checkRes['message'] ?? 'កំពុងរង់ចាំការទូទាត់...',
+            'md5' => $md5,
+            'http_code' => $checkRes['http_code'] ?? 0
         ]);
         exit;
     }

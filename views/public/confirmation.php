@@ -42,13 +42,19 @@ if ($isTgBotActive) {
 
 // Check if face is enrolled in participant_faces table
 $hasEnrolledFace = false;
+$latestPayment = null;
 if (!empty($reg['id'])) {
     $db = Database::getInstance();
     $faceRecord = $db->queryOne("SELECT id, enrolled_at FROM participant_faces WHERE registration_id = ? AND is_active = 1", [$reg['id']]);
     if ($faceRecord) {
         $hasEnrolledFace = true;
     }
+    $latestPayment = $db->queryOne("SELECT * FROM payments WHERE registration_id = ? ORDER BY id DESC LIMIT 1", [$reg['id']]);
 }
+$isPaymentSuccessful = (!empty($reg['payment_status']) && $reg['payment_status'] === 'paid') 
+    || (!empty($latestPayment['status']) && $latestPayment['status'] === 'paid')
+    || isset($_GET['paid'])
+    || !empty($reg['just_paid']);
 ?>
 
 <style>
@@ -376,9 +382,29 @@ body {
                 </div>
             <?php endif; ?>
 
-            <?php if ($status === 'confirmed' || $status === 'attended' || $status === 'completed'): ?>
+            <?php if ($status === 'confirmed' || $status === 'attended' || $status === 'completed' || $isPaymentSuccessful): ?>
                 <div class="ticket-page-wrapper">
                     
+                    <?php if ($isPaymentSuccessful): ?>
+                    <!-- Payment Success Banner (សារបញ្ជាក់ការបង់ប្រាក់ជោគជ័យ) -->
+                    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white border-start border-4 border-success">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px; font-size: 20px;">
+                                <i class="bi bi-check2-circle"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <h6 class="fw-bold text-success mb-0" style="font-size: 14.5px;">ការទូទាត់ប្រាក់ជោគជ័យ!</h6>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">ជោគជ័យ</span>
+                                </div>
+                                <div class="text-muted small mt-0.5" style="font-size: 11.5px;">
+                                    ប្រព័ន្ធបានចេញសំបុត្រផ្លូវការ និងបង្កាន់ដៃជូនលោកអ្នករួចរាល់។
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Top Status Bar -->
                     <div class="d-flex align-items-center justify-content-between mb-2 px-1">
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
@@ -531,6 +557,66 @@ body {
 
                         </div>
                     </div>
+
+                    <?php if ($isPaymentSuccessful || !empty($latestPayment)): ?>
+                    <!-- Payment Receipt Card (បង្កាន់ដៃ / វិក្កយបត្របង់ប្រាក់) -->
+                    <div class="card border-0 rounded-4 shadow-sm p-3 mt-3 bg-white" id="paymentReceiptCard">
+                        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-receipt text-primary fs-5"></i>
+                                <h6 class="fw-bold text-dark mb-0" style="font-size: 13.5px;">បង្កាន់ដៃទូទាត់ប្រាក់ (Receipt)</h6>
+                            </div>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5" style="font-size: 10.5px;">
+                                <i class="bi bi-check-circle-fill me-1"></i> បានបង់រួច
+                            </span>
+                        </div>
+
+                        <div class="bg-light rounded-3 p-2.5 border mb-2 text-start" style="font-size: 12px;">
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">កូដសំបុត្រ៖</span>
+                                <strong class="text-primary font-monospace"><?= htmlspecialchars($regCode) ?></strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">អ្នកបង់ប្រាក់៖</span>
+                                <strong class="text-dark"><?= htmlspecialchars($reg['participant_name'] ?? 'សិក្ខាកាម') ?></strong>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">ប្រភេទសំបុត្រ៖</span>
+                                <span class="text-dark fw-medium"><?= htmlspecialchars($reg['ticket_name'] ?? 'សំបុត្រទូទៅ') ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">មធ្យោបាយទូទាត់៖</span>
+                                <span class="text-dark fw-semibold">
+                                    <span class="badge bg-danger text-white me-1 py-0 px-1" style="font-size:9px;">KHQR</span>
+                                    <?= htmlspecialchars($reg['payment_method'] ?? $latestPayment['notes'] ?? 'Bakong KHQR') ?>
+                                </span>
+                            </div>
+                            <?php 
+                            $trxRefShow = $reg['transaction_reference'] ?? $latestPayment['transaction_reference'] ?? '';
+                            if (!empty($trxRefShow)): ?>
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">លេខយោងប្រតិបត្តិការ (Ref)៖</span>
+                                <span class="font-monospace text-muted small"><?= htmlspecialchars($trxRefShow) ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+                                <span class="text-muted">កាលបរិច្ឆេទ៖</span>
+                                <span class="text-muted small"><?= htmlspecialchars($reg['paid_at'] ?? $latestPayment['created_at'] ?? date('Y-m-d H:i')) ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2">
+                                <span class="fw-bold text-dark">ទឹកប្រាក់បានទូទាត់៖</span>
+                                <span class="fw-bold text-success fs-5">
+                                    $<?= number_format((float)($reg['final_amount'] ?? $latestPayment['amount'] ?? 0), 2) ?> USD
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="text-muted text-center" style="font-size: 11px;">
+                            <i class="bi bi-shield-check text-success me-1"></i>
+                            វិក្កយបត្រនេះត្រូវបានផ្ទៀងផ្ទាត់ដោយប្រព័ន្ធស្វ័យប្រវត្តិតាម Bakong Network
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Express Face Check-in (Opt-In) Card -->
                     <div class="card border-0 rounded-4 shadow-sm p-3 mt-3 bg-white text-center">

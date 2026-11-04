@@ -374,12 +374,15 @@
 
                             // Generate dynamic Bakong KHQR
                             $bakongQrImgUrl = '';
+                            $bakongMd5 = '';
                             if ($hasBakongGateway) {
                                 $invCode = 'REG' . $workshop['id'] . '-' . strtoupper(substr(md5(uniqid()), 0, 6));
                                 $khqrData = function_exists('bakong_create_khqr') ? bakong_create_khqr($invCode, $ticketPrice > 0 ? $ticketPrice : 1.0, $ticketCurrency, $bBakongAccount, $bBakongMerchant) : ['ok' => false];
                                 $bakongQrString = !empty($khqrData['qr_text']) ? $khqrData['qr_text'] : $bBakongStatic;
+                                $bakongMd5 = $khqrData['md5'] ?? ($bakongQrString ? md5($bakongQrString) : '');
                                 if (empty($bakongQrString)) {
                                     $bakongQrString = 'https://bakong.nbc.gov.kh/pay?account=' . urlencode($bBakongAccount) . '&amount=' . $ticketPrice;
+                                    $bakongMd5 = md5($bakongQrString);
                                 }
                                 $bakongQrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($bakongQrString);
                             }
@@ -410,9 +413,12 @@
                                 </div>
                             </div>
 
-                            <!-- Hidden field for active payment choice -->
+                            <!-- Hidden field for active payment choice & auto-confirm -->
                             <input type="hidden" name="payment_method_choice" id="selectedPaymentMethodChoice" value="<?= htmlspecialchars($activeChoice) ?>">
                             <input type="hidden" name="payment_method_id" id="selectedPaymentMethodId" value="<?= htmlspecialchars($activeChoice === 'bakong' ? '' : $activeChoice) ?>">
+                            <input type="hidden" name="bakong_md5" id="bakongMd5Input" value="<?= htmlspecialchars($bakongMd5) ?>">
+                            <input type="hidden" name="bakong_invoice" id="bakongInvInput" value="<?= htmlspecialchars($invCode ?? '') ?>">
+                            <input type="hidden" name="payment_confirmed" id="paymentConfirmedInput" value="0">
 
                             <!-- Choice Tiles ONLY if more than 1 payment option -->
                             <?php if ($totalChoices > 1): ?>
@@ -511,8 +517,14 @@
                                             </div>
                                         </div>
 
-                                        <div class="text-muted small mt-2" style="font-size: 12px;">
+                                        <div class="text-muted small mt-2 mb-2" style="font-size: 12px;">
                                             ស្កេនទូទាត់តាម <strong>Bakong</strong> ឬ <strong>App ធនាគារ</strong>
+                                        </div>
+
+                                        <!-- Live Polling Listening Indicator -->
+                                        <div class="alert alert-light border py-1.5 px-3 mb-1 d-flex align-items-center justify-content-center text-muted mx-auto rounded-pill shadow-xs" style="max-width: 320px; font-size: 11px;" id="bakongLiveListener">
+                                            <div class="spinner-grow spinner-grow-sm text-danger me-2" role="status" style="width: 0.75rem; height: 0.75rem;"></div>
+                                            <span id="bakongLiveStatusText">កំពុងរង់ចាំការទូទាត់... (Auto Checking)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -576,8 +588,8 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm py-2.5 px-3 fw-bold rounded-pill" onclick="goToStep1()" style="font-size: 13px;">
                                     <i class="bi bi-arrow-left me-1"></i> ត្រឡប់ក្រោយ
                                 </button>
-                                <button type="submit" class="btn btn-primary btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm" id="btnSubmitPaid" style="font-size: 13px;">
-                                    <i class="bi bi-check-circle me-1"></i> បញ្ជាក់ការចុះឈ្មោះ
+                                <button type="button" class="btn btn-danger btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm" id="btnSubmitPaid" onclick="confirmAndSubmitRegistration()" style="font-size: 13.5px;">
+                                    <i class="bi bi-patch-check-fill me-1"></i> ខ្ញុំបានទូទាត់រួចរាល់ / ទទួលសំបុត្រភ្លាមៗ
                                 </button>
                             </div>
                         </div>
@@ -769,9 +781,14 @@ function goToPaymentStep() {
     const step2 = document.getElementById('step2Section');
     if (step2) step2.classList.remove('d-none');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    startBakongPolling();
 }
 
 function goToStep1() {
+    if (typeof bakongPollTimer !== 'undefined' && bakongPollTimer) {
+        clearInterval(bakongPollTimer);
+        bakongPollTimer = null;
+    }
     const step2 = document.getElementById('step2Section');
     if (step2) step2.classList.add('d-none');
     document.getElementById('step1Section').classList.remove('d-none');
@@ -834,8 +851,10 @@ function selectPaymentMethod(pmId) {
         activeTile.classList.remove('border-secondary-subtle', 'bg-white');
         if (pmId === 'bakong') {
             activeTile.classList.add('border-danger', 'bg-danger-subtle', 'shadow-xs');
+            startBakongPolling();
         } else {
             activeTile.classList.add('border-primary', 'bg-primary-subtle', 'shadow-xs');
+            if (bakongPollTimer) { clearInterval(bakongPollTimer); bakongPollTimer = null; }
         }
     }
 
@@ -848,6 +867,83 @@ function selectPaymentMethod(pmId) {
         activePanel.classList.remove('d-none');
     }
 }
+
+let bakongPollTimer = null;
+function startBakongPolling() {
+    if (bakongPollTimer) clearInterval(bakongPollTimer);
+    const md5 = document.getElementById('bakongMd5Input')?.value;
+    if (!md5) return;
+
+    bakongPollTimer = setInterval(async () => {
+        const step2 = document.getElementById('step2Section');
+        if (!step2 || step2.classList.contains('d-none')) {
+            clearInterval(bakongPollTimer);
+            bakongPollTimer = null;
+            return;
+        }
+
+        try {
+            const res = await fetch('<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    md5: md5,
+                    amount: '<?= (float)$ticketPrice ?>',
+                    currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
+                })
+            });
+            const data = await res.json();
+            if (data.paid || (data.data && data.data.is_paid)) {
+                clearInterval(bakongPollTimer);
+                bakongPollTimer = null;
+
+                const listener = document.getElementById('bakongLiveListener');
+                if (listener) {
+                    listener.className = 'alert alert-success border border-success py-1.5 px-3 mb-2 d-flex align-items-center justify-content-center text-success mx-auto rounded-pill shadow-xs';
+                    listener.innerHTML = '<i class="bi bi-check-circle-fill me-2 fs-6"></i><strong style="font-size:12px;">ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...</strong>';
+                }
+                const submitBtn = document.getElementById('btnSubmitPaid');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.className = 'btn btn-success btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm';
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> ការទូទាត់ជោគជ័យ!';
+                }
+                const pConfirmed = document.getElementById('paymentConfirmedInput');
+                if (pConfirmed) pConfirmed.value = '1';
+
+                setTimeout(() => {
+                    const form = document.getElementById('registrationForm');
+                    if (form) form.submit();
+                }, 700);
+            }
+        } catch (e) {
+            // Heartbeat
+        }
+    }, 3500);
+}
+
+function confirmAndSubmitRegistration() {
+    const btn = document.getElementById('btnSubmitPaid');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> កំពុងបញ្ជាក់ការទូទាត់ និងចេញសំបុត្រ...';
+    }
+    const pConfirmed = document.getElementById('paymentConfirmedInput');
+    if (pConfirmed) pConfirmed.value = '1';
+
+    const form = document.getElementById('registrationForm');
+    if (form) form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const step2 = document.getElementById('step2Section');
+    if (step2 && !step2.classList.contains('d-none')) {
+        startBakongPolling();
+    }
+});
 </script>
 
 <?php if (!empty($formConfig['show_face_enroll'])): ?>

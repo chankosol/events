@@ -30,6 +30,11 @@ $router->post('/event/{slug}/register', function($slug) {
     PublicRegisterController::submit($slug);
 });
 
+$router->post('/event/{slug}/check-bakong', function($slug) {
+    require_once ROOT_PATH . '/controllers/public/RegisterController.php';
+    PublicRegisterController::checkBakongPayment($slug);
+});
+
 $router->get('/register/{slug}', function($slug) {
     require_once ROOT_PATH . '/controllers/public/RegisterController.php';
     PublicRegisterController::show($slug);
@@ -38,6 +43,11 @@ $router->get('/register/{slug}', function($slug) {
 $router->post('/register/{slug}', function($slug) {
     require_once ROOT_PATH . '/controllers/public/RegisterController.php';
     PublicRegisterController::submit($slug);
+});
+
+$router->post('/register/{slug}/check-bakong', function($slug) {
+    require_once ROOT_PATH . '/controllers/public/RegisterController.php';
+    PublicRegisterController::checkBakongPayment($slug);
 });
 
 $router->get('/event/{slug}/confirmation', function($slug) {

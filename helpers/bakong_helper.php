@@ -133,14 +133,19 @@ if (!function_exists('bakong_create_khqr')) {
  * Learnt from telegram_ai_settings.php to prevent 100 daily limit errors.
  */
 if (!function_exists('bakong_check_payment_by_md5')) {
-    function bakong_check_payment_by_md5(string $md5): array {
+    function bakong_check_payment_by_md5(string $md5, ?string $customToken = null, ?string $customBase = null): array {
         $md5 = trim($md5);
         if ($md5 === '') {
             return ['ok' => false, 'paid' => false, 'message' => 'Missing Bakong MD5 hash'];
         }
 
-        $tokenConfig = trim(bakong_get_platform_setting('bakong_api_token', ''));
-        $baseUrl = rtrim(trim(bakong_get_platform_setting('bakong_api_base_url', 'https://api-bakong.nbc.gov.kh')), '/');
+        $platToken = trim(bakong_get_platform_setting('bakong_api_token', ''));
+        $tokenConfig = !empty($customToken) ? trim($customToken) : $platToken;
+        if (!empty($customToken) && !empty($platToken) && $customToken !== $platToken) {
+            $tokenConfig = $customToken . ',' . $platToken;
+        }
+
+        $baseUrl = !empty($customBase) ? rtrim(trim($customBase), '/') : rtrim(trim(bakong_get_platform_setting('bakong_api_base_url', 'https://api-bakong.nbc.gov.kh')), '/');
 
         if ($tokenConfig === '') {
             return ['ok' => false, 'paid' => false, 'message' => 'Bakong API token is not configured in Super Admin'];
