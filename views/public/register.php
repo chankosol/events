@@ -334,10 +334,16 @@
                                     </button>
                                 <?php endif; ?>
                             </div>
+                        
+                            <div class="text-center mt-3">
+                                <button type="button" class="btn btn-link text-decoration-none text-muted small" onclick="openFindTicketModal()" style="font-size: 12px;">
+                                    <i class="bi bi-search me-1 text-primary"></i> ធ្លាប់បានចុះឈ្មោះរួចហើយ? <strong>ស្វែងរកសំបុត្រ ឬ QR Code</strong>
+                                </button>
+                            </div>
                         </div> <!-- End #step1Section -->
 
                         <?php if (!$isFreeMode): ?>
-                        <!-- Step 2: Payment Section (Redesigned & Clean) -->
+                        <!-- Step 2: Payment Section (Ultra-clean, uncluttered) -->
                         <div id="step2Section" class="d-none">
                             <?php
                             $bSettings = $businessSettings ?? [];
@@ -348,21 +354,25 @@
 
                             $hasBakongGateway = (!empty($bBakongAccount) && in_array($bProvider, ['both', 'bakong'], true));
 
-                            // Decide default active payment choice
-                            $activeChoice = '';
+                            // If business configured Bakong only, don't show manual methods
+                            $displayMethods = ($bProvider === 'bakong' && $hasBakongGateway) ? [] : $paymentMethods;
+                            $totalChoices = ($hasBakongGateway ? 1 : 0) + count($displayMethods);
+
+                            // Active payment choice
+                            $activeChoice = 'bakong';
                             if ($bProvider === 'bakong' && $hasBakongGateway) {
                                 $activeChoice = 'bakong';
                             } elseif ($hasBakongGateway) {
                                 $activeChoice = 'bakong';
-                            } elseif (!empty($paymentMethods)) {
-                                $activeChoice = (string)$paymentMethods[0]['id'];
+                            } elseif (!empty($displayMethods)) {
+                                $activeChoice = (string)$displayMethods[0]['id'];
                             }
 
-                            // Calculate ticket price for initial display
+                            // Calculate ticket price
                             $ticketPrice = isset($tickets[0]) ? (float)$tickets[0]['price'] : (float)($workshop['ticket_price'] ?? 0);
                             $ticketCurrency = $tickets[0]['currency'] ?? 'USD';
 
-                            // Generate dynamic Bakong KHQR if enabled
+                            // Generate dynamic Bakong KHQR
                             $bakongQrImgUrl = '';
                             if ($hasBakongGateway) {
                                 $invCode = 'REG' . $workshop['id'] . '-' . strtoupper(substr(md5(uniqid()), 0, 6));
@@ -373,8 +383,6 @@
                                 }
                                 $bakongQrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($bakongQrString);
                             }
-
-                            $totalChoices = ($hasBakongGateway ? 1 : 0) + count($paymentMethods);
                             ?>
 
                             <!-- Header -->
@@ -388,7 +396,7 @@
                                 </span>
                             </div>
 
-                            <!-- Clean Attendee & Ticket Summary Strip -->
+                            <!-- Attendee & Ticket Summary Strip -->
                             <div class="bg-light rounded-3 p-3 border mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 12px;">
                                     <span class="text-muted">សិក្ខាកាម៖ <strong class="text-dark" id="summaryAttendeeName">-</strong></span>
@@ -402,26 +410,17 @@
                                 </div>
                             </div>
 
-                            <!-- Promo Code (Optional) -->
-                            <div class="mb-3">
-                                <div class="input-group input-group-sm">
-                                    <span class="input-group-text bg-white text-muted"><i class="bi bi-tag"></i></span>
-                                    <input type="text" name="promo_code" id="promoCodeInput" class="form-control" placeholder="កូដបញ្ចុះតម្លៃ (ប្រសិនបើមាន)" value="<?= htmlspecialchars($old['promo_code'] ?? '') ?>" style="font-size: 12px;">
-                                </div>
-                            </div>
-
                             <!-- Hidden field for active payment choice -->
                             <input type="hidden" name="payment_method_choice" id="selectedPaymentMethodChoice" value="<?= htmlspecialchars($activeChoice) ?>">
                             <input type="hidden" name="payment_method_id" id="selectedPaymentMethodId" value="<?= htmlspecialchars($activeChoice === 'bakong' ? '' : $activeChoice) ?>">
 
-                            <!-- Payment Method Choice Tiles (if more than 1 option) -->
+                            <!-- Choice Tiles ONLY if more than 1 payment option -->
                             <?php if ($totalChoices > 1): ?>
                                 <label class="form-label text-muted small mb-2 d-flex align-items-center gap-1.5" style="font-size: 12px;">
                                     <i class="bi bi-credit-card text-primary"></i> ជ្រើសរើសមធ្យោបាយទូទាត់៖
                                 </label>
                                 <div class="row g-2 mb-3" id="paymentMethodSelectors">
                                     <?php if ($hasBakongGateway): ?>
-                                        <!-- Bakong KHQR Option Tile -->
                                         <div class="col-sm-6">
                                             <div class="payment-method-tile card p-2.5 rounded-3 border-2 h-100 cursor-pointer <?= $activeChoice === 'bakong' ? 'border-danger bg-danger-subtle shadow-xs' : 'border-secondary-subtle bg-white' ?>"
                                                  id="pm_tile_bakong"
@@ -448,7 +447,7 @@
                                         </div>
                                     <?php endif; ?>
 
-                                    <?php foreach ($paymentMethods as $pm): ?>
+                                    <?php foreach ($displayMethods as $pm): ?>
                                         <div class="col-sm-6">
                                             <div class="payment-method-tile card p-2.5 rounded-3 border-2 h-100 cursor-pointer <?= $activeChoice === (string)$pm['id'] ? 'border-primary bg-primary-subtle shadow-xs' : 'border-secondary-subtle bg-white' ?>"
                                                  id="pm_tile_<?= $pm['id'] ?>"
@@ -513,22 +512,14 @@
                                         </div>
 
                                         <div class="text-muted small mt-2" style="font-size: 12px;">
-                                            ស្កេនទូទាត់តាម <strong>Bakong</strong> ឬ <strong>App ធនាគារនានា</strong> (ABA, ACLEDA, Wing...)
-                                        </div>
-
-                                        <!-- Account details strip -->
-                                        <div class="bg-light p-2 rounded-3 border mt-2 d-flex justify-content-between align-items-center" style="font-size: 12px;">
-                                            <span class="text-muted">Account: <strong class="text-dark font-monospace"><?= htmlspecialchars($bBakongAccount) ?></strong></span>
-                                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 11px;" onclick="copyDirectText('<?= htmlspecialchars($bBakongAccount) ?>', this)">
-                                                <i class="bi bi-copy me-1"></i> ចម្លង
-                                            </button>
+                                            ស្កេនទូទាត់តាម <strong>Bakong</strong> ឬ <strong>App ធនាគារ</strong>
                                         </div>
                                     </div>
                                 </div>
                             <?php endif; ?>
 
-                            <!-- 2. Manual Payment Panels -->
-                            <?php foreach ($paymentMethods as $pm): ?>
+                            <!-- 2. Manual Payment Panels (if allowed) -->
+                            <?php foreach ($displayMethods as $pm): ?>
                                 <div class="pm-detail-panel card border shadow-sm rounded-4 overflow-hidden mb-3 <?= $activeChoice === (string)$pm['id'] ? '' : 'd-none' ?>" id="pm_panel_<?= $pm['id'] ?>">
                                     <div class="card-header bg-white py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
                                         <span class="fw-bold text-dark" style="font-size: 13px;"><?= htmlspecialchars($pm['name']) ?></span>
@@ -580,33 +571,17 @@
                                 </div>
                             <?php endif; ?>
 
-                            <!-- Upload Payment Proof -->
-                            <div class="card border rounded-3 p-3 mb-3 bg-light shadow-2xs">
-                                <label class="form-label text-muted small fw-semibold mb-1" style="font-size: 12px;">
-                                    <i class="bi bi-receipt text-primary me-1"></i> ភ្ជាប់បង្កាន់ដៃបង់ប្រាក់ <span class="text-muted fw-normal">(ជម្រើស)</span>
-                                </label>
-                                <input type="file" name="payment_slip" id="paymentSlipInput" class="form-control form-control-sm bg-white" accept="image/*" onchange="previewSlip(this)" style="font-size: 12px;">
-                                <div id="slipPreviewWrapper" class="text-center mt-2 d-none">
-                                    <img id="slipPreviewImg" src="" class="img-thumbnail rounded-3" style="max-height: 120px;">
-                                </div>
-                            </div>
-
                             <!-- Step 2 Navigation Buttons -->
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary btn-sm py-2 px-3 fw-bold rounded-pill" onclick="goToStep1()" style="font-size: 13px;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-2.5 px-3 fw-bold rounded-pill" onclick="goToStep1()" style="font-size: 13px;">
                                     <i class="bi bi-arrow-left me-1"></i> ត្រឡប់ក្រោយ
                                 </button>
-                                <button type="submit" class="btn btn-primary btn-sm py-2 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm" id="btnSubmitPaid" style="font-size: 13px;">
+                                <button type="submit" class="btn btn-primary btn-sm py-2.5 px-4 fw-bold flex-grow-1 rounded-pill shadow-sm" id="btnSubmitPaid" style="font-size: 13px;">
                                     <i class="bi bi-check-circle me-1"></i> បញ្ជាក់ការចុះឈ្មោះ
                                 </button>
                             </div>
-                        </div>                        <?php endif; ?>
-
-                        <div class="text-center mt-3">
-                            <button type="button" class="btn btn-link text-decoration-none text-muted small" onclick="openFindTicketModal()">
-                                <i class="bi bi-search me-1 text-primary"></i> ធ្លាប់បានចុះឈ្មោះរួចហើយ? <strong>ស្វែងរកសំបុត្រ ឬ QR Code ឡើងវិញ</strong>
-                            </button>
                         </div>
+                        <?php endif; ?>
                     </form>
                 </div>
             </div>
