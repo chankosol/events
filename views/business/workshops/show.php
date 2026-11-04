@@ -14,7 +14,13 @@ $breadcrumbs = [
     <div class="p-4 text-white">
         <div class="d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-3">
             <div>
-                <div class="d-flex align-items-center gap-2 mb-2.5 flex-wrap">
+                <h1 class="h4 fw-bold mb-2 text-white"><?php echo e($workshop['name']); ?></h1>
+                <div class="d-flex flex-wrap gap-3 text-light opacity-75 small mb-2.5">
+                    <span><i class="bi bi-calendar-event me-1.5 text-info"></i><?php echo formatDate($workshop['start_date']); ?><?php if (!empty($workshop['start_time'])): ?> (ម៉ោង <?php echo date('h:i A', strtotime($workshop['start_time'])); ?>)<?php endif; ?></span>
+                    <span><i class="bi bi-geo-alt me-1.5 text-danger"></i><?php echo e($workshop['venue'] ?: 'អនឡាញ / មិនទាន់កំណត់'); ?></span>
+                    <span><i class="bi bi-person-badge me-1.5 text-warning"></i><?php echo e(!empty($workshop['trainer_title']) ? $workshop['trainer_title'] : 'គ្រូ'); ?>: <strong><?php echo e($workshop['trainer_name'] ?: 'មិនទាន់កំណត់'); ?></strong></span>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <?php echo statusBadge($workshop['status']); ?>
                     <?php if (!empty($workshop['payment_mode'])): ?>
                         <span class="badge bg-secondary bg-opacity-50 text-white border border-light border-opacity-25 px-2.5 py-1 small">
@@ -30,12 +36,6 @@ $breadcrumbs = [
                             <i class="bi bi-exclamation-triangle-fill me-1"></i>រង់ចាំការបង់ថ្លៃប្រព័ន្ធ
                         </span>
                     <?php endif; ?>
-                </div>
-                <h1 class="h4 fw-bold mb-2 text-white"><?php echo e($workshop['name']); ?></h1>
-                <div class="d-flex flex-wrap gap-3 text-light opacity-75 small">
-                    <span><i class="bi bi-calendar-event me-1.5 text-info"></i><?php echo formatDate($workshop['start_date']); ?><?php if (!empty($workshop['start_time'])): ?> (ម៉ោង <?php echo e($workshop['start_time']); ?>)<?php endif; ?></span>
-                    <span><i class="bi bi-geo-alt me-1.5 text-danger"></i><?php echo e($workshop['venue'] ?: 'អនឡាញ / មិនទាន់កំណត់'); ?></span>
-                    <span><i class="bi bi-person-badge me-1.5 text-warning"></i><?php echo e(!empty($workshop['trainer_title']) ? $workshop['trainer_title'] : 'គ្រូ'); ?>: <strong><?php echo e($workshop['trainer_name'] ?: 'មិនទាន់កំណត់'); ?></strong></span>
                 </div>
             </div>
 
@@ -498,10 +498,10 @@ $breadcrumbs = [
                     <?php if (!empty($sessions)): ?>
                         <span class="badge bg-primary text-white rounded-pill px-2 py-1 small"><?php echo count($sessions); ?> វគ្គ</span>
                     <?php endif; ?>
-                    <a href="<?php echo APP_URL; ?>/workshops/<?php echo $workshop['id']; ?>/agenda/print" target="_blank" class="btn btn-outline-secondary btn-sm py-1 px-2.5 rounded-2 d-inline-flex align-items-center justify-content-center" title="ទម្រង់បោះពុម្ព A4">
-                        <i class="bi bi-printer"></i>
+                    <a href="<?php echo APP_URL; ?>/workshops/<?php echo $workshop['id']; ?>/agenda/print" target="_blank" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center justify-content-center gap-1.5" style="height: 32px; padding: 0 10px;" title="ទម្រង់បោះពុម្ព A4">
+                        <i class="bi bi-printer"></i> <span>បោះពុម្ព</span>
                     </a>
-                    <button type="button" class="btn btn-primary btn-sm py-1 px-2.5 rounded-2 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addSessionModal">
+                    <button type="button" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center justify-content-center gap-1.5" style="height: 32px; padding: 0 12px;" data-bs-toggle="modal" data-bs-target="#addSessionModal">
                         <i class="bi bi-plus-lg"></i> <span>បន្ថែម</span>
                     </button>
                 </div>
