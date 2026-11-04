@@ -223,7 +223,7 @@ body {
 
 /* QR Container */
 .qr-premium-frame {
-    background: #ffffff;
+    background: transparent;
     padding: 10px;
     border-radius: 16px;
     border: 1.5px solid #e2e8f0;
@@ -250,30 +250,16 @@ body {
     padding-top: 10px;
     border-top: 1px dashed #e2e8f0;
 }
-.ticket-barcode-bars {
-    height: 20px;
-    width: 140px;
+.ticket-barcode-bars-wrap {
     margin: 4px auto 3px;
-    background: repeating-linear-gradient(
-        90deg,
-        #1e293b 0px,
-        #1e293b 2px,
-        transparent 2px,
-        transparent 4px,
-        #1e293b 4px,
-        #1e293b 6px,
-        transparent 6px,
-        transparent 8px,
-        #1e293b 8px,
-        #1e293b 11px,
-        transparent 11px,
-        transparent 13px,
-        #1e293b 13px,
-        #1e293b 15px,
-        transparent 15px,
-        transparent 18px
-    );
-    opacity: 0.55;
+    display: flex;
+    justify-content: center;
+}
+.ticket-barcode-svg {
+    width: 170px;
+    height: 22px;
+    display: block;
+    opacity: 0.7;
 }
 .ticket-barcode-text {
     font-family: monospace;
@@ -483,19 +469,16 @@ body {
     position: relative;
 }
 .ticket-entry-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+    display: inline-block;
+    background: #eff6ff;
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     border: 1.5px solid #bfdbfe;
-    color: #1d4ed8;
-    padding: 5px 18px 5px 12px;
+    padding: 5px 16px 5px 10px;
     border-radius: 50px;
-    font-size: 0.88rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
     box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
     transition: all 0.2s ease;
+    text-align: center;
+    letter-spacing: normal;
 }
 .ticket-entry-badge:hover {
     transform: translateY(-1px);
@@ -507,11 +490,22 @@ body {
     justify-content: center;
     width: 22px;
     height: 22px;
-    background: #2563eb;
-    color: #ffffff;
+    background-color: #2563eb !important;
+    color: #ffffff !important;
     border-radius: 50%;
     font-size: 11px;
     box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+    vertical-align: middle;
+    margin-right: 6px;
+}
+.ticket-entry-badge-text {
+    display: inline-block;
+    vertical-align: middle;
+    color: #1d4ed8 !important;
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0;
 }
 
 /* Face check-in button anchored at bottom-right corner of the ticket */
@@ -707,7 +701,7 @@ if ($showSuccessPopup):
                                 <span class="ticket-entry-badge-icon">
                                     <i class="bi bi-ticket-perforated-fill"></i>
                                 </span>
-                                <span>សំបុត្រចូលរួម</span>
+                                <span class="ticket-entry-badge-text">សំបុត្រចូលរួម</span>
                             </div>
                         </div>
 
@@ -754,7 +748,51 @@ if ($showSuccessPopup):
 
                             <!-- Decorative barcode & serial -->
                             <div class="ticket-barcode-wrap position-relative">
-                                <div class="ticket-barcode-bars"></div>
+                                <div class="ticket-barcode-bars-wrap">
+                                    <svg class="ticket-barcode-svg" viewBox="0 0 170 22" fill="#1e293b" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="0" y="0" width="2" height="22"/>
+                                        <rect x="4" y="0" width="1" height="22"/>
+                                        <rect x="7" y="0" width="3" height="22"/>
+                                        <rect x="12" y="0" width="1" height="22"/>
+                                        <rect x="15" y="0" width="2" height="22"/>
+                                        <rect x="19" y="0" width="4" height="22"/>
+                                        <rect x="25" y="0" width="1" height="22"/>
+                                        <rect x="28" y="0" width="3" height="22"/>
+                                        <rect x="33" y="0" width="2" height="22"/>
+                                        <rect x="37" y="0" width="1" height="22"/>
+                                        <rect x="40" y="0" width="3" height="22"/>
+                                        <rect x="45" y="0" width="2" height="22"/>
+                                        <rect x="49" y="0" width="4" height="22"/>
+                                        <rect x="55" y="0" width="1" height="22"/>
+                                        <rect x="58" y="0" width="2" height="22"/>
+                                        <rect x="62" y="0" width="3" height="22"/>
+                                        <rect x="67" y="0" width="1" height="22"/>
+                                        <rect x="70" y="0" width="4" height="22"/>
+                                        <rect x="76" y="0" width="2" height="22"/>
+                                        <rect x="80" y="0" width="1" height="22"/>
+                                        <rect x="83" y="0" width="3" height="22"/>
+                                        <rect x="88" y="0" width="2" height="22"/>
+                                        <rect x="92" y="0" width="4" height="22"/>
+                                        <rect x="98" y="0" width="1" height="22"/>
+                                        <rect x="101" y="0" width="3" height="22"/>
+                                        <rect x="106" y="0" width="2" height="22"/>
+                                        <rect x="110" y="0" width="1" height="22"/>
+                                        <rect x="113" y="0" width="3" height="22"/>
+                                        <rect x="118" y="0" width="2" height="22"/>
+                                        <rect x="122" y="0" width="4" height="22"/>
+                                        <rect x="128" y="0" width="1" height="22"/>
+                                        <rect x="131" y="0" width="2" height="22"/>
+                                        <rect x="135" y="0" width="3" height="22"/>
+                                        <rect x="140" y="0" width="1" height="22"/>
+                                        <rect x="143" y="0" width="4" height="22"/>
+                                        <rect x="149" y="0" width="2" height="22"/>
+                                        <rect x="153" y="0" width="1" height="22"/>
+                                        <rect x="156" y="0" width="3" height="22"/>
+                                        <rect x="161" y="0" width="2" height="22"/>
+                                        <rect x="165" y="0" width="2" height="22"/>
+                                        <rect x="168" y="0" width="2" height="22"/>
+                                    </svg>
+                                </div>
                                 <div class="ticket-barcode-text"><?= htmlspecialchars($regCode) ?> &bull; PASS-<?= strtoupper(substr(md5($regCode), 0, 6)) ?></div>
                             </div>
 
@@ -1070,6 +1108,11 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const ticketEl = document.getElementById('ticketCaptureArea');
                 if (!ticketEl) return;
+
+                // Ensure all custom web fonts (like Kantumruy Pro) are fully loaded
+                if (document.fonts && document.fonts.ready) {
+                    await document.fonts.ready;
+                }
 
                 const canvas = await html2canvas(ticketEl, {
                     scale: 2.5,
