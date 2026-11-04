@@ -95,6 +95,7 @@ CREATE TABLE business_payment_methods (
   instructions TEXT,
   currency VARCHAR(10) DEFAULT 'USD',
   status ENUM('active','inactive') DEFAULT 'active',
+  is_default TINYINT(1) DEFAULT 0,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

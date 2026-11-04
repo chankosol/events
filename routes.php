@@ -621,6 +621,11 @@ $router->post('/settings/payment-methods/update', function() {
     BusinessSettingsController::updatePaymentMethod();
 });
 
+$router->post('/settings/payment-methods/set-default', function() {
+    require_once ROOT_PATH . '/controllers/business/SettingsController.php';
+    BusinessSettingsController::setDefaultPaymentMethod();
+});
+
 $router->post('/settings/payment-methods/delete', function() {
     require_once ROOT_PATH . '/controllers/business/SettingsController.php';
     BusinessSettingsController::deletePaymentMethod();

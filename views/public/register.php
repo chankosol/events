@@ -401,7 +401,12 @@
                                                                 </div>
                                                             <?php endif; ?>
                                                             <div class="flex-grow-1 overflow-hidden">
-                                                                <div class="fw-bold text-dark text-truncate small"><?= htmlspecialchars($pm['name']) ?></div>
+                                                                <div class="d-flex align-items-center gap-1.5">
+                                                                    <span class="fw-bold text-dark text-truncate small"><?= htmlspecialchars($pm['name']) ?></span>
+                                                                    <?php if (!empty($pm['is_default'])): ?>
+                                                                        <span class="badge bg-warning text-dark border border-warning-subtle" style="font-size: 0.65rem; padding: 1px 5px;">★ ចម្បង</span>
+                                                                    <?php endif; ?>
+                                                                </div>
                                                                 <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
                                                                     <?= htmlspecialchars($pm['bank'] ?: 'ធនាគារ') ?> (<?= htmlspecialchars($pm['currency'] ?: 'USD') ?>)
                                                                 </div>
@@ -428,6 +433,11 @@
                                                         <i class="bi bi-wallet2" style="font-size: 0.75rem;"></i>
                                                     </span>
                                                     <strong class="text-dark"><?= htmlspecialchars($pm['name']) ?></strong>
+                                                    <?php if (!empty($pm['is_default'])): ?>
+                                                        <span class="badge bg-warning text-dark border border-warning-subtle small px-2">
+                                                            ★ វិធីសាស្ត្រចម្បង
+                                                        </span>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <?php if (!empty($pm['bank'])): ?>
                                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2">
@@ -439,16 +449,42 @@
                                             <!-- QR Code Display -->
                                             <div class="text-center my-2 p-2 bg-light rounded-3 border d-inline-block mx-auto">
                                                 <?php 
+                                                $khqrInfo = null;
                                                 if (!empty($pm['qr_image_path'])) {
                                                     $qrImgSrc = APP_URL . '/' . htmlspecialchars($pm['qr_image_path']);
                                                 } else {
-                                                    // Fallback QR code from bank details
-                                                    $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
-                                                    $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
+                                                    // Detect Bakong account ID or KHQR bank
+                                                    $isBakongAccount = (strpos($pm['account_number'] ?? '', '@') !== false) || stripos($pm['bank'] ?? '', 'bakong') !== false || stripos($pm['name'] ?? '', 'bakong') !== false || stripos($pm['name'] ?? '', 'khqr') !== false;
+                                                    $ticketAmount = (float)($workshop['ticket_price'] ?? 0);
+                                                    if ($isBakongAccount && function_exists('bakong_create_khqr') && $ticketAmount > 0) {
+                                                        $invCode = 'REG' . ($workshop['id'] ?? 1) . '-' . substr(md5(uniqid()), 0, 6);
+                                                        $khqrInfo = bakong_create_khqr($invCode, $ticketAmount, $pm['currency'] ?: 'USD', $pm['account_number'], $pm['account_name'] ?: $pm['name']);
+                                                        if (!empty($khqrInfo['ok']) && !empty($khqrInfo['qr_text'])) {
+                                                            $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($khqrInfo['qr_text']);
+                                                        } else {
+                                                            $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
+                                                            $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
+                                                        }
+                                                    } else {
+                                                        // Fallback QR code from bank details
+                                                        $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
+                                                        $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
+                                                    }
                                                 }
                                                 ?>
                                                 <img src="<?= $qrImgSrc ?>" alt="QR Payment" class="img-fluid rounded" style="max-height: 180px; width: 180px; object-fit: contain;">
-                                                <div class="text-muted small mt-1" style="font-size: 0.72rem;">ស្កេនដើម្បីបង់ប្រាក់តាម <?= htmlspecialchars($pm['bank'] ?: $pm['name']) ?></div>
+                                                <?php if (!empty($khqrInfo['ok'])): ?>
+                                                    <div class="text-success small fw-semibold mt-1" style="font-size: 0.72rem;">
+                                                        <i class="bi bi-shield-check me-1"></i> Dynamic KHQR (<?= htmlspecialchars($khqrInfo['currency'] ?? 'USD') ?> <?= htmlspecialchars($khqrInfo['amount'] ?? '') ?>)
+                                                    </div>
+                                                    <?php if (!empty($khqrInfo['total_accounts']) && $khqrInfo['total_accounts'] > 1): ?>
+                                                        <div class="badge bg-info-subtle text-info border border-info-subtle mt-1 small" style="font-size: 0.68rem;">
+                                                            <i class="bi bi-arrow-repeat me-1"></i> Auto-Switch: <?= htmlspecialchars($khqrInfo['account']) ?> (គណនី <?= $khqrInfo['account_index'] ?>/<?= $khqrInfo['total_accounts'] ?>)
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <div class="text-muted small mt-1" style="font-size: 0.72rem;">ស្កេនដើម្បីបង់ប្រាក់តាម <?= htmlspecialchars($pm['bank'] ?: $pm['name']) ?></div>
+                                                <?php endif; ?>
                                             </div>
 
                                             <!-- Bank Account Details -->

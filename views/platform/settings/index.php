@@ -7,6 +7,10 @@ if ($hasBakongToken) {
     $tokenCount = count(array_filter(array_map('trim', preg_split('/[\s,]+/', $actualBakongTokens))));
 }
 
+$actualBakongAccounts = $settingsMap['bakong_account_id'] ?? 'kosol@abaa';
+$bakongAccountsList = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $actualBakongAccounts))));
+$accountCount = count($bakongAccountsList);
+
 $isTgBotEnabled = ($settingsMap['telegram_bot_enabled'] ?? '0') === '1';
 $tgBotUsername = $settingsMap['telegram_bot_username'] ?? '';
 $tgBotToken = $settingsMap['telegram_bot_token'] ?? '';
@@ -106,8 +110,9 @@ $hasTgBot = $isTgBotEnabled && !empty($tgBotUsername) && !empty($tgBotToken);
             <div class="alert alert-info border-info-subtle bg-info-subtle text-dark rounded-3 d-flex align-items-start gap-2 mb-4">
                 <i class="bi bi-shield-check text-primary fs-4 flex-shrink-0 mt-1"></i>
                 <div class="small">
-                    <strong>ការការពារបញ្ហា Rate Limit (Multi-Token Switching Mechanism):</strong>
-                    NBC Bakong Open API មានកម្រិតកំណត់ចំនួនសំណើប្រចាំថ្ងៃ (Rate Limit: 100 requests/day ក្នុងមួយ Token)។ ប្រព័ន្ធ Workshop OS គាំទ្រការបញ្ចូល <strong>Pool of Tokens</strong>។ នៅពេល Token ណាមួយជាប់ Limit (ErrorCode 17 ឬ HTTP 429) ប្រព័ន្ធនឹង <strong>ប្តូរទៅប្រើ Token បន្ទាប់ដោយស្វ័យប្រវត្តិ</strong> ដើម្បីធានាថាការស្កេនទូទាត់ប្រាក់ និងបើកដំណើរការសិក្ខាសាលាមិនមានការរអាក់រអួលឡើយ។
+                    <strong>ការការពារបញ្ហា Rate Limit & Daily Limit (Auto-Switching Mechanism):</strong><br>
+                    • <strong>Multi-Token Switching:</strong> NBC Bakong Open API មានកម្រិតកំណត់ 100 requests/day ក្នុងមួយ Token។ ប្រព័ន្ធគាំទ្រ Pool of Tokens ដោយប្តូរ Token បន្ទាប់ដោយស្វ័យប្រវត្តិនៅពេលមួយជាប់ Limit (ErrorCode 17 ឬ HTTP 429)។<br>
+                    • <strong>Multi-Account Auto-Switch:</strong> អាចបញ្ចូល Bakong Account ID ច្រើន (ខណ្ឌដោយសញ្ញាក្បៀស <code>,</code>)។ ប្រព័ន្ធនឹងបង្វិលគណនីទទួលប្រាក់ជាជុំ (Auto-Switch Account) ដោយស្វ័យប្រវត្តិនូវរាល់ការបង្កើត KHQR ដើម្បីការពារកុំឱ្យគណនីណាមួយពេញ Daily Limit។
                 </div>
             </div>
 
@@ -145,10 +150,12 @@ $hasTgBot = $isTgBotEnabled && !empty($tgBotUsername) && !empty($tgBotToken);
                 </div>
 
                 <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Bakong Account ID</label>
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">
+                        Bakong Account ID <span class="badge <?php echo $accountCount > 1 ? 'bg-success' : 'bg-secondary'; ?> rounded-pill ms-1" id="bakong-account-count-badge"><?php echo $accountCount; ?></span>
+                    </label>
                     <input type="text" class="form-control font-monospace" name="bakong_account_id" 
-                           value="<?php echo e($settingsMap['bakong_account_id'] ?? 'kosol@abaa'); ?>" placeholder="kosol@abaa" required>
-                    <div class="form-text small">គណនី Bakong ទទួលប្រាក់ (ឧទាហរណ៍: <code>kosol@abaa</code>)</div>
+                           value="<?php echo e($settingsMap['bakong_account_id'] ?? 'kosol@abaa'); ?>" placeholder="kosol@abaa, kosol2@abaa" required>
+                    <div class="form-text small">ដាក់បានច្រើន Account ខណ្ឌដោយក្បៀស (,) សម្រាប់ Auto-Switch គណនីទទួលប្រាក់ ការពារការជាប់ Daily Limit</div>
                 </div>
 
                 <div class="col-lg-3 col-md-6">

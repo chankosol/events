@@ -197,11 +197,18 @@ $user = $user ?? Auth::user() ?? [];
                                                 <div class="flex-grow-1 overflow-hidden">
                                                     <div class="d-flex justify-content-between align-items-start mb-1">
                                                         <h6 class="fw-bold mb-0 text-truncate"><?php echo e($pm['name']); ?></h6>
-                                                        <?php if (($pm['status'] ?? 'active') === 'active'): ?>
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle small px-2">សកម្ម</span>
-                                                        <?php else: ?>
-                                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small px-2">អសកម្ម</span>
-                                                        <?php endif; ?>
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            <?php if (!empty($pm['is_default'])): ?>
+                                                                <span class="badge bg-warning text-dark border border-warning shadow-2xs small px-2">
+                                                                    <i class="bi bi-star-fill text-dark me-0.5"></i> ចម្បង
+                                                                </span>
+                                                            <?php endif; ?>
+                                                            <?php if (($pm['status'] ?? 'active') === 'active'): ?>
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle small px-2">សកម្ម</span>
+                                                            <?php else: ?>
+                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small px-2">អសកម្ម</span>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </div>
                                                     <div class="text-muted small"><strong>ធនាគារ:</strong> <?php echo e($pm['bank'] ?: 'ធនាគារ'); ?></div>
                                                     <div class="text-muted small"><strong>គណនី:</strong> <?php echo e($pm['account_name'] ?: 'N/A'); ?> (<?php echo e($pm['account_number'] ?: 'N/A'); ?>)</div>
@@ -214,25 +221,43 @@ $user = $user ?? Auth::user() ?? [];
                                                 </div>
                                             </div>
 
-                                            <!-- Edit & Delete Buttons at Bottom-Right Corner -->
-                                            <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-2 border-top">
-                                                <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5" 
-                                                        onclick='openEditPaymentMethod(<?php echo json_encode($pm, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>
-                                                    <i class="bi bi-pencil-square me-1"></i> កែប្រែ
-                                                </button>
-                                                <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបវិធីសាស្ត្រទូទាត់ «<?php echo e($pm['name']); ?>» នេះមែនទេ?');">
-                                                    <?php echo csrfField(); ?>
-                                                    <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5">
-                                                        <i class="bi bi-trash me-1"></i> លុប
+                                            <!-- Default Button on Left, Edit & Delete on Right -->
+                                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                                <div>
+                                                    <?php if (empty($pm['is_default'])): ?>
+                                                        <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/set-default" class="d-inline">
+                                                            <?php echo csrfField(); ?>
+                                                            <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark py-1 px-2.5" title="កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង">
+                                                                <i class="bi bi-star me-1 text-warning"></i> កំណត់ជាចម្បង
+                                                            </button>
+                                                        </form>
+                                                    <?php else: ?>
+                                                        <span class="text-warning small fw-bold">
+                                                            <i class="bi bi-check-circle-fill me-1"></i> គណនីទទួលប្រាក់ចម្បង
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1.5">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5" 
+                                                            onclick='openEditPaymentMethod(<?php echo json_encode($pm, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>
+                                                        <i class="bi bi-pencil-square me-1"></i> កែប្រែ
                                                     </button>
-                                                </form>
+                                                    <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបវិធីសាស្ត្រទូទាត់ «<?php echo e($pm['name']); ?>» នេះមែនទេ?');">
+                                                        <?php echo csrfField(); ?>
+                                                        <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5">
+                                                            <i class="bi bi-trash me-1"></i> លុប
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
+
 
                         <!-- Add New Payment Method Form -->
                         <h6 class="fw-bold mb-3 border-top pt-4">បន្ថែមវិធីសាស្ត្រទទួលប្រាក់តាមធនាគារ</h6>
@@ -270,6 +295,14 @@ $user = $user ?? Auth::user() ?? [];
                                 <div class="col-md-12">
                                     <label class="form-label small fw-bold">សេចក្តីណែនាំសម្រាប់សិក្ខាកាម</label>
                                     <textarea name="instructions" class="form-control form-control-sm" rows="2" placeholder="ឧទាហរណ៍៖ សូមស្កេនកូដ QR នេះ រួចបញ្ចូលលេខកូដចុះឈ្មោះក្នុងចំណាំ និងផ្ទុកឡើងវិក្កយបត្របង់ប្រាក់។"></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="is_default" value="1" id="add_pm_is_default">
+                                        <label class="form-check-label small fw-bold" for="add_pm_is_default">
+                                            <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង (Default)
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mt-3 text-end">
@@ -426,6 +459,14 @@ $user = $user ?? Auth::user() ?? [];
                             <label class="form-label small fw-bold">សេចក្តីណែនាំសម្រាប់សិក្ខាកាម</label>
                             <textarea name="instructions" id="edit_pm_instructions" class="form-control form-control-sm" rows="2"></textarea>
                         </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_default" value="1" id="edit_pm_is_default">
+                                <label class="form-check-label small fw-bold" for="edit_pm_is_default">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង (Default)
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -446,6 +487,7 @@ function openEditPaymentMethod(pm) {
     document.getElementById('edit_pm_bank').value = pm.bank || '';
     document.getElementById('edit_pm_currency').value = pm.currency || 'USD';
     document.getElementById('edit_pm_status').value = pm.status || 'active';
+    document.getElementById('edit_pm_is_default').checked = (parseInt(pm.is_default, 10) === 1);
     document.getElementById('edit_pm_account_name').value = pm.account_name || '';
     document.getElementById('edit_pm_account_number').value = pm.account_number || '';
     document.getElementById('edit_pm_instructions').value = pm.instructions || '';

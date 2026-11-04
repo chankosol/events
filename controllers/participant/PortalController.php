@@ -67,7 +67,7 @@ class ParticipantPortalController {
 
         $paymentMethods = [];
         if ($reg['payment_status'] !== 'paid') {
-            $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active'", [$reg['business_id']]);
+            $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY is_default DESC, sort_order ASC, id ASC", [$reg['business_id']]);
         }
 
         $sessions = $db->query("SELECT * FROM workshop_sessions WHERE workshop_id = ? ORDER BY session_date, start_time", [$reg['workshop_id']]);

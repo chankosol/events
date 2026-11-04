@@ -38,27 +38,30 @@ if (!function_exists('bakong_get_platform_setting')) {
 
 /**
  * Generate standard EMVCo Bakong KHQR String and MD5 hash
+ * Supports Pool of Accounts with Auto-Switch to prevent hitting daily receiving limits
  */
 if (!function_exists('bakong_create_khqr')) {
-    function bakong_create_khqr(string $invoiceNo, float $amount, string $currency = 'USD'): array {
-        $account  = trim(bakong_get_platform_setting('bakong_account_id', 'kosol@abaa'));
-        $merchant = trim(bakong_get_platform_setting('bakong_merchant_name', 'Chan Kosol'));
-        $city     = trim(bakong_get_platform_setting('bakong_merchant_city', 'PHNOM PENH'));
-        $mcc      = trim(bakong_get_platform_setting('bakong_mcc', '5999'));
-        $staticQr = trim(bakong_get_platform_setting('bakong_static_qr_text', ''));
+    function bakong_create_khqr(string $invoiceNo, float $amount, string $currency = 'USD', ?string $customAccount = null, ?string $customMerchant = null): array {
+        $rawAccount = $customAccount ?: trim(bakong_get_platform_setting('bakong_account_id', 'kosol@abaa'));
+        $merchant   = $customMerchant ?: trim(bakong_get_platform_setting('bakong_merchant_name', 'Chan Kosol'));
+        $city       = trim(bakong_get_platform_setting('bakong_merchant_city', 'PHNOM PENH'));
+        $mcc        = trim(bakong_get_platform_setting('bakong_mcc', '5999'));
+        $staticQr   = trim(bakong_get_platform_setting('bakong_static_qr_text', ''));
 
-        if ($staticQr !== '') {
+        if ($staticQr !== '' && empty($customAccount)) {
             return [
                 'ok' => true,
                 'qr_text' => $staticQr,
                 'md5' => md5($staticQr),
-                'account' => $account,
+                'account' => $rawAccount,
                 'merchant' => $merchant,
                 'raw' => ['mode' => 'static_override']
             ];
         }
 
-        if ($account === '') {
+        // Support pool of Bakong accounts with auto-switching to prevent hitting daily receiving limits
+        $accounts = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $rawAccount))));
+        if (empty($accounts)) {
             $fallback = "KHQR|MERCHANT={$merchant}|INV={$invoiceNo}|AMOUNT={$amount}|CCY={$currency}";
             return [
                 'ok' => false,
@@ -66,9 +69,20 @@ if (!function_exists('bakong_create_khqr')) {
                 'md5' => md5($fallback),
                 'account' => 'unconfigured',
                 'merchant' => $merchant,
-                'message' => 'Bakong account ID is not configured in Super Admin',
+                'message' => 'Bakong account ID is not configured',
                 'raw' => ['mode' => 'fallback']
             ];
+        }
+
+        // Auto-switch across accounts pool to prevent reaching daily receiving limit
+        $selectedAccount = $accounts[0];
+        $selectedIdx = 0;
+        if (count($accounts) > 1) {
+            $rotatorFile = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__)) . '/logs/bakong_account_rotator.txt';
+            $lastIdx = file_exists($rotatorFile) ? (int)@file_get_contents($rotatorFile) : 0;
+            $selectedIdx = ($lastIdx + 1) % count($accounts);
+            @file_put_contents($rotatorFile, (string)$selectedIdx);
+            $selectedAccount = $accounts[$selectedIdx];
         }
 
         $currency = strtoupper($currency) === 'KHR' ? 'KHR' : 'USD';
@@ -77,7 +91,7 @@ if (!function_exists('bakong_create_khqr')) {
         $merchant = mb_substr($merchant, 0, 25, 'UTF-8');
         $city = mb_substr($city, 0, 15, 'UTF-8');
 
-        $merchantAccount = bakong_tlv('00', $account);
+        $merchantAccount = bakong_tlv('00', $selectedAccount);
         $additional = bakong_tlv('01', substr(preg_replace('/[^A-Za-z0-9._-]/', '', $invoiceNo), 0, 25));
         $nowMs = (string)(time() * 1000);
         $expiresMs = (string)((time() + 900) * 1000); // 15 mins expiry
@@ -103,7 +117,9 @@ if (!function_exists('bakong_create_khqr')) {
             'ok' => true,
             'qr_text' => $qrText,
             'md5' => md5($qrText),
-            'account' => $account,
+            'account' => $selectedAccount,
+            'account_index' => $selectedIdx + 1,
+            'total_accounts' => count($accounts),
             'merchant' => $merchant,
             'amount' => $amountText,
             'currency' => $currency,

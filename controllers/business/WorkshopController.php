@@ -75,7 +75,7 @@ class WorkshopController {
         
         // Get business payment methods
         $paymentMethods = $db->query(
-            "SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY sort_order",
+            "SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY is_default DESC, sort_order ASC, id ASC",
             [$businessId]
         );
         

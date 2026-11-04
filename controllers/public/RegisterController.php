@@ -74,7 +74,7 @@ class PublicRegisterController {
         $paymentMethods = [];
         if ($workshop['payment_mode'] !== 'free') {
             $paymentMethods = $db->query(
-                "SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY sort_order",
+                "SELECT * FROM business_payment_methods WHERE business_id = ? AND status = 'active' ORDER BY is_default DESC, sort_order ASC, id ASC",
                 [$workshop['business_id']]
             );
         }
