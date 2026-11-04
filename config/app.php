@@ -34,14 +34,17 @@ date_default_timezone_set($timezone);
 
 // Application constants & Dynamic URL detection
 $envUrl = getenv('APP_URL');
-if (!empty($envUrl)) {
-    $appUrl = rtrim($envUrl, '/');
-    $basePath = parse_url($appUrl, PHP_URL_PATH) ?: '';
-} elseif (!empty($_SERVER['HTTP_HOST'])) {
+if (!empty($_SERVER['HTTP_HOST'])) {
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
     $basePath = ($scriptDir === '/' || $scriptDir === '\\' || $scriptDir === '.') ? '' : rtrim(str_replace('\\', '/', $scriptDir), '/');
+    if (empty($basePath) && !empty($envUrl)) {
+        $basePath = parse_url($envUrl, PHP_URL_PATH) ?: '';
+    }
     $appUrl = "{$scheme}://{$_SERVER['HTTP_HOST']}{$basePath}";
+} elseif (!empty($envUrl)) {
+    $appUrl = rtrim($envUrl, '/');
+    $basePath = parse_url($appUrl, PHP_URL_PATH) ?: '';
 } else {
     $basePath = '/workshopos';
     $appUrl = 'http://localhost/workshopos';

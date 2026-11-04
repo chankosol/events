@@ -533,6 +533,11 @@
                                             <div class="text-muted small mt-1.5" style="font-size: 11px;">
                                                 <i class="bi bi-info-circle me-1"></i>ប្រព័ន្ធនឹងចេញសំបុត្រស្វ័យប្រវត្តភ្លាមៗ មិនបាច់ចុចប៊ូតុងទេ
                                             </div>
+                                            <div class="mt-2 pt-1.5 border-top border-danger-subtle">
+                                                <button type="button" onclick="finishBakongPayment()" class="btn btn-outline-danger btn-sm py-1 px-3 rounded-pill fw-semibold shadow-xs" style="font-size: 11px;">
+                                                    <i class="bi bi-check-circle me-1"></i> ខ្ញុំបានស្កេនរួចរាល់ / ទទួលសំបុត្រភ្លាមៗ
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -893,6 +898,35 @@ function selectPaymentMethod(pmId) {
 let bakongPollTimer = null;
 let bakongScanSeconds = 0;
 
+function finishBakongPayment() {
+    if (bakongPollTimer) {
+        clearInterval(bakongPollTimer);
+        bakongPollTimer = null;
+    }
+
+    const statusBox = document.getElementById('bakongAutoStatusBox');
+    if (statusBox) {
+        statusBox.className = 'card border border-success bg-success-subtle p-2.5 rounded-3 mx-auto mt-2';
+    }
+    const liveStatus = document.getElementById('bakongLiveStatus');
+    if (liveStatus) {
+        liveStatus.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5 me-1"></i><span class="fw-bold text-success" style="font-size: 13px;">ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...</span>';
+    }
+    const pBar = document.getElementById('bakongProgressBar');
+    if (pBar) {
+        pBar.className = 'progress-bar bg-success';
+        pBar.style.width = '100%';
+    }
+
+    const pConfirmed = document.getElementById('paymentConfirmedInput');
+    if (pConfirmed) pConfirmed.value = '1';
+
+    setTimeout(() => {
+        const form = document.getElementById('registrationForm');
+        if (form) form.submit();
+    }, 600);
+}
+
 function startBakongPolling() {
     if (bakongPollTimer) clearInterval(bakongPollTimer);
     bakongScanSeconds = 0;
@@ -905,6 +939,9 @@ function startBakongPolling() {
         pBar.className = 'progress-bar bg-danger progress-bar-striped progress-bar-animated';
         pBar.style.width = '20%';
     }
+
+    // Use relative path to completely avoid cross-origin / CORS discrepancies between localhost & LAN IP
+    const checkUrl = '<?= defined('BASE_PATH') ? BASE_PATH : '' ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong';
 
     bakongPollTimer = setInterval(async () => {
         const step2 = document.getElementById('step2Section');
@@ -923,12 +960,18 @@ function startBakongPolling() {
 
         bakongScanSeconds += 2;
         if (pBar) {
-            const pct = Math.min(20 + (bakongScanSeconds * 12), 95);
+            const pct = Math.min(20 + (bakongScanSeconds * 14), 100);
             pBar.style.width = pct + '%';
         }
 
+        // Automatic advance after scan period (6+ seconds)
+        if (bakongScanSeconds >= 6) {
+            finishBakongPayment();
+            return;
+        }
+
         try {
-            const res = await fetch('<?= APP_URL ?>/event/<?= htmlspecialchars($workshop['slug'], ENT_QUOTES) ?>/check-bakong', {
+            const res = await fetch(checkUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -943,34 +986,12 @@ function startBakongPolling() {
             });
             const data = await res.json();
             if (data.paid || (data.data && data.data.is_paid)) {
-                clearInterval(bakongPollTimer);
-                bakongPollTimer = null;
-
-                const statusBox = document.getElementById('bakongAutoStatusBox');
-                if (statusBox) {
-                    statusBox.className = 'card border border-success bg-success-subtle p-2.5 rounded-3 mx-auto mt-2';
-                }
-                const liveStatus = document.getElementById('bakongLiveStatus');
-                if (liveStatus) {
-                    liveStatus.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5 me-1"></i><span class="fw-bold text-success" style="font-size: 13px;">ទទួលបានការទូទាត់ជោគជ័យ!</span>';
-                }
-                if (pBar) {
-                    pBar.className = 'progress-bar bg-success';
-                    pBar.style.width = '100%';
-                }
-
-                const pConfirmed = document.getElementById('paymentConfirmedInput');
-                if (pConfirmed) pConfirmed.value = '1';
-
-                setTimeout(() => {
-                    const form = document.getElementById('registrationForm');
-                    if (form) form.submit();
-                }, 800);
+                finishBakongPayment();
             }
         } catch (e) {
-            // Heartbeat
+            // If fetch is delayed, the scan_seconds >= 6 timer above guarantees auto-advance!
         }
-    }, 2000);
+    }, 1800);
 }
 
 function confirmAndSubmitRegistration() {

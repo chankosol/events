@@ -3,6 +3,15 @@
 
 define('ROOT_PATH', __DIR__);
 
+// Handle CORS and preflight OPTIONS requests gracefully
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN');
+    http_response_code(200);
+    exit;
+}
+
 // Load configurations & core helpers
 require_once ROOT_PATH . '/config/app.php';
 require_once ROOT_PATH . '/core/Database.php';
