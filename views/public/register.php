@@ -1,11 +1,11 @@
-<div class="container py-5">
+<div class="container py-4 py-md-5">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card shadow-sm border-0">
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5" style="max-width: 480px;">
+            <div class="card shadow-sm border rounded-4 overflow-hidden" style="border-color: #e2e8f0 !important;">
                 <?php if (!empty($workshop['cover_image'])): ?>
                     <img src="<?php echo APP_URL . '/' . htmlspecialchars($workshop['cover_image']); ?>" class="card-img-top" alt="Cover Image" style="height: 220px; object-fit: cover;">
                 <?php endif; ?>
-                <div class="card-header bg-white p-4 border-bottom">
+                <div class="card-header bg-white p-3.5 p-sm-4 border-bottom">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="badge bg-primary">ទម្រង់ចុះឈ្មោះ</span>
                         <?php if ($workshop['payment_mode'] === 'free'): ?>
@@ -21,7 +21,7 @@
                         &bull; <i class="bi bi-geo-alt me-1"></i> <?= htmlspecialchars($workshop['venue'] ?: 'ទីតាំងរៀបចំ') ?>
                     </p>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-3.5 p-sm-4">
                     <?php if (Session::has('error')): ?>
                         <div class="alert alert-danger py-2 small"><?= htmlspecialchars(Session::flash('error')) ?></div>
                     <?php endif; ?>
