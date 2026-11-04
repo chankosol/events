@@ -164,42 +164,44 @@ $user = $user ?? Auth::user() ?? [];
                 </div>
             </div>
 
-            <!-- PAYMENT RECEIVING METHODS (SYSTEM B: PARTICIPANT PAYS HOST) -->
+            <!-- PAYMENT RECEIVING METHODS (HOST ORGANIZER) -->
             <div class="tab-pane fade" id="paymentsTab">
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="fw-bold mb-1">កូដ QR ធនាគារសម្រាប់ទទួលប្រាក់ពីសិក្ខាកាម</h5>
-                            <span class="badge bg-success-subtle text-success">ប្រព័ន្ធទី ២: សិក្ខាកាមបង់ប្រាក់ថ្លៃសំបុត្រជូនស្ថាប័ន</span>
-                        </div>
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-qr-code text-primary me-2"></i>QR ទទួលប្រាក់
+                        </h5>
+                        <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                            <i class="bi bi-plus-lg me-1"></i> បន្ថែម
+                        </button>
                     </div>
                     <div class="card-body p-4">
-                        <div class="alert alert-info py-2 small mb-4">
-                            <i class="bi bi-info-circle-fill me-1"></i> គណនីធនាគារ និងកូដ QR ទាំងនេះជារបស់ស្ថាប័នអ្នកផ្ទាល់សម្រាប់ទទួលប្រាក់ថ្លៃសំបុត្រពីសិក្ខាកាម។ ប្រព័ន្ធ SAAS មិនកាន់កាប់ ឬប៉ះពាល់ប្រាក់នេះឡើយ!
-                        </div>
-
                         <!-- Current Payment Methods -->
-                        <div class="row g-3 mb-4">
+                        <div class="row g-3">
                             <?php if (empty($paymentMethods)): ?>
-                                <div class="col-12 text-center py-4 text-muted border rounded bg-light">
-                                    មិនទាន់មានវិធីសាស្ត្រទទួលប្រាក់នៅឡើយទេ។ សូមបន្ថែមខាងក្រោម!
+                                <div class="col-12 text-center py-5 text-muted border rounded-3 bg-light">
+                                    <i class="bi bi-wallet2 fs-2 d-block text-secondary mb-2"></i>
+                                    <p class="mb-3">មិនទាន់មានវិធីសាស្ត្រទទួលប្រាក់</p>
+                                    <button type="button" class="btn btn-sm btn-primary px-3" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                                        <i class="bi bi-plus-lg me-1"></i> បន្ថែមថ្មី
+                                    </button>
                                 </div>
                             <?php else: ?>
                                 <?php foreach ($paymentMethods as $pm): ?>
                                     <div class="col-md-6">
-                                        <div class="card border h-100 p-3 shadow-sm d-flex flex-column justify-content-between">
+                                        <div class="card border rounded-3 h-100 p-3 shadow-sm d-flex flex-column justify-content-between">
                                             <div class="d-flex align-items-start gap-3">
                                                 <?php if (!empty($pm['qr_image_path'])): ?>
-                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail flex-shrink-0" style="width: 80px; height: 80px; object-fit: contain;" alt="QR">
+                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail rounded-3 flex-shrink-0" style="width: 80px; height: 80px; object-fit: contain;" alt="QR">
                                                 <?php else: ?>
-                                                    <div class="bg-light p-3 rounded text-muted flex-shrink-0"><i class="bi bi-qr-code fs-2"></i></div>
+                                                    <div class="bg-light p-3 rounded-3 text-muted flex-shrink-0"><i class="bi bi-qr-code fs-2"></i></div>
                                                 <?php endif; ?>
                                                 <div class="flex-grow-1 overflow-hidden">
                                                     <div class="d-flex justify-content-between align-items-start mb-1">
                                                         <h6 class="fw-bold mb-0 text-truncate"><?php echo e($pm['name']); ?></h6>
                                                         <div class="d-flex align-items-center gap-1">
                                                             <?php if (!empty($pm['is_default'])): ?>
-                                                                <span class="badge bg-warning text-dark border border-warning shadow-2xs small px-2">
+                                                                <span class="badge bg-warning text-dark border border-warning small px-2">
                                                                     <i class="bi bi-star-fill text-dark me-0.5"></i> ចម្បង
                                                                 </span>
                                                             <?php endif; ?>
@@ -225,7 +227,7 @@ $user = $user ?? Auth::user() ?? [];
                                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                                                 <div>
                                                     <?php if (empty($pm['is_default'])): ?>
-                                                        <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/set-default" class="d-inline">
+                                                        <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/set-default" class="d-inline m-0">
                                                             <?php echo csrfField(); ?>
                                                             <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
                                                             <button type="submit" class="btn btn-sm btn-outline-warning text-dark py-1 px-2.5" title="កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង">
@@ -233,20 +235,20 @@ $user = $user ?? Auth::user() ?? [];
                                                             </button>
                                                         </form>
                                                     <?php else: ?>
-                                                        <span class="text-warning small fw-bold">
-                                                            <i class="bi bi-check-circle-fill me-1"></i> គណនីទទួលប្រាក់ចម្បង
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 small">
+                                                            <i class="bi bi-check-circle-fill me-1"></i> គណនីចម្បង
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <div class="d-flex align-items-center gap-1.5">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5" 
+                                                <div class="d-flex align-items-center" style="gap: 10px;">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5 rounded" 
                                                             onclick='openEditPaymentMethod(<?php echo json_encode($pm, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>
                                                         <i class="bi bi-pencil-square me-1"></i> កែប្រែ
                                                     </button>
-                                                    <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបវិធីសាស្ត្រទូទាត់ «<?php echo e($pm['name']); ?>» នេះមែនទេ?');">
+                                                    <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline m-0" onsubmit="return confirm('តើអ្នកពិតជាចង់លុប «<?php echo e($pm['name']); ?>» មែនទេ?');">
                                                         <?php echo csrfField(); ?>
                                                         <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5 rounded">
                                                             <i class="bi bi-trash me-1"></i> លុប
                                                         </button>
                                                     </form>
@@ -257,60 +259,6 @@ $user = $user ?? Auth::user() ?? [];
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
-
-
-                        <!-- Add New Payment Method Form -->
-                        <h6 class="fw-bold mb-3 border-top pt-4">បន្ថែមវិធីសាស្ត្រទទួលប្រាក់តាមធនាគារ</h6>
-                        <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods" enctype="multipart/form-data">
-                            <?php echo csrfField(); ?>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold">ឈ្មោះវិធីសាស្ត្រ <span class="text-danger">*</span></label>
-                                    <input type="text" name="method_name" class="form-control form-control-sm" placeholder="ឧទាហរណ៍៖ ABA Bank QR" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold">ឈ្មោះធនាគារ</label>
-                                    <input type="text" name="bank" class="form-control form-control-sm" placeholder="ឧទាហរណ៍៖ ABA / ACLEDA / Bakong">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label small fw-bold">រូបិយប័ណ្ណ</label>
-                                    <select name="currency" class="form-select form-select-sm">
-                                        <option value="USD">ដុល្លារ ($ USD)</option>
-                                        <option value="KHR">រៀល (៛ KHR)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">ឈ្មោះម្ចាស់គណនី</label>
-                                    <input type="text" name="account_name" class="form-control form-control-sm" placeholder="ឧទាហរណ៍៖ KSH Training Institute">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">លេខគណនី</label>
-                                    <input type="text" name="account_number" class="form-control form-control-sm" placeholder="ឧទាហរណ៍៖ 001 987 654">
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">ផ្ទុកឡើងរូបភាពកូដ QR ធនាគាររបស់អ្នក <span class="text-danger">*</span></label>
-                                    <input type="file" name="qr_image" class="form-control form-control-sm" accept="image/*" required>
-                                    <div class="form-text small">នេះជាកូដ QR របស់ស្ថាប័នអ្នក ដែលសិក្ខាកាមនឹងស្កេនដើម្បីបង់ប្រាក់ថ្លៃសំបុត្រ។</div>
-                                </div>
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">សេចក្តីណែនាំសម្រាប់សិក្ខាកាម</label>
-                                    <textarea name="instructions" class="form-control form-control-sm" rows="2" placeholder="ឧទាហរណ៍៖ សូមស្កេនកូដ QR នេះ រួចបញ្ចូលលេខកូដចុះឈ្មោះក្នុងចំណាំ និងផ្ទុកឡើងវិក្កយបត្របង់ប្រាក់។"></textarea>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="is_default" value="1" id="add_pm_is_default">
-                                        <label class="form-check-label small fw-bold" for="add_pm_is_default">
-                                            <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង (Default)
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-3 text-end">
-                                <button type="submit" class="btn btn-success btn-sm px-4">
-                                    <i class="bi bi-plus-circle me-1"></i> បន្ថែមវិធីសាស្ត្រទូទាត់
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             </div>
@@ -399,6 +347,72 @@ $user = $user ?? Auth::user() ?? [];
         </div>
 
 
+<!-- Add Payment Method Modal -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods" enctype="multipart/form-data">
+                <?php echo csrfField(); ?>
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="addPaymentModalLabel">
+                        <i class="bi bi-plus-circle text-primary me-2"></i>បន្ថែមវិធីសាស្ត្រទទួលប្រាក់
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះវិធីសាស្ត្រ <span class="text-danger">*</span></label>
+                            <input type="text" name="method_name" class="form-control form-control-sm" placeholder="ABA Bank QR" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះធនាគារ</label>
+                            <input type="text" name="bank" class="form-control form-control-sm" placeholder="ABA / Bakong">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">រូបិយប័ណ្ណ</label>
+                            <select name="currency" class="form-select form-select-sm">
+                                <option value="USD">ដុល្លារ ($ USD)</option>
+                                <option value="KHR">រៀល (៛ KHR)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះម្ចាស់គណនី</label>
+                            <input type="text" name="account_name" class="form-control form-control-sm" placeholder="ឈ្មោះម្ចាស់គណនី">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">លេខគណនី</label>
+                            <input type="text" name="account_number" class="form-control form-control-sm" placeholder="លេខគណនី ឬ Bakong ID">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">រូបភាព QR <span class="text-danger">*</span></label>
+                            <input type="file" name="qr_image" class="form-control form-control-sm" accept="image/*" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">ចំណាំបន្ថែម</label>
+                            <textarea name="instructions" class="form-control form-control-sm" rows="2" placeholder="ចំណាំសម្រាប់អ្នកស្កេនបង់ប្រាក់..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_default" value="1" id="add_pm_is_default">
+                                <label class="form-check-label small fw-bold" for="add_pm_is_default">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាចម្បង
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">បោះបង់</button>
+                    <button type="submit" class="btn btn-sm btn-primary px-4">
+                        <i class="bi bi-plus-lg me-1"></i> បន្ថែម
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Payment Method Modal -->
 <div class="modal fade" id="editPaymentModal" tabindex="-1" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -409,7 +423,7 @@ $user = $user ?? Auth::user() ?? [];
                 
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold" id="editPaymentModalLabel">
-                        <i class="bi bi-pencil-square text-primary me-2"></i> កែប្រែវិធីសាស្ត្រទទួលប្រាក់
+                        <i class="bi bi-pencil-square text-primary me-2"></i>កែប្រែវិធីសាស្ត្រទទួលប្រាក់
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -433,8 +447,8 @@ $user = $user ?? Auth::user() ?? [];
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">ស្ថានភាព</label>
                             <select name="status" id="edit_pm_status" class="form-select form-select-sm">
-                                <option value="active">សកម្ម (Active)</option>
-                                <option value="inactive">អសកម្ម (Inactive)</option>
+                                <option value="active">សកម្ម</option>
+                                <option value="inactive">អសកម្ម</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -446,24 +460,24 @@ $user = $user ?? Auth::user() ?? [];
                             <input type="text" name="account_number" id="edit_pm_account_number" class="form-control form-control-sm">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-bold">រូបភាពកូដ QR</label>
+                            <label class="form-label small fw-bold">រូបភាព QR</label>
                             <div class="d-flex align-items-center gap-3 mb-2">
-                                <img id="edit_pm_qr_preview" src="" class="img-thumbnail d-none" style="width: 70px; height: 70px; object-fit: contain;">
+                                <img id="edit_pm_qr_preview" src="" class="img-thumbnail rounded d-none" style="width: 60px; height: 60px; object-fit: contain;">
                                 <div class="flex-grow-1">
                                     <input type="file" name="qr_image" class="form-control form-control-sm" accept="image/*">
-                                    <div class="form-text small">ជ្រើសរើសរូបថ្មីប្រសិនបើអ្នកចង់ផ្លាស់ប្តូរកូដ QR</div>
+                                    <div class="form-text small">ជ្រើសរើសរូបថ្មីប្រសិនបើចង់ប្តូរ QR</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-bold">សេចក្តីណែនាំសម្រាប់សិក្ខាកាម</label>
+                            <label class="form-label small fw-bold">ចំណាំបន្ថែម</label>
                             <textarea name="instructions" id="edit_pm_instructions" class="form-control form-control-sm" rows="2"></textarea>
                         </div>
                         <div class="col-12">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" name="is_default" value="1" id="edit_pm_is_default">
                                 <label class="form-check-label small fw-bold" for="edit_pm_is_default">
-                                    <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាវិធីសាស្ត្រទទួលប្រាក់ចម្បង (Default)
+                                    <i class="bi bi-star-fill text-warning me-1"></i> កំណត់ជាចម្បង
                                 </label>
                             </div>
                         </div>
@@ -472,7 +486,7 @@ $user = $user ?? Auth::user() ?? [];
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">បោះបង់</button>
                     <button type="submit" class="btn btn-sm btn-primary px-4">
-                        <i class="bi bi-check2 me-1"></i> រក្សាទុកការកែប្រែ
+                        <i class="bi bi-check2 me-1"></i> រក្សាទុក
                     </button>
                 </div>
             </form>
