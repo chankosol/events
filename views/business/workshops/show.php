@@ -695,24 +695,20 @@ $breadcrumbs = [
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <!-- 1. Public Event Landing Page Link Bar -->
+                <!-- 1. Public Event Landing Page Link Row -->
                 <?php $publicEventUrl = qrCodeUrl('/event/' . $workshop['slug']); ?>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1.5">
-                        <span class="small fw-bold text-dark d-flex align-items-center gap-1.5">
-                            <i class="bi bi-globe text-primary"></i> ទំព័រដើមកម្មវិធី
-                        </span>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2" style="font-size: 0.72rem;">សាធារណៈ</span>
-                    </div>
-                    <div class="input-group">
-                        <input type="text" class="form-control form-control-sm bg-light font-monospace text-muted" readonly value="<?php echo e($publicEventUrl); ?>" onclick="this.select()" title="ចុចដើម្បីជ្រើសរើស" style="font-size: 0.82rem;">
-                        <button type="button" class="btn btn-sm btn-outline-primary px-3 fw-bold" onclick="copyDirectLink('<?php echo e($publicEventUrl); ?>', this)">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold text-dark">
+                        <i class="bi bi-globe text-primary me-1.5"></i> ទំព័រដើមកម្មវិធី
+                    </span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-primary px-3 fw-bold" onclick="copyDirectLink('<?php echo e($publicEventUrl); ?>', this)">
                             <i class="bi bi-link-45deg me-1"></i> ចម្លង Link
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-dark px-2.5" onclick="showTicketQrModal('ទំព័រដើមកម្មវិធី', 'សាធារណៈ', '<?php echo e($publicEventUrl); ?>')" title="មើល QR">
+                        <button type="button" class="btn btn-outline-dark px-2.5" onclick="showTicketQrModal('ទំព័រដើមកម្មវិធី', '', '<?php echo e($publicEventUrl); ?>')" title="មើល QR">
                             <i class="bi bi-qr-code me-1"></i> QR
                         </button>
-                        <a href="<?php echo e($publicEventUrl); ?>" target="_blank" class="btn btn-sm btn-outline-secondary px-2" title="បើកមើល">
+                        <a href="<?php echo e($publicEventUrl); ?>" target="_blank" class="btn btn-outline-secondary px-2" title="បើកមើល">
                             <i class="bi bi-box-arrow-up-right"></i>
                         </a>
                     </div>
