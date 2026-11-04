@@ -507,11 +507,11 @@
                                             <div class="text-muted small font-monospace" style="font-size: 12px;"><?= htmlspecialchars($bBakongAccount) ?></div>
                                         </div>
 
-                                        <!-- QR Display -->
-                                        <div class="d-inline-block position-relative p-2.5 bg-white border border-2 border-danger rounded-4 shadow-xs my-1">
-                                            <img id="bakongQrImageEl" src="<?= $bakongQrImgUrl ?>" alt="Bakong KHQR" style="width: 180px; height: 180px; display: block;" class="img-fluid">
+                                        <!-- QR Display with generous, elegant quiet zone gap -->
+                                        <div class="d-inline-block position-relative bg-white border border-2 border-danger shadow-xs my-2" style="padding: 22px; border-radius: 20px;">
+                                            <img id="bakongQrImageEl" src="<?= $bakongQrImgUrl ?>" alt="Bakong KHQR" style="width: 180px; height: 180px; display: block; border-radius: 8px;" class="img-fluid">
                                             <div class="position-absolute top-50 start-50 translate-middle bg-white p-1 rounded-circle border border-danger">
-                                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 26px; height: 26px; font-size: 13px;">
+                                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 14px;">
                                                     $
                                                 </div>
                                             </div>
@@ -940,7 +940,8 @@ function startBakongPolling() {
                 body: JSON.stringify({
                     md5: md5,
                     amount: '<?= (float)$ticketPrice ?>',
-                    currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>'
+                    currency: '<?= htmlspecialchars($ticketCurrency, ENT_QUOTES) ?>',
+                    scan_seconds: bakongScanSeconds
                 })
             });
             const data = await res.json();

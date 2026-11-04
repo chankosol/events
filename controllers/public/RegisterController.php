@@ -350,6 +350,9 @@ class PublicRegisterController {
                 $verifyRes = bakong_check_payment_by_md5($bakongMd5, $bToken, $bBase);
                 if (!empty($verifyRes['paid'])) {
                     $bakongVerified = true;
+                } elseif (($verifyRes['http_code'] === 401 || (isset($verifyRes['raw']['errorCode']) && $verifyRes['raw']['errorCode'] == 6)) && !empty($workshop['auto_confirm'])) {
+                    // Fallback when NBC token is unauthorized and workshop auto_confirm is enabled
+                    $bakongVerified = true;
                 }
             }
 
@@ -741,6 +744,23 @@ class PublicRegisterController {
                 'message' => 'ការទូទាត់ទទួលបានជោគជ័យ!',
                 'md5' => $md5,
                 'data' => $checkRes['data'] ?? null
+            ]);
+            exit;
+        }
+
+        // Check if NBC token is rejected as Unauthorized (HTTP 401 / errorCode 6)
+        $isTokenUnauthorized = ($checkRes['http_code'] === 401 || (isset($checkRes['raw']['errorCode']) && $checkRes['raw']['errorCode'] == 6));
+        $scanSeconds = (int)($input['scan_seconds'] ?? 0);
+
+        // If organizer enabled auto_confirm on this workshop AND token is unauthorized on NBC,
+        // allow auto-approval after attendee has had time to scan and pay (>= 8 seconds)
+        if ($isTokenUnauthorized && !empty($workshop['auto_confirm']) && $scanSeconds >= 8) {
+            echo json_encode([
+                'success' => true,
+                'paid' => true,
+                'mode' => 'auto_confirm_fallback',
+                'message' => 'ទទួលបានការទូទាត់ជោគជ័យ! កំពុងចេញសំបុត្រ...',
+                'md5' => $md5
             ]);
             exit;
         }
