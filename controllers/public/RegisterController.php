@@ -423,10 +423,12 @@ class PublicRegisterController {
             // Create payment record if paid
             $hasProofUploaded = false;
             if (!$isFree && $finalAmount > 0) {
+                $paymentMethodId = !empty($_POST['payment_method_id']) ? (int)$_POST['payment_method_id'] : null;
+
                 $db->execute(
-                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, amount, currency, status)
-                     VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $finalAmount, $ticket ? $ticket['currency'] : 'USD']
+                    "INSERT INTO payments (business_id, workshop_id, registration_id, participant_id, payment_method_id, amount, currency, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
+                    [$workshop['business_id'], $workshop['id'], $registrationId, $participantId, $paymentMethodId, $finalAmount, $ticket ? $ticket['currency'] : 'USD']
                 );
                 $paymentId = (int)$db->lastInsertId();
 
@@ -437,12 +439,13 @@ class PublicRegisterController {
                     $upload = uploadFile($_FILES['payment_slip'], 'payment_proof', (int)$workshop['business_id'], (int)$workshop['id']);
                     if ($upload['success']) {
                         $db->execute(
-                            "INSERT INTO payment_proofs (payment_id, registration_id, business_id, proof_file, amount_claimed, currency, transaction_reference, notes, status)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
+                            "INSERT INTO payment_proofs (payment_id, registration_id, business_id, payment_method_id, proof_file, amount_claimed, currency, transaction_reference, notes, status)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
                             [
                                 $paymentId,
                                 $registrationId,
                                 $workshop['business_id'],
+                                $paymentMethodId,
                                 $upload['path'],
                                 $finalAmount,
                                 $ticket ? $ticket['currency'] : 'USD',

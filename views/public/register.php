@@ -376,75 +376,113 @@
 
                             <!-- Business Payment Information -->
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-dark mb-2">
-                                    <i class="bi bi-bank text-primary me-1"></i> ព័ត៌មានគណនីបង់ប្រាក់របស់ស្ថាប័ន
-                                </label>
                                 <?php if (!empty($paymentMethods)): ?>
-                                    <div class="d-flex flex-column gap-3">
-                                        <?php foreach ($paymentMethods as $pm): ?>
-                                            <div class="card border rounded-3 p-3 bg-white shadow-2xs">
-                                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="badge bg-primary text-white p-1.5 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 26px; height: 26px;">
-                                                            <i class="bi bi-wallet2" style="font-size: 0.75rem;"></i>
-                                                        </span>
-                                                        <strong class="text-dark"><?= htmlspecialchars($pm['name']) ?></strong>
-                                                    </div>
-                                                    <?php if (!empty($pm['bank'])): ?>
-                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2">
-                                                            <?= htmlspecialchars($pm['bank']) ?>
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-
-                                                <!-- QR Code Display -->
-                                                <div class="text-center my-2 p-2 bg-light rounded-3 border d-inline-block mx-auto">
-                                                    <?php 
-                                                    if (!empty($pm['qr_image_path'])) {
-                                                        $qrImgSrc = APP_URL . '/' . htmlspecialchars($pm['qr_image_path']);
-                                                    } else {
-                                                        // Fallback QR code from bank details
-                                                        $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
-                                                        $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
-                                                    }
-                                                    ?>
-                                                    <img src="<?= $qrImgSrc ?>" alt="QR Payment" class="img-fluid rounded" style="max-height: 180px; width: 180px; object-fit: contain;">
-                                                    <div class="text-muted small mt-1" style="font-size: 0.72rem;">ស្កេនដើម្បីបង់ប្រាក់</div>
-                                                </div>
-
-                                                <!-- Bank Account Details -->
-                                                <div class="bg-light p-2.5 rounded-3 border small">
-                                                    <?php if (!empty($pm['account_name'])): ?>
-                                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                                        <span class="text-muted">ឈ្មោះគណនី:</span>
-                                                        <strong class="text-dark"><?= htmlspecialchars($pm['account_name']) ?></strong>
-                                                    </div>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($pm['account_number'])): ?>
-                                                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                                        <span class="text-muted">លេខគណនី:</span>
-                                                        <div class="d-flex align-items-center gap-1.5">
-                                                            <strong class="text-primary font-monospace fs-6"><?= htmlspecialchars($pm['account_number']) ?></strong>
-                                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1.5" style="font-size: 0.7rem;" onclick="copyDirectText('<?= htmlspecialchars($pm['account_number']) ?>', this)">
-                                                                <i class="bi bi-copy me-1"></i> ចម្លង
-                                                            </button>
+                                    <?php if (count($paymentMethods) > 1): ?>
+                                        <label class="form-label small fw-bold text-dark mb-2 d-flex align-items-center gap-1.5">
+                                            <i class="bi bi-wallet2 text-primary"></i> ជ្រើសរើសមធ្យោបាយទូទាត់ប្រាក់ <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- Payment Method Choice Tiles -->
+                                        <div class="row g-2 mb-3" id="paymentMethodSelectors">
+                                            <?php foreach ($paymentMethods as $idx => $pm): ?>
+                                                <div class="col-sm-6">
+                                                    <div class="payment-method-tile card p-2.5 rounded-3 border-2 h-100 cursor-pointer <?= $idx === 0 ? 'border-primary bg-primary-subtle shadow-xs' : 'border-secondary-subtle bg-white' ?>"
+                                                         id="pm_tile_<?= $pm['id'] ?>"
+                                                         onclick="selectPaymentMethod(<?= $pm['id'] ?>)"
+                                                         style="cursor: pointer; transition: all 0.2s ease;">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="form-check m-0">
+                                                                <input class="form-check-input" type="radio" name="payment_method_choice" id="pm_radio_<?= $pm['id'] ?>" value="<?= $pm['id'] ?>" <?= $idx === 0 ? 'checked' : '' ?> onchange="selectPaymentMethod(<?= $pm['id'] ?>)">
+                                                            </div>
+                                                            <?php if (!empty($pm['qr_image_path'])): ?>
+                                                                <img src="<?= APP_URL . '/' . htmlspecialchars($pm['qr_image_path']) ?>" class="rounded border p-0.5 bg-white flex-shrink-0" style="width: 38px; height: 38px; object-fit: contain;" alt="QR">
+                                                            <?php else: ?>
+                                                                <div class="rounded bg-light border d-flex align-items-center justify-content-center text-primary flex-shrink-0" style="width: 38px; height: 38px;">
+                                                                    <i class="bi bi-bank fs-6"></i>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                            <div class="flex-grow-1 overflow-hidden">
+                                                                <div class="fw-bold text-dark text-truncate small"><?= htmlspecialchars($pm['name']) ?></div>
+                                                                <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
+                                                                    <?= htmlspecialchars($pm['bank'] ?: 'ធនាគារ') ?> (<?= htmlspecialchars($pm['currency'] ?: 'USD') ?>)
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <?php endif; ?>
-                                                    <div class="d-flex justify-content-between align-items-center py-1">
-                                                        <span class="text-muted">រូបិយប័ណ្ណ:</span>
-                                                        <span class="fw-bold text-dark"><?= htmlspecialchars($pm['currency'] ?: 'USD') ?></span>
-                                                    </div>
                                                 </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <label class="form-label small fw-bold text-dark mb-2">
+                                            <i class="bi bi-bank text-primary me-1"></i> ព័ត៌មានគណនីបង់ប្រាក់របស់ស្ថាប័ន
+                                        </label>
+                                    <?php endif; ?>
 
-                                                <?php if (!empty($pm['instructions'])): ?>
-                                                    <div class="text-muted small mt-2 pt-2 border-top" style="font-size: 0.78rem;">
-                                                        <i class="bi bi-info-circle me-1"></i> <?= htmlspecialchars($pm['instructions']) ?>
-                                                    </div>
+                                    <input type="hidden" name="payment_method_id" id="selectedPaymentMethodId" value="<?= $paymentMethods[0]['id'] ?? '' ?>">
+
+                                    <!-- Payment Method Details Panels -->
+                                    <?php foreach ($paymentMethods as $idx => $pm): ?>
+                                        <div class="pm-detail-panel card border rounded-3 p-3 bg-white shadow-2xs mb-3 <?= $idx === 0 ? '' : 'd-none' ?>" id="pm_panel_<?= $pm['id'] ?>">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-primary text-white p-1.5 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 26px; height: 26px;">
+                                                        <i class="bi bi-wallet2" style="font-size: 0.75rem;"></i>
+                                                    </span>
+                                                    <strong class="text-dark"><?= htmlspecialchars($pm['name']) ?></strong>
+                                                </div>
+                                                <?php if (!empty($pm['bank'])): ?>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2">
+                                                        <?= htmlspecialchars($pm['bank']) ?>
+                                                    </span>
                                                 <?php endif; ?>
                                             </div>
-                                        <?php endforeach; ?>
-                                    </div>
+
+                                            <!-- QR Code Display -->
+                                            <div class="text-center my-2 p-2 bg-light rounded-3 border d-inline-block mx-auto">
+                                                <?php 
+                                                if (!empty($pm['qr_image_path'])) {
+                                                    $qrImgSrc = APP_URL . '/' . htmlspecialchars($pm['qr_image_path']);
+                                                } else {
+                                                    // Fallback QR code from bank details
+                                                    $qrData = "ACC:{$pm['account_number']}|NAME:{$pm['account_name']}|BANK:{$pm['bank']}";
+                                                    $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' . urlencode($qrData);
+                                                }
+                                                ?>
+                                                <img src="<?= $qrImgSrc ?>" alt="QR Payment" class="img-fluid rounded" style="max-height: 180px; width: 180px; object-fit: contain;">
+                                                <div class="text-muted small mt-1" style="font-size: 0.72rem;">ស្កេនដើម្បីបង់ប្រាក់តាម <?= htmlspecialchars($pm['bank'] ?: $pm['name']) ?></div>
+                                            </div>
+
+                                            <!-- Bank Account Details -->
+                                            <div class="bg-light p-2.5 rounded-3 border small">
+                                                <?php if (!empty($pm['account_name'])): ?>
+                                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                    <span class="text-muted">ឈ្មោះគណនី:</span>
+                                                    <strong class="text-dark"><?= htmlspecialchars($pm['account_name']) ?></strong>
+                                                </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($pm['account_number'])): ?>
+                                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                    <span class="text-muted">លេខគណនី:</span>
+                                                    <div class="d-flex align-items-center gap-1.5">
+                                                        <strong class="text-primary font-monospace fs-6"><?= htmlspecialchars($pm['account_number']) ?></strong>
+                                                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1.5" style="font-size: 0.7rem;" onclick="copyDirectText('<?= htmlspecialchars($pm['account_number']) ?>', this)">
+                                                            <i class="bi bi-copy me-1"></i> ចម្លង
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <?php endif; ?>
+                                                <div class="d-flex justify-content-between align-items-center py-1">
+                                                    <span class="text-muted">រូបិយប័ណ្ណ:</span>
+                                                    <span class="fw-bold text-dark"><?= htmlspecialchars($pm['currency'] ?: 'USD') ?></span>
+                                                </div>
+                                            </div>
+
+                                            <?php if (!empty($pm['instructions'])): ?>
+                                                <div class="text-muted small mt-2 pt-2 border-top" style="font-size: 0.78rem;">
+                                                    <i class="bi bi-info-circle me-1"></i> <?= htmlspecialchars($pm['instructions']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
                                 <?php else: ?>
                                     <div class="alert alert-secondary small text-center">
                                         មិនទាន់មានព័ត៌មានគណនីបង់ប្រាក់។ សូមទាក់ទងអ្នករៀបចំកម្មវិធី។
@@ -711,6 +749,35 @@ function copyDirectText(text, btn) {
         const orig = button.innerHTML;
         button.innerHTML = '<i class="bi bi-check2"></i> បានចម្លង!';
         setTimeout(() => button.innerHTML = orig, 1200);
+    }
+}
+
+function selectPaymentMethod(pmId) {
+    const hiddenInp = document.getElementById('selectedPaymentMethodId');
+    if (hiddenInp) hiddenInp.value = pmId;
+
+    // Update radio check
+    const radio = document.getElementById('pm_radio_' + pmId);
+    if (radio) radio.checked = true;
+
+    // Update tile visual states
+    document.querySelectorAll('.payment-method-tile').forEach(tile => {
+        tile.classList.remove('border-primary', 'bg-primary-subtle', 'shadow-xs');
+        tile.classList.add('border-secondary-subtle', 'bg-white');
+    });
+    const activeTile = document.getElementById('pm_tile_' + pmId);
+    if (activeTile) {
+        activeTile.classList.remove('border-secondary-subtle', 'bg-white');
+        activeTile.classList.add('border-primary', 'bg-primary-subtle', 'shadow-xs');
+    }
+
+    // Switch panels
+    document.querySelectorAll('.pm-detail-panel').forEach(panel => {
+        panel.classList.add('d-none');
+    });
+    const activePanel = document.getElementById('pm_panel_' + pmId);
+    if (activePanel) {
+        activePanel.classList.remove('d-none');
     }
 }
 </script>

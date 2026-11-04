@@ -121,7 +121,80 @@ class BusinessSettingsController {
         );
 
         auditLog('payment_method_created', 'business_payment_methods', $db->lastInsertId());
-        Session::flash('success', 'Payment method added successfully.');
-        redirect(APP_URL . '/settings');
+        Session::flash('success', 'បានបន្ថែមវិធីសាស្ត្រទូទាត់ដោយជោគជ័យ។');
+        redirect(APP_URL . '/settings#paymentsTab');
+    }
+
+    public static function updatePaymentMethod(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $id           = (int)($_POST['id'] ?? 0);
+        $name         = trim($_POST['method_name'] ?? '');
+        $bank         = trim($_POST['bank'] ?? '');
+        $accName      = trim($_POST['account_name'] ?? '');
+        $accNum       = trim($_POST['account_number'] ?? '');
+        $instructions = trim($_POST['instructions'] ?? '');
+        $currency     = $_POST['currency'] ?? 'USD';
+        $status       = in_array($_POST['status'] ?? '', ['active', 'inactive']) ? $_POST['status'] : 'active';
+
+        if (!$id || empty($name)) {
+            Session::flash('error', 'ឈ្មោះវិធីសាស្ត្រទូទាត់មិនអាចទទេបានទេ។');
+            redirect(APP_URL . '/settings#paymentsTab');
+        }
+
+        $existing = $db->queryOne("SELECT * FROM business_payment_methods WHERE id = ? AND business_id = ?", [$id, $businessId]);
+        if (!$existing) {
+            Session::flash('error', 'រកមិនឃើញវិធីសាស្ត្រទូទាត់នេះទេ។');
+            redirect(APP_URL . '/settings#paymentsTab');
+        }
+
+        $qrPath = $existing['qr_image_path'];
+        if (!empty($_FILES['qr_image']['name'])) {
+            $upload = uploadFile($_FILES['qr_image'], 'qr_image', $businessId);
+            if ($upload['success']) {
+                $qrPath = $upload['path'];
+            }
+        }
+
+        $db->execute(
+            "UPDATE business_payment_methods 
+             SET name = ?, bank = ?, account_name = ?, account_number = ?, qr_image_path = ?, instructions = ?, currency = ?, status = ?, updated_at = NOW()
+             WHERE id = ? AND business_id = ?",
+            [$name, $bank, $accName, $accNum, $qrPath, $instructions, $currency, $status, $id, $businessId]
+        );
+
+        auditLog('payment_method_updated', 'business_payment_methods', $id);
+        Session::flash('success', 'បានកែប្រែវិធីសាស្ត្រទូទាត់ដោយជោគជ័យ។');
+        redirect(APP_URL . '/settings#paymentsTab');
+    }
+
+    public static function deletePaymentMethod(): void {
+        requireAuth();
+        requirePermission('business.settings');
+        requireCsrf();
+        $businessId = Tenant::id();
+        $db = Database::getInstance();
+
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) {
+            Session::flash('error', 'ការស្នើសុំមិនត្រឹមត្រូវ។');
+            redirect(APP_URL . '/settings#paymentsTab');
+        }
+
+        $existing = $db->queryOne("SELECT * FROM business_payment_methods WHERE id = ? AND business_id = ?", [$id, $businessId]);
+        if (!$existing) {
+            Session::flash('error', 'រកមិនឃើញវិធីសាស្ត្រទូទាត់នេះទេ។');
+            redirect(APP_URL . '/settings#paymentsTab');
+        }
+
+        $db->execute("DELETE FROM business_payment_methods WHERE id = ? AND business_id = ?", [$id, $businessId]);
+
+        auditLog('payment_method_deleted', 'business_payment_methods', $id);
+        Session::flash('success', 'បានលុបវិធីសាស្ត្រទូទាត់ដោយជោគជ័យ។');
+        redirect(APP_URL . '/settings#paymentsTab');
     }
 }

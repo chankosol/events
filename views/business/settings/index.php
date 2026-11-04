@@ -154,19 +154,46 @@
                             <?php else: ?>
                                 <?php foreach ($paymentMethods as $pm): ?>
                                     <div class="col-md-6">
-                                        <div class="card border h-100 p-3 shadow-sm">
+                                        <div class="card border h-100 p-3 shadow-sm d-flex flex-column justify-content-between">
                                             <div class="d-flex align-items-start gap-3">
                                                 <?php if (!empty($pm['qr_image_path'])): ?>
-                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: contain;" alt="QR">
+                                                    <img src="<?php echo APP_URL . '/' . e($pm['qr_image_path']); ?>" class="img-thumbnail flex-shrink-0" style="width: 80px; height: 80px; object-fit: contain;" alt="QR">
                                                 <?php else: ?>
-                                                    <div class="bg-light p-3 rounded text-muted"><i class="bi bi-qr-code fs-2"></i></div>
+                                                    <div class="bg-light p-3 rounded text-muted flex-shrink-0"><i class="bi bi-qr-code fs-2"></i></div>
                                                 <?php endif; ?>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="fw-bold mb-1"><?php echo e($pm['name']); ?></h6>
+                                                <div class="flex-grow-1 overflow-hidden">
+                                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                                        <h6 class="fw-bold mb-0 text-truncate"><?php echo e($pm['name']); ?></h6>
+                                                        <?php if (($pm['status'] ?? 'active') === 'active'): ?>
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle small px-2">សកម្ម</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small px-2">អសកម្ម</span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                     <div class="text-muted small"><strong>ធនាគារ:</strong> <?php echo e($pm['bank'] ?: 'ធនាគារ'); ?></div>
                                                     <div class="text-muted small"><strong>គណនី:</strong> <?php echo e($pm['account_name'] ?: 'N/A'); ?> (<?php echo e($pm['account_number'] ?: 'N/A'); ?>)</div>
                                                     <div class="text-muted small"><strong>រូបិយប័ណ្ណ:</strong> <?php echo e($pm['currency']); ?></div>
+                                                    <?php if (!empty($pm['instructions'])): ?>
+                                                        <div class="text-muted small mt-1 text-truncate" title="<?php echo e($pm['instructions']); ?>">
+                                                            <i class="bi bi-info-circle me-1"></i><?php echo e($pm['instructions']); ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
+                                            </div>
+
+                                            <!-- Edit & Delete Buttons at Bottom-Right Corner -->
+                                            <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-2 border-top">
+                                                <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2.5" 
+                                                        onclick='openEditPaymentMethod(<?php echo json_encode($pm, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)'>
+                                                    <i class="bi bi-pencil-square me-1"></i> កែប្រែ
+                                                </button>
+                                                <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/delete" class="d-inline" onsubmit="return confirm('តើអ្នកពិតជាចង់លុបវិធីសាស្ត្រទូទាត់ «<?php echo e($pm['name']); ?>» នេះមែនទេ?');">
+                                                    <?php echo csrfField(); ?>
+                                                    <input type="hidden" name="id" value="<?php echo (int)$pm['id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2.5">
+                                                        <i class="bi bi-trash me-1"></i> លុប
+                                                    </button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -307,8 +334,113 @@
     </div>
 </div>
 
+<!-- Edit Payment Method Modal -->
+<div class="modal fade" id="editPaymentModal" tabindex="-1" aria-labelledby="editPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="<?php echo APP_URL; ?>/settings/payment-methods/update" enctype="multipart/form-data">
+                <?php echo csrfField(); ?>
+                <input type="hidden" name="id" id="edit_pm_id">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editPaymentModalLabel">
+                        <i class="bi bi-pencil-square text-primary me-2"></i> កែប្រែវិធីសាស្ត្រទទួលប្រាក់
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះវិធីសាស្ត្រ <span class="text-danger">*</span></label>
+                            <input type="text" name="method_name" id="edit_pm_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះធនាគារ</label>
+                            <input type="text" name="bank" id="edit_pm_bank" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">រូបិយប័ណ្ណ</label>
+                            <select name="currency" id="edit_pm_currency" class="form-select form-select-sm">
+                                <option value="USD">ដុល្លារ ($ USD)</option>
+                                <option value="KHR">រៀល (៛ KHR)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ស្ថានភាព</label>
+                            <select name="status" id="edit_pm_status" class="form-select form-select-sm">
+                                <option value="active">សកម្ម (Active)</option>
+                                <option value="inactive">អសកម្ម (Inactive)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ឈ្មោះម្ចាស់គណនី</label>
+                            <input type="text" name="account_name" id="edit_pm_account_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">លេខគណនី</label>
+                            <input type="text" name="account_number" id="edit_pm_account_number" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">រូបភាពកូដ QR</label>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <img id="edit_pm_qr_preview" src="" class="img-thumbnail d-none" style="width: 70px; height: 70px; object-fit: contain;">
+                                <div class="flex-grow-1">
+                                    <input type="file" name="qr_image" class="form-control form-control-sm" accept="image/*">
+                                    <div class="form-text small">ជ្រើសរើសរូបថ្មីប្រសិនបើអ្នកចង់ផ្លាស់ប្តូរកូដ QR</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">សេចក្តីណែនាំសម្រាប់សិក្ខាកាម</label>
+                            <textarea name="instructions" id="edit_pm_instructions" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">បោះបង់</button>
+                    <button type="submit" class="btn btn-sm btn-primary px-4">
+                        <i class="bi bi-check2 me-1"></i> រក្សាទុកការកែប្រែ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+function openEditPaymentMethod(pm) {
+    document.getElementById('edit_pm_id').value = pm.id;
+    document.getElementById('edit_pm_name').value = pm.name || '';
+    document.getElementById('edit_pm_bank').value = pm.bank || '';
+    document.getElementById('edit_pm_currency').value = pm.currency || 'USD';
+    document.getElementById('edit_pm_status').value = pm.status || 'active';
+    document.getElementById('edit_pm_account_name').value = pm.account_name || '';
+    document.getElementById('edit_pm_account_number').value = pm.account_number || '';
+    document.getElementById('edit_pm_instructions').value = pm.instructions || '';
+    
+    const qrPreview = document.getElementById('edit_pm_qr_preview');
+    if (pm.qr_image_path) {
+        qrPreview.src = '<?php echo APP_URL; ?>/' + pm.qr_image_path;
+        qrPreview.classList.remove('d-none');
+    } else {
+        qrPreview.classList.add('d-none');
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('editPaymentModal'));
+    modal.show();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Activate tab from URL hash if present
+    if (window.location.hash) {
+        const hash = window.location.hash;
+        const tabLink = document.querySelector('#settingsTabs a[href="' + hash + '"]');
+        if (tabLink) {
+            const tab = bootstrap.Tab.getOrCreateInstance(tabLink);
+            tab.show();
+        }
+    }
+
     const sPhotoInput = document.getElementById('settingsProfilePhotoInput');
     const sPreview = document.getElementById('settingsAvatarPreview');
     if (sPhotoInput && sPreview) {

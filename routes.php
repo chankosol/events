@@ -616,6 +616,16 @@ $router->post('/settings/payment-methods', function() {
     BusinessSettingsController::savePaymentMethods();
 });
 
+$router->post('/settings/payment-methods/update', function() {
+    require_once ROOT_PATH . '/controllers/business/SettingsController.php';
+    BusinessSettingsController::updatePaymentMethod();
+});
+
+$router->post('/settings/payment-methods/delete', function() {
+    require_once ROOT_PATH . '/controllers/business/SettingsController.php';
+    BusinessSettingsController::deletePaymentMethod();
+});
+
 $router->get('/staff', function() {
     require_once ROOT_PATH . '/controllers/business/StaffController.php';
     StaffController::index();
