@@ -73,3 +73,15 @@ CREATE TABLE IF NOT EXISTS attendance_slots (
 ALTER TABLE tickets ADD COLUMN is_visible TINYINT(1) DEFAULT 1;
 ALTER TABLE business_payment_methods ADD COLUMN is_default TINYINT(1) DEFAULT 0;
 
+-- Ensure business_settings table exists for Bakong KHQR & ABA PayWay configurations
+CREATE TABLE IF NOT EXISTS business_settings (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  business_id INT UNSIGNED NOT NULL,
+  setting_key VARCHAR(100) NOT NULL,
+  setting_value TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_business_key (business_id, setting_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+

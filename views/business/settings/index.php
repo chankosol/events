@@ -75,49 +75,49 @@ $user = $user ?? Auth::user() ?? [];
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">ឈ្មោះស្ថាប័ន / ក្រុមហ៊ុន</label>
-                                    <input type="text" name="name" class="form-control" value="<?php echo e($business['name']); ?>" required>
+                                    <input type="text" name="name" class="form-control" value="<?php echo e($business['name'] ?? ''); ?>" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">អ៊ីមែលក្រុមហ៊ុន</label>
-                                    <input type="email" class="form-control" value="<?php echo e($business['email']); ?>" readonly>
+                                    <input type="email" class="form-control" value="<?php echo e($business['email'] ?? ''); ?>" readonly>
                                     <div class="form-text small">អ៊ីមែលគណនីគ្រប់គ្រងដោយម្ចាស់ស្ថាប័ន។</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">លេខទូរស័ព្ទទំនាក់ទំនង</label>
-                                    <input type="text" name="phone" class="form-control" value="<?php echo e($business['phone']); ?>">
+                                    <input type="text" name="phone" class="form-control" value="<?php echo e($business['phone'] ?? ''); ?>">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">គេហទំព័រ</label>
-                                    <input type="url" name="website" class="form-control" value="<?php echo e($business['website']); ?>">
+                                    <input type="url" name="website" class="form-control" value="<?php echo e($business['website'] ?? ''); ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">ប្រទេស</label>
-                                    <input type="text" name="country" class="form-control" value="<?php echo e($business['country']); ?>">
+                                    <input type="text" name="country" class="form-control" value="<?php echo e($business['country'] ?? ''); ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">រាជធានី / ខេត្ត</label>
-                                    <input type="text" name="city" class="form-control" value="<?php echo e($business['city']); ?>">
+                                    <input type="text" name="city" class="form-control" value="<?php echo e($business['city'] ?? ''); ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">តំបន់ម៉ោង</label>
-                                    <input type="text" name="timezone" class="form-control" value="<?php echo e($business['timezone']); ?>">
+                                    <input type="text" name="timezone" class="form-control" value="<?php echo e($business['timezone'] ?? 'Asia/Phnom_Penh'); ?>">
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label fw-bold">អាសយដ្ឋាន</label>
-                                    <textarea name="address" class="form-control" rows="2"><?php echo e($business['address']); ?></textarea>
+                                    <textarea name="address" class="form-control" rows="2"><?php echo e($business['address'] ?? ''); ?></textarea>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">រូបិយប័ណ្ណចម្បង</label>
                                     <select name="preferred_currency" class="form-select">
-                                        <option value="USD" <?php echo $business['preferred_currency'] === 'USD' ? 'selected' : ''; ?>>ដុល្លារអាមេរិក ($ USD)</option>
-                                        <option value="KHR" <?php echo $business['preferred_currency'] === 'KHR' ? 'selected' : ''; ?>>រៀលខ្មែរ (៛ KHR)</option>
+                                        <option value="USD" <?php echo ($business['preferred_currency'] ?? 'USD') === 'USD' ? 'selected' : ''; ?>>ដុល្លារអាមេរិក ($ USD)</option>
+                                        <option value="KHR" <?php echo ($business['preferred_currency'] ?? 'USD') === 'KHR' ? 'selected' : ''; ?>>រៀលខ្មែរ (៛ KHR)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">ភាសាចម្បង</label>
                                     <select name="preferred_language" class="form-select">
-                                        <option value="km" <?php echo $business['preferred_language'] === 'km' ? 'selected' : ''; ?>>ភាសាខ្មែរ</option>
-                                        <option value="en" <?php echo $business['preferred_language'] === 'en' ? 'selected' : ''; ?>>English</option>
+                                        <option value="km" <?php echo ($business['preferred_language'] ?? 'km') === 'km' ? 'selected' : ''; ?>>ភាសាខ្មែរ</option>
+                                        <option value="en" <?php echo ($business['preferred_language'] ?? 'km') === 'en' ? 'selected' : ''; ?>>English</option>
                                     </select>
                                 </div>
                             </div>

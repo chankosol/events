@@ -8,18 +8,83 @@ class BusinessSettingsController {
         $businessId = Tenant::id();
         $db = Database::getInstance();
 
-        $business = $db->queryOne("SELECT * FROM businesses WHERE id = ?", [$businessId]);
-        $branding = $db->queryOne("SELECT * FROM business_branding WHERE business_id = ?", [$businessId]);
-        $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY is_default DESC, sort_order ASC, id ASC", [$businessId]);
+        // Fallback for platform admin without active tenant
+        if (!$businessId) {
+            $businessId = (int)($db->queryValue("SELECT id FROM businesses WHERE deleted_at IS NULL ORDER BY id ASC LIMIT 1") ?: 1);
+        }
+
+        $business = $businessId ? $db->queryOne("SELECT * FROM businesses WHERE id = ?", [$businessId]) : null;
+        if (!$business) {
+            $business = [
+                'id' => $businessId ?: 1,
+                'name' => '',
+                'email' => '',
+                'phone' => '',
+                'website' => '',
+                'country' => 'Cambodia',
+                'city' => 'Phnom Penh',
+                'timezone' => 'Asia/Phnom_Penh',
+                'address' => '',
+                'preferred_currency' => 'USD',
+                'preferred_language' => 'km'
+            ];
+        }
+
+        $branding = $businessId ? $db->queryOne("SELECT * FROM business_branding WHERE business_id = ?", [$businessId]) : null;
+        if (!$branding) {
+            $branding = [
+                'logo_path' => null,
+                'primary_color' => '#0d6efd',
+                'secondary_color' => '#6c757d'
+            ];
+        }
+
+        // Resilient query for payment methods with auto-heal for is_default column
+        $paymentMethods = [];
+        if ($businessId) {
+            try {
+                $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY is_default DESC, sort_order ASC, id ASC", [$businessId]);
+            } catch (Throwable $e) {
+                try {
+                    $db->execute("ALTER TABLE business_payment_methods ADD COLUMN is_default TINYINT(1) DEFAULT 0");
+                    $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY is_default DESC, sort_order ASC, id ASC", [$businessId]);
+                } catch (Throwable $e2) {
+                    try {
+                        $paymentMethods = $db->query("SELECT * FROM business_payment_methods WHERE business_id = ? ORDER BY sort_order ASC, id ASC", [$businessId]);
+                    } catch (Throwable $e3) {
+                        $paymentMethods = [];
+                    }
+                }
+            }
+        }
         
-        $settingsRows = $db->query("SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?", [$businessId]);
+        // Resilient query for business_settings with auto-heal for table
         $businessSettings = [];
-        foreach ($settingsRows as $r) {
-            $businessSettings[$r['setting_key']] = $r['setting_value'];
+        if ($businessId) {
+            try {
+                $settingsRows = $db->query("SELECT setting_key, setting_value FROM business_settings WHERE business_id = ?", [$businessId]);
+                if (is_array($settingsRows)) {
+                    foreach ($settingsRows as $r) {
+                        $businessSettings[$r['setting_key']] = $r['setting_value'];
+                    }
+                }
+            } catch (Throwable $e) {
+                try {
+                    $db->execute("CREATE TABLE IF NOT EXISTS business_settings (
+                        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        business_id INT UNSIGNED NOT NULL,
+                        setting_key VARCHAR(100) NOT NULL,
+                        setting_value TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY unique_business_key (business_id, setting_key)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                } catch (Throwable $e2) {}
+            }
         }
 
         $userId = Auth::id();
-        $user = $db->queryOne("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", [$userId]) ?? Auth::user();
+        $user = ($userId ? $db->queryOne("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", [$userId]) : null) ?? Auth::user();
 
         $title = 'Business Settings - ' . APP_NAME;
         ob_start();
@@ -207,6 +272,10 @@ class BusinessSettingsController {
             redirect(APP_URL . '/settings#paymentsTab');
         }
 
+        try {
+            $db->execute("ALTER TABLE business_payment_methods ADD COLUMN is_default TINYINT(1) DEFAULT 0");
+        } catch (Throwable $e) {}
+
         $existing = $db->queryOne("SELECT * FROM business_payment_methods WHERE id = ? AND business_id = ?", [$id, $businessId]);
         if (!$existing) {
             Session::flash('error', 'រកមិនឃើញវិធីសាស្ត្រទូទាត់នេះទេ។');
@@ -263,6 +332,18 @@ class BusinessSettingsController {
         requireCsrf();
         $businessId = Tenant::id();
         $db = Database::getInstance();
+
+        try {
+            $db->execute("CREATE TABLE IF NOT EXISTS business_settings (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                business_id INT UNSIGNED NOT NULL,
+                setting_key VARCHAR(100) NOT NULL,
+                setting_value TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_business_key (business_id, setting_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $e) {}
 
         $fields = [
             'payment_provider',
